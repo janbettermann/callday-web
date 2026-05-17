@@ -42,11 +42,23 @@ async function launchBrowser(): Promise<Browser> {
   const isVercel = !!process.env.VERCEL_ENV;
 
   if (isVercel) {
-    return puppeteer.launch({
+    // Sparticuz-Pattern aus dem README (wichtig — abweichende Configs
+    // crashen auf Lambda):
+    //   - `puppeteer.defaultArgs(...)` mit den chromium.args mergen
+    //   - `headless: "shell"` statt true (kleineres headless_shell-Binary
+    //      das im sparticuz-Bundle steckt)
+    //   - executablePath aus dem brotli-entpackten chromium-bundle
+    //
+    // Puppeteer 25.x: `defaultArgs` ist async — await Pflicht.
+    const defaultArgs = await puppeteer.defaultArgs({
       args: chromium.args,
+      headless: "shell",
+    });
+    return puppeteer.launch({
+      args: defaultArgs,
       defaultViewport: { width: 1080, height: 1920, deviceScaleFactor: 1 },
       executablePath: await chromium.executablePath(),
-      headless: true,
+      headless: "shell",
     });
   }
 
@@ -112,9 +124,26 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("[share-card] render failed", err);
-    return new Response("Share card render failed", { status: 500 });
+    // Reichlich loggen damit Vercel-Function-Logs den Crash-Grund
+    // klar zeigen. In Prod returnen wir trotzdem nur eine generische
+    // Message, ohne interne Pfade preiszugeben.
+    const message =
+      err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    console.error("[share-card] render failed —", message);
+    if (err instanceof Error && err.stack) {
+      console.error("[share-card] stack:", err.stack);
+    }
+    return new Response(`Share card render failed: ${message}`, {
+      status: 500,
+    });
   } finally {
-    if (browser) await browser.close();
+    if (browser) {
+      try {
+        await browser.close();
+      } catch {
+        // Browser kann beim Crash schon kaputt sein — close() schmeisst
+        // dann selber. Egal, der Container wird sowieso recycelt.
+      }
+    }
   }
 }
