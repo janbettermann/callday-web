@@ -4,8 +4,12 @@
  * CSS-Parser durcheinanderbringt.
  *
  * Komposition: 9:16 Off-White Story-Canvas (fix 1080×1920, NICHT
- * viewport-relativ), 4:5 Polaroid-Card mittig drauf. 1:1 nach
- * `callday-card-brand.html` aus dem Design-Spec.
+ * viewport-relativ), 4:5 Polaroid-Card mittig drauf. Proportionen 1:1
+ * nach `callday-card-brand.html` aus dem Design-Spec — aber MULTIPLIED
+ * fuer unsere 842px-Card-Breite (Original-Spec war 400px). Stats-Box,
+ * Bars, Fonts und Sonne sind alle ca. ×2 hochskaliert damit sie auf
+ * dem grossen Render-Target die gleichen visuellen Proportionen haben
+ * wie im Spec-Mockup.
  */
 
 .story {
@@ -22,21 +26,22 @@
 .card {
   width: 842px;
   aspect-ratio: 4 / 5;
-  border-radius: 28px;
+  border-radius: 40px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   box-shadow:
-    0 20px 60px rgba(60, 40, 20, 0.18),
-    0 4px 14px rgba(60, 40, 20, 0.08),
+    0 30px 80px rgba(60, 40, 20, 0.18),
+    0 6px 18px rgba(60, 40, 20, 0.08),
     0 0 0 0.5px rgba(0, 0, 0, 0.05);
   background: white;
 }
 
-/* TOP BAR */
+/* TOP BAR — proportional zu Card-Breite. Werte aus visuellem
+   Abgleich mit dem Spec-Screenshot (842px-Card als Basis). */
 .barTop {
   background: white;
-  padding: 22px 28px;
+  padding: 44px 56px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -46,19 +51,19 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 22px;
 }
 .brandName {
-  font-size: 20px;
+  font-size: 52px;
   font-weight: 800;
   color: #1a1d26;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.8px;
 }
 .date {
-  font-size: 16px;
+  font-size: 42px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.4);
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
 }
 
 /* VIBE CANVAS — blauer Brand-Gradient. 1:1 aus
@@ -70,33 +75,42 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 40px;
   background: linear-gradient(160deg, #4a7af7 0%, #3564e0 100%);
 }
 
-/* Grosser warmer Ambient-Halo — top:-60 right:-60 wie HTML,
-   proportional auf 78%-Card-Breite skaliert. */
+/* Grosser warmer Ambient-Halo — bewusst groesser + naeher an die
+   Canvas-Mitte als die direkte Spec-Skalierung. Grund: das Stats-
+   Overlay mit `backdrop-filter: blur` ist nur sichtbar wenn was
+   Buntes/Variierendes dahinter ist. Bei unserem grossen Card-Format
+   wuerde die direkt-skalierte Halo-Groesse den Overlay-Bereich nicht
+   farblich beruehren — der Blur waere unsichtbar weil er nur
+   einheitliches Blau wegblurrt. Mit groesserem Halo reicht der
+   amber Tint bis unter den Stats-Box und der Blur frostet sichtbar. */
 .halo {
   position: absolute;
-  top: -90px;
-  right: -90px;
-  width: 360px;
-  height: 360px;
+  top: -200px;
+  right: -200px;
+  width: 900px;
+  height: 900px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(251, 191, 36, 0.4) 0%,
-    transparent 60%
+    rgba(251, 191, 36, 0.55) 0%,
+    rgba(251, 191, 36, 0.2) 35%,
+    transparent 70%
   );
 }
 
-/* Scharfer Sun-Disk — top:10 right:10, 60×60 mit Glow im HTML. */
+/* Scharfer Sun-Disk — 1:1 aus Spec (top:10 right:10, 60×60 auf 400px-
+   Card) proportional auf 842px skaliert. Sitzt in der absoluten Ecke,
+   ueber dem Stats-Overlay, nicht ueberlappend. */
 .sun {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 92px;
-  height: 92px;
+  top: 21px;
+  right: 21px;
+  width: 126px;
+  height: 126px;
   border-radius: 50%;
   background: radial-gradient(
     circle at 38% 35%,
@@ -104,65 +118,70 @@
     #fbbf24 60%,
     #d97706 100%
   );
-  box-shadow: 0 0 60px rgba(251, 191, 36, 0.5);
+  box-shadow: 0 0 84px rgba(251, 191, 36, 0.5);
 }
 
 /* STATS OVERLAY — echtes Frosted-Glass via backdrop-filter.
-   Funktioniert weil's Headless-Chrome nativ rendert. */
+   Funktioniert weil's Headless-Chrome nativ rendert.
+
+   blur-Wert ist absolute Pixel: Spec hat `blur(20px)` auf 400px-Card
+   (= 5 % der Card-Breite). Unsere Card ist 842px, also 20px Blur waere
+   nur 2.4 % — visuell viel weniger milky. Skaliert auf 42px damit's
+   proportional gleich frosted aussieht wie im Spec-Mockup. */
 .statsOverlay {
-  width: 100%;
-  max-width: 420px;
-  background: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 22px;
-  padding: 26px 30px;
+  width: 86%;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(80px) saturate(1.8);
+  -webkit-backdrop-filter: blur(80px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 36px;
+  padding: 50px 56px;
   box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 14px 40px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
   position: relative;
   z-index: 2;
 }
 .statsRow {
   display: flex;
   align-items: flex-end;
-  gap: 28px;
+  gap: 56px;
 }
 .stat {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 12px;
   flex: 1;
 }
 .statLabel {
-  font-size: 14px;
+  font-size: 30px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.78);
-  letter-spacing: 0.5px;
+  letter-spacing: 0.7px;
 }
 .statNum {
-  font-size: 56px;
+  font-size: 140px;
   font-weight: 800;
   color: white;
-  letter-spacing: -2px;
+  letter-spacing: -5px;
   line-height: 1;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 .statNumAccent {
   color: #fbbf24;
 }
 .statDivider {
   width: 1px;
-  height: 52px;
+  height: 130px;
   background: rgba(255, 255, 255, 0.28);
-  margin-bottom: 4px;
+  margin-bottom: 12px;
 }
 
-/* BOTTOM BAR */
+/* BOTTOM BAR — symmetrisch zur Top-Bar dimensioniert, sodass die
+   beiden weissen Bars optisch in Balance sind. */
 .barBottom {
   background: white;
-  padding: 18px 28px;
+  padding: 44px 56px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -170,15 +189,15 @@
   z-index: 2;
 }
 .slogan {
-  font-size: 15px;
+  font-size: 40px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.4);
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
   line-height: 1.25;
 }
 .domain {
-  font-size: 15px;
+  font-size: 42px;
   font-weight: 700;
   color: #1a1d26;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
 }

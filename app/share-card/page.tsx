@@ -70,7 +70,7 @@ export default async function ShareCardPage({
         {/* TOP BAR */}
         <div className={styles.barTop}>
           <div className={styles.brand}>
-            <CalldayLogo size={22} />
+            <CalldayLogo size={64} />
             <span className={styles.brandName}>Callday</span>
           </div>
           <div className={styles.date}>{dateLabel}</div>
