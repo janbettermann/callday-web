@@ -1,0 +1,184 @@
+/*
+ * Share-Card-Styles. CSS-Module-File statt inline `<style>` JSX, weil
+ * React 19 inline-Style-Tags umformatiert/dedupliziert und dabei den
+ * CSS-Parser durcheinanderbringt.
+ *
+ * Komposition: 9:16 Off-White Story-Canvas (fix 1080×1920, NICHT
+ * viewport-relativ), 4:5 Polaroid-Card mittig drauf. 1:1 nach
+ * `callday-card-brand.html` aus dem Design-Spec.
+ */
+
+.story {
+  width: 1080px;
+  height: 1920px;
+  background: #faf9f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-inter), "Inter", -apple-system, sans-serif;
+}
+
+/* 4:5 Polaroid-Card — 842px = 78% von 1080 */
+.card {
+  width: 842px;
+  aspect-ratio: 4 / 5;
+  border-radius: 28px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 20px 60px rgba(60, 40, 20, 0.18),
+    0 4px 14px rgba(60, 40, 20, 0.08),
+    0 0 0 0.5px rgba(0, 0, 0, 0.05);
+  background: white;
+}
+
+/* TOP BAR */
+.barTop {
+  background: white;
+  padding: 22px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  z-index: 2;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brandName {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1a1d26;
+  letter-spacing: -0.3px;
+}
+.date {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.3px;
+}
+
+/* VIBE CANVAS — blauer Brand-Gradient. 1:1 aus
+   callday-card-brand.html. */
+.canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(160deg, #4a7af7 0%, #3564e0 100%);
+}
+
+/* Grosser warmer Ambient-Halo — top:-60 right:-60 wie HTML,
+   proportional auf 78%-Card-Breite skaliert. */
+.halo {
+  position: absolute;
+  top: -90px;
+  right: -90px;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(251, 191, 36, 0.4) 0%,
+    transparent 60%
+  );
+}
+
+/* Scharfer Sun-Disk — top:10 right:10, 60×60 mit Glow im HTML. */
+.sun {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 38% 35%,
+    #fde68a 0%,
+    #fbbf24 60%,
+    #d97706 100%
+  );
+  box-shadow: 0 0 60px rgba(251, 191, 36, 0.5);
+}
+
+/* STATS OVERLAY — echtes Frosted-Glass via backdrop-filter.
+   Funktioniert weil's Headless-Chrome nativ rendert. */
+.statsOverlay {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 22px;
+  padding: 26px 30px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  position: relative;
+  z-index: 2;
+}
+.statsRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 28px;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.statLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+  letter-spacing: 0.5px;
+}
+.statNum {
+  font-size: 56px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: -2px;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.statNumAccent {
+  color: #fbbf24;
+}
+.statDivider {
+  width: 1px;
+  height: 52px;
+  background: rgba(255, 255, 255, 0.28);
+  margin-bottom: 4px;
+}
+
+/* BOTTOM BAR */
+.barBottom {
+  background: white;
+  padding: 18px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+  z-index: 2;
+}
+.slogan {
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.3px;
+  line-height: 1.25;
+}
+.domain {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1d26;
+  letter-spacing: 0.3px;
+}
