@@ -22,11 +22,14 @@
   font-family: var(--font-inter), "Inter", -apple-system, sans-serif;
 }
 
-/* 4:5 Polaroid-Card — 842px = 78% von 1080 */
+/* 4:5 Polaroid-Card — 842px = 78% von 1080.
+   border-radius: 56px ≈ 6.7% der Card-Breite, etwas runder als die
+   strikte Spec-Ratio (24/400=6%) damit's auf der grossen Card visuell
+   so rund wirkt wie das Spec-Mockup im Browser. */
 .card {
   width: 842px;
   aspect-ratio: 4 / 5;
-  border-radius: 40px;
+  border-radius: 56px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -79,14 +82,9 @@
   background: linear-gradient(160deg, #4a7af7 0%, #3564e0 100%);
 }
 
-/* Grosser warmer Ambient-Halo — bewusst groesser + naeher an die
-   Canvas-Mitte als die direkte Spec-Skalierung. Grund: das Stats-
-   Overlay mit `backdrop-filter: blur` ist nur sichtbar wenn was
-   Buntes/Variierendes dahinter ist. Bei unserem grossen Card-Format
-   wuerde die direkt-skalierte Halo-Groesse den Overlay-Bereich nicht
-   farblich beruehren — der Blur waere unsichtbar weil er nur
-   einheitliches Blau wegblurrt. Mit groesserem Halo reicht der
-   amber Tint bis unter den Stats-Box und der Blur frostet sichtbar. */
+/* Grosser warmer Ambient-Halo. z-index 0 damit's hinter dem Stats-
+   Overlay (z-index 2) liegt und der backdrop-filter blur den Halo
+   frostet. */
 .halo {
   position: absolute;
   top: -200px;
@@ -100,17 +98,19 @@
     rgba(251, 191, 36, 0.2) 35%,
     transparent 70%
   );
+  z-index: 0;
 }
 
-/* Scharfer Sun-Disk — 1:1 aus Spec (top:10 right:10, 60×60 auf 400px-
-   Card) proportional auf 842px skaliert. Sitzt in der absoluten Ecke,
-   ueber dem Stats-Overlay, nicht ueberlappend. */
+/* Sun-Disk HINTER dem Overlay (z-index 1, Overlay ist 2). Der
+   backdrop-filter des Overlays blurred die Sonne dort wo sie sich
+   ueberlappen — die Sonne erscheint als diffuses warmes Glow durch's
+   milchige Glas. */
 .sun {
   position: absolute;
-  top: 21px;
-  right: 21px;
-  width: 126px;
-  height: 126px;
+  top: 40px;
+  right: 40px;
+  width: 300px;
+  height: 300px;
   border-radius: 50%;
   background: radial-gradient(
     circle at 38% 35%,
@@ -118,7 +118,8 @@
     #fbbf24 60%,
     #d97706 100%
   );
-  box-shadow: 0 0 84px rgba(251, 191, 36, 0.5);
+  box-shadow: 0 0 200px rgba(251, 191, 36, 0.6);
+  z-index: 1;
 }
 
 /* STATS OVERLAY — echtes Frosted-Glass via backdrop-filter.
@@ -130,15 +131,24 @@
    proportional gleich frosted aussieht wie im Spec-Mockup. */
 .statsOverlay {
   width: 86%;
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(80px) saturate(1.8);
-  -webkit-backdrop-filter: blur(80px) saturate(1.8);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 36px;
+  /* EXAKT die Spec-Werte aus callday-card-brand.html:
+       background: rgba(255,255,255,0.18)
+       backdrop-filter: blur(20px) saturate(1.4)
+       border: rgba(255,255,255,0.25)
+     Damit der backdrop-filter die Sonne dahinter wirklich frostet.
+     Vorher hatte ich Opazitaet hochgeschraubt was das Overlay nur
+     wie ein opakes weisses Rechteck aussehen liess. */
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  /* Spec: 18px Overlay-Border-Radius auf 280px-Overlay = 6.4% der
+     Overlay-Breite. Bei unserem ~724px-Overlay sind das ~46px. */
+  border-radius: 46px;
   padding: 50px 56px;
   box-shadow:
-    0 14px 40px rgba(0, 0, 0, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
   position: relative;
   z-index: 2;
 }
