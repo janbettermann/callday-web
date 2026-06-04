@@ -204,8 +204,26 @@ body::before {
 
 /* === HERO === */
 .hero {
-  padding: 90px 0 80px;
+  padding: 64px 0 44px;
   position: relative;
+}
+/* Compact, centered single-column hero (mobile-first — no device mockup) */
+.hero-inner {
+  max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.hero-inner .hero-sub {
+  margin-left: auto;
+  margin-right: auto;
+}
+.hero-inner .hero-cta-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .hero-grid {
   display: grid;
@@ -1453,4 +1471,146 @@ h2 .italic {
 }
 .delay-5 {
   animation-delay: 0.5s;
+}
+
+/* === THE FLOW — animated 3-step section === */
+.flow {
+  padding: 72px 0 100px;
+  position: relative;
+}
+.flow-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+  margin-top: 56px;
+}
+.flow-step {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Gray animation placeholder — portrait, clearly a stand-in.
+   Swapped for the real motion (Framer Motion / Lottie) later. */
+.flow-anim {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border-radius: 24px;
+  border: 1.5px dashed var(--line-strong);
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(26, 29, 38, 0.035) 0 14px,
+    rgba(26, 29, 38, 0.06) 14px 28px
+  );
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 28px 24px;
+  margin-bottom: 24px;
+}
+.flow-anim-badge {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: rgba(255, 255, 255, 0.72);
+  border: 0.5px solid var(--line-strong);
+  padding: 5px 12px;
+  border-radius: 100px;
+}
+.flow-anim-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-dim);
+  letter-spacing: -0.2px;
+}
+.flow-anim-desc {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  max-width: 230px;
+  line-height: 1.45;
+}
+.flow-num {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: var(--blue-deep);
+  margin-bottom: 8px;
+}
+.flow-step h4 {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.6px;
+  margin-bottom: 10px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.flow-step p {
+  font-size: 15px;
+  color: var(--ink-dim);
+  line-height: 1.6;
+}
+
+/* === STICKY MOBILE CTA (small screens only) === */
+.mobile-cta {
+  display: none;
+}
+
+@media (max-width: 960px) {
+  .flow-grid {
+    grid-template-columns: 1fr;
+    gap: 52px;
+  }
+  .flow-step {
+    align-items: center;
+    text-align: center;
+    max-width: 440px;
+    margin: 0 auto;
+  }
+  .flow-anim {
+    max-width: 360px;
+  }
+}
+
+@media (max-width: 700px) {
+  body {
+    /* room so the fixed CTA never covers the footer */
+    padding-bottom: 78px;
+  }
+  .mobile-cta {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: rgba(250, 249, 245, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 0.5px solid var(--line);
+  }
+  .mobile-cta a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
+    color: white;
+    padding: 14px;
+    border-radius: 100px;
+    font-weight: 600;
+    font-size: 15px;
+    text-decoration: none;
+    box-shadow: 0 8px 24px rgba(74, 122, 247, 0.36);
+  }
+  .flow {
+    padding: 56px 0 72px;
+  }
 }

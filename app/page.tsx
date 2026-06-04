@@ -1,7 +1,34 @@
 import Link from "next/link";
 import { BetaApplicationForm } from "./components/BetaApplicationForm";
 import { CalldayLogo } from "./components/CalldayLogo";
-import { CalldayAppMockup } from "./components/CalldayAppMockup";
+
+/**
+ * Gray stand-in for an upcoming workflow animation. It holds the slot's
+ * portrait dimensions and documents what the real animation will show, so
+ * the layout/scroll-rhythm is final before any motion work happens. Each
+ * one gets swapped for a real Framer Motion / Lottie animation later.
+ */
+function AnimationSlot({
+  badge,
+  label,
+  desc,
+}: {
+  badge: string;
+  label: string;
+  desc: string;
+}) {
+  return (
+    <div
+      className="flow-anim"
+      role="img"
+      aria-label={`${label} — animation placeholder`}
+    >
+      <span className="flow-anim-badge">{badge}</span>
+      <span className="flow-anim-label">{label}</span>
+      <span className="flow-anim-desc">{desc}</span>
+    </div>
+  );
+}
 
 export default function Home() {
   return (
@@ -23,119 +50,105 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* === HERO === */}
+      {/* === HERO — compact, mobile-first, no device mockup ===
+          The product visual now lives in the animated 3-step flow directly
+          below, so the hero stays small and gets the visitor scrolling fast. */}
       <section className="hero">
-        <div className="container hero-grid">
-          <div>
-            <div className="pill reveal">
-              <span className="pill-dot" />
-              Make today a Callday.
-            </div>
-
-            <h1 className="reveal delay-1">
-              Less avoiding.
-              <br />
-              More <span className="accent">dialing</span>.
-            </h1>
-
-            <p className="hero-sub reveal delay-2">
-              Cold callers don&apos;t lose to bad scripts. They lose to
-              procrastination. Callday builds calling momentum that survives
-              the gaps where focus usually dies — keeping you on the phone,
-              one tap at a time.
-            </p>
-
-            <div className="hero-cta-wrap reveal delay-3">
-              <a href="#beta" className="hero-cta">
-                Apply for a beta spot
-                <svg
-                  width={14}
-                  height={14}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1={5} y1={12} x2={19} y2={12} />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </a>
-              <p className="hero-cta-meta">
-                50 spots · Free for the full beta · iOS only · Launching 2026
-              </p>
-            </div>
+        <div className="container hero-inner">
+          <div className="pill reveal">
+            <span className="pill-dot" />
+            Make today a Callday.
           </div>
 
-          <div className="hero-mockup">
-            {/* Floating decoration cards */}
-            <div className="floating-card calls-card">
-              <div className="floating-icon green">
-                <svg
-                  width={18}
-                  height={18}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                </svg>
-              </div>
-              <div className="floating-card-text">
-                <strong>74 calls</strong>
-                <span>today</span>
-              </div>
+          <h1 className="reveal delay-1">
+            Less avoiding.
+            <br />
+            More <span className="accent">dialing</span>.
+          </h1>
+
+          <p className="hero-sub reveal delay-2">
+            Cold callers don&apos;t lose to bad scripts — they lose to
+            procrastination. Callday keeps you on the phone, one tap at a time.
+          </p>
+
+          <div className="hero-cta-wrap reveal delay-3">
+            <a href="#beta" className="hero-cta">
+              Apply for a beta spot
+              <svg
+                width={14}
+                height={14}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1={5} y1={12} x2={19} y2={12} />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </a>
+            <p className="hero-cta-meta">
+              50 spots · Free for the full beta · iOS only · Launching 2026
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* === THE FLOW — 3 animated steps (the centerpiece) ===
+          Each step carries one workflow animation (placeholder for now). */}
+      <section className="flow">
+        <div className="container">
+          <h2>
+            Three steps. <span className="italic">That&apos;s it.</span>
+          </h2>
+          <p className="section-sub">
+            Import, dial, done — the whole loop, top to bottom. Nothing to set
+            up.
+          </p>
+
+          <div className="flow-grid">
+            <div className="flow-step reveal">
+              <AnimationSlot
+                badge="Animation 01"
+                label="Drag &amp; drop import"
+                desc="An Excel file drops into the import zone and becomes a lead list that joins your stack of audiences."
+              />
+              <div className="flow-num">01</div>
+              <h4>Drop in your list</h4>
+              <p>
+                CSV or Excel in. Ready in under a minute — no setup, no system
+                to build.
+              </p>
             </div>
 
-            <div className="floating-card meetings-card">
-              <div className="floating-icon blue">
-                <svg
-                  width={18}
-                  height={18}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth={2.2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polygon points="23 7 16 12 23 17 23 7" />
-                  <rect x={1} y={5} width={15} height={14} rx={2} ry={2} />
-                </svg>
-              </div>
-              <div className="floating-card-text">
-                <strong>4 meetings booked</strong>
-                <span>today</span>
-              </div>
+            <div className="flow-step reveal delay-1">
+              <AnimationSlot
+                badge="Animation 02"
+                label="The calling loop"
+                desc="One lead card: tap to call, tap the outcome, the next card slides in — a counter ticks up on every dial."
+              />
+              <div className="flow-num">02</div>
+              <h4>Get into the rhythm</h4>
+              <p>
+                One lead per card. Tap to call, tap to log — the next lead&apos;s
+                already there. Every dial counts, even the no&apos;s.
+              </p>
             </div>
 
-            <div className="floating-card closes-card">
-              <div className="floating-icon gold">
-                <svg
-                  width={18}
-                  height={18}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1={12} y1={2} x2={12} y2={22} />
-                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                </svg>
-              </div>
-              <div className="floating-card-text">
-                <strong>1 close</strong>
-                <span>today</span>
-              </div>
+            <div className="flow-step reveal delay-2">
+              <AnimationSlot
+                badge="Animation 03"
+                label="Booked. Synced. Sent."
+                desc="A booked meeting cascades into a calendar event and a confirmation email — auto-fired before the next lead."
+              />
+              <div className="flow-num">03</div>
+              <h4>Booked in two taps</h4>
+              <p>
+                Meeting? Two taps, and the calendar event and confirmation email
+                fire before the next lead lands.
+              </p>
             </div>
-
-            <CalldayAppMockup />
           </div>
         </div>
       </section>
@@ -174,10 +187,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* === FEATURES === */}
+      {/* === DIFFERENTIATORS — slimmed from the old 4-card grid ===
+          The workflow mechanics now live in the animated flow above, so this
+          keeps only the two "why it sticks" points that aren't shown there. */}
       <section className="features">
         <div className="container">
-          <div className="section-label">// HOW IT WORKS</div>
           <h2>
             We take the <span className="italic">friction</span> out of cold
             calling.
@@ -205,8 +219,8 @@ export default function Home() {
               </div>
               <h3>One card at a time.</h3>
               <p>
-                No menus. No clutter. One card, one decision: call or skip.
-                Each tap pulls you deeper into the rhythm — never out of it.
+                No menus. No clutter. One card, one decision: call or skip. Each
+                tap pulls you deeper into the rhythm — never out of it.
               </p>
             </div>
 
@@ -228,8 +242,8 @@ export default function Home() {
               <h3>Rewards the dial, not the close.</h3>
               <p>
                 Every call counts — not just the yeses. Voicemails count.
-                &ldquo;Not interested&rdquo; counts. Your brain learns to
-                crave the dial, not the outcome.
+                &ldquo;Not interested&rdquo; counts. Your brain learns to crave
+                the dial, not the outcome.
               </p>
             </div>
 
@@ -287,49 +301,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* === HOW IT WORKS === */}
-      <section className="how-section">
-        <div className="container">
-          <div className="section-label">// THE FLOW</div>
-          <h2>
-            Three steps. <span className="italic">That&apos;s it.</span>
-          </h2>
-
-          <div className="steps">
-            <div className="step">
-              <div className="step-num">01</div>
-              <h4>Import your leads</h4>
-              <p>
-                Drop in a CSV or Excel sheet — or paste them in by hand. Your
-                list is ready in under a minute. No setup. No system to build.
-              </p>
-            </div>
-            <div className="step">
-              <div className="step-num">02</div>
-              <h4>Open the app and start your Callday</h4>
-              <p>
-                First lead is up. Tap to call. Tap to skip. Tap to log the
-                outcome. The next lead is already there before you can
-                second-guess yourself.
-              </p>
-            </div>
-            <div className="step">
-              <div className="step-num">03</div>
-              <h4>Close the loop in two taps</h4>
-              <p>
-                Booked a meeting? Two taps and it&apos;s in your calendar with
-                the confirmation email already sent. The next lead is up before
-                procrastination can land.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* === ROADMAP === */}
       <section className="roadmap">
         <div className="container">
-          <div className="section-label">// ROADMAP</div>
           <h2>
             What ships in the beta.{" "}
             <span className="italic">What&apos;s coming next.</span>
@@ -377,15 +351,14 @@ export default function Home() {
       {/* === BIG CTA === */}
       <section className="big-cta" id="beta">
         <div className="container big-cta-inner">
-          <div className="section-label">// BETA APPLICATION</div>
           <h2>
             50 spots. <span className="italic">First come, best fit.</span>
           </h2>
           <p className="section-sub">
-            Callday&apos;s closed beta opens with 50 testers. Free for the
-            full beta period. Founder pricing locked in for life when we
-            launch publicly. We&apos;re prioritizing solo founders, freelancers,
-            and small agencies who actually cold-call to grow.
+            Callday&apos;s closed beta opens with 50 testers. Free for the full
+            beta period. Founder pricing locked in for life when we launch
+            publicly. We&apos;re prioritizing solo founders, freelancers, and
+            small agencies who actually cold-call to grow.
           </p>
 
           <BetaApplicationForm />
@@ -407,6 +380,11 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* === STICKY MOBILE CTA — only shows on small screens === */}
+      <div className="mobile-cta">
+        <a href="#beta">Apply for a beta spot</a>
+      </div>
     </>
   );
 }
