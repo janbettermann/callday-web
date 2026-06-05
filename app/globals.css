@@ -1,12 +1,13 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 /*
  * Callday landing-page theme.
  *
  * The marketing site is light-only — we don't honour prefers-color-scheme
  * because the brand identity lives on the warm off-white background with
- * sun-glow accents and inverting it would break the gradient washes,
- * sun-orbs, and SVG mockups.
+ * sun-glow accents, and inverting it would break the gradient washes and
+ * sun-orbs. The one intentionally dark section is the hero — a "spotlight"
+ * band styled in-place under `.hero` (see below).
  *
  * Brand: blue (#4a7af7 → #3564e0) for the calling/clarity side,
  *        sun (#fbbf24 / #fde68a) for the "Make today a Callday" warmth.
@@ -38,6 +39,16 @@
 
   --line: rgba(26, 29, 38, 0.06);
   --line-strong: rgba(26, 29, 38, 0.12);
+
+  /* Sticky-nav height — single source of truth.
+     Used by .site-nav (visual height), the dark .hero (negative
+     margin-top + padding-top so the hero extends edge-to-edge behind
+     the transparent nav) and SiteNav.tsx (IntersectionObserver
+     rootMargin). Change this value and the whole stack stays in sync.
+     --hero-buffer adds slack on top so font/line-height variations
+     can't expose a strip of body cream above the dark hero. */
+  --nav-h: 72px;
+  --hero-buffer: 48px;
 }
 
 @theme inline {
@@ -153,16 +164,42 @@ body::before {
   z-index: 1;
 }
 
-/* === NAV === */
+/* === NAV ===
+   Notion-style adaptive nav. While the dark `.hero` is in view the
+   nav wears a dark frosted glass that blends into the hero band;
+   once the user has scrolled past the hero it switches to a light
+   frosted glass over the warm cream page. The state is driven by
+   `data-scrolled` on `.site-nav`, toggled in components/SiteNav.tsx
+   via a scroll listener on the hero.
+
+   The top padding includes `env(safe-area-inset-top)` so the nav's
+   background extends up under the iOS status bar / notch — combined
+   with `viewport-fit: cover` in layout.tsx, this kills the
+   transparent strip we used to have above the logo on mobile. */
 .site-nav {
-  position: sticky;
+  /* `fixed` instead of `sticky` because iOS Safari's sticky has a
+     long-standing bug where the element doesn't extend its
+     background up under the status bar / notch even with
+     viewport-fit=cover + padding-top: env(safe-area-inset-top).
+     With `fixed`, the box sits at the actual top of the screen and
+     its background reaches edge-to-edge as expected. */
+  position: fixed;
   top: 0;
-  padding: 18px 0;
-  background: rgba(250, 249, 245, 0.72);
-  backdrop-filter: blur(20px);
+  left: 0;
+  right: 0;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 0 18px;
+  background: rgba(13, 15, 20, 0.55);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 0.5px solid var(--line);
+  backdrop-filter: blur(20px);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.06);
   z-index: 50;
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease;
+}
+.site-nav[data-scrolled="true"] {
+  background: rgba(250, 249, 245, 0.72);
+  border-bottom-color: var(--line);
 }
 .nav-inner {
   display: flex;
@@ -179,6 +216,15 @@ body::before {
   gap: 10px;
   color: var(--ink);
 }
+/* In the nav, the logo flips to white over the dark hero and back to
+   ink once we've scrolled into the light page. */
+.site-nav .logo {
+  color: white;
+  transition: color 0.3s ease;
+}
+.site-nav[data-scrolled="true"] .logo {
+  color: var(--ink);
+}
 .logo-mark {
   width: 32px;
   height: 32px;
@@ -186,26 +232,73 @@ body::before {
   border-radius: 9px;
   box-shadow: 0 4px 14px rgba(74, 122, 247, 0.32);
 }
+/* CTA: white pill on the dark hero, dark pill once scrolled. */
 .nav-cta {
-  background: var(--ink);
-  color: white;
+  background: white;
+  color: var(--ink);
   padding: 9px 18px;
   border-radius: 100px;
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
-  transition: all 0.2s;
-  border: 0.5px solid var(--ink);
+  border: 0.5px solid white;
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.15s ease;
 }
 .nav-cta:hover {
-  background: rgba(26, 29, 38, 0.85);
+  background: rgba(255, 255, 255, 0.88);
   transform: translateY(-1px);
 }
+.site-nav[data-scrolled="true"] .nav-cta {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+}
+.site-nav[data-scrolled="true"] .nav-cta:hover {
+  background: rgba(26, 29, 38, 0.85);
+}
 
-/* === HERO === */
+/* === HERO — dark "spotlight" band (Notion-style) ===
+   The hero is the ONE intentionally dark section on an otherwise
+   light-only site (see top-of-file note). A deep navy spotlight makes
+   the white headline and the blue glow pop; the page then returns to
+   warm daylight at .flow. Everything here is scoped under .hero so it
+   never bleeds into the rest of the page. The opaque navy base also
+   covers the fixed .bg-orb sun-glows within the hero's bounds.
+
+   The negative margin-top pulls the hero up behind the sticky nav so
+   the dark background extends edge-to-edge. Padding-top pushes the
+   actual hero content back down below the nav. Both values are
+   derived from `--nav-h` + `--hero-buffer` so the layout stays in
+   sync when the nav height changes. */
 .hero {
-  padding: 64px 0 44px;
   position: relative;
+  overflow: hidden;
+  /* With the nav now `position: fixed`, the hero naturally starts
+     at body-top (y=0), so its dark background fills behind the
+     translucent nav without any negative-margin trick. Padding-top
+     just pushes the hero content below the nav (nav height +
+     safe-area-inset-top + 64 px breathing room). */
+  padding: calc(
+      var(--nav-h) + var(--hero-buffer) + env(safe-area-inset-top, 0px) + 64px
+    )
+    0 44px;
+  background:
+    radial-gradient(
+      120% 92% at 50% -18%,
+      rgba(74, 122, 247, 0.32) 0%,
+      rgba(74, 122, 247, 0.07) 38%,
+      transparent 64%
+    ),
+    radial-gradient(
+      92% 70% at 50% 120%,
+      rgba(251, 191, 36, 0.12) 0%,
+      transparent 55%
+    ),
+    linear-gradient(180deg, #0d0f14 0%, #111319 55%, #14171e 100%);
 }
 /* Compact, centered single-column hero (mobile-first — no device mockup) */
 .hero-inner {
@@ -223,12 +316,6 @@ body::before {
 .hero-inner .hero-cta-wrap {
   display: flex;
   flex-direction: column;
-  align-items: center;
-}
-.hero-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 80px;
   align-items: center;
 }
 
@@ -332,385 +419,44 @@ h1 .accent {
   color: var(--ink-faint);
 }
 
-/* === HERO MOCKUP === */
-.hero-mockup {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 640px;
-}
-.hero-mockup .device-mockup {
-  position: relative;
-  z-index: 2;
-  width: 380px;
-  max-width: 100%;
-  height: auto;
-  filter: drop-shadow(0 30px 60px rgba(26, 29, 38, 0.18))
-    drop-shadow(0 8px 16px rgba(26, 29, 38, 0.08));
-  border-radius: 40px;
-}
-
-/* === APP MOCKUP (Home-Screen of the Callday iOS app) ===
-   Rendered inline so the hero is always brand-consistent and pixel-sharp.
-   All selectors are scoped under .app-mockup to keep them isolated from
-   the marketing styles (we'd otherwise collide on .section-label etc.). */
-.app-mockup {
-  position: relative;
-  z-index: 2;
-  width: 380px;
-  max-width: 100%;
-  aspect-ratio: 390 / 844;
-  background: linear-gradient(180deg, #f8f9fb 0%, #f1f3f7 40%, #eef0f5 100%);
-  border-radius: 40px;
-  overflow: hidden;
-  color: #1a1d26;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow:
-    0 30px 60px rgba(26, 29, 38, 0.18),
-    0 8px 16px rgba(26, 29, 38, 0.08);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
-  font-size: 14.4px;
-}
-.app-mockup * {
-  box-sizing: border-box;
-}
-.app-mockup .status-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 28px 0;
-  font-size: 15px;
-  font-weight: 600;
-}
-.app-mockup .status-icons {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-.app-mockup .signal {
-  display: flex;
-  gap: 1px;
-  align-items: flex-end;
-}
-.app-mockup .signal-bar {
-  width: 3px;
-  background: #1a1d26;
-  border-radius: 1px;
-}
-.app-mockup .battery {
-  width: 25px;
-  height: 12px;
-  border: 1.5px solid rgba(0, 0, 0, 0.25);
-  border-radius: 3px;
-  padding: 1px;
-}
-.app-mockup .battery-fill {
-  width: 60%;
-  height: 100%;
-  background: #1a1d26;
-  border-radius: 1.5px;
-}
-.app-mockup .am-header {
-  padding: 20px 24px 16px;
-}
-.app-mockup .header-date {
-  font-size: 13px;
-  color: rgba(0, 0, 0, 0.35);
-  margin-bottom: 4px;
-  letter-spacing: 0.2px;
-}
-.app-mockup .header-greeting {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-}
-.app-mockup .am-cta {
-  margin: 0 20px 20px;
-  padding: 16px 20px;
-  background: linear-gradient(135deg, #4a7af7 0%, #5b8af5 50%, #6b94f8 100%);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow:
-    0 4px 20px rgba(74, 122, 247, 0.25),
-    0 1px 3px rgba(74, 122, 247, 0.15);
-  color: white;
-}
-.app-mockup .cta-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.app-mockup .cta-icon {
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.app-mockup .cta-title {
-  font-size: 16px;
-  font-weight: 600;
-}
-.app-mockup .cta-sub {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.75);
-  margin-top: 2px;
-}
-.app-mockup .cta-count {
-  width: 32px;
-  height: 32px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
-}
-.app-mockup .am-section-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.app-mockup .am-section-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.35);
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  font-family: inherit;
-}
-.app-mockup .section-badge {
-  background: #ef4444;
-  color: white;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-.app-mockup .leads {
-  padding: 0 24px;
-}
-.app-mockup .lead-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.app-mockup .lead-card {
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 14px;
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-.app-mockup .lead-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.app-mockup .lead-time {
-  text-align: center;
-  min-width: 48px;
-}
-.app-mockup .lead-time-val {
-  font-size: 16px;
-  font-weight: 600;
-}
-.app-mockup .lead-time-ago {
-  font-size: 10px;
-  color: rgba(0, 0, 0, 0.3);
-  margin-top: 1px;
-}
-.app-mockup .lead-name {
-  font-size: 15px;
-  font-weight: 500;
-}
-.app-mockup .lead-meta {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.4);
-  margin-top: 3px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.app-mockup .am-status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 3px;
-  display: inline-block;
-}
-.app-mockup .lead-call-btn {
-  width: 38px;
-  height: 38px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.02);
-}
-.app-mockup .upcoming {
-  padding: 16px 24px 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.app-mockup .upcoming-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.app-mockup .upcoming-badge {
-  background: rgba(0, 0, 0, 0.06);
-  color: rgba(0, 0, 0, 0.35);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-.app-mockup .upcoming-plus {
-  color: rgba(0, 0, 0, 0.2);
-  font-size: 20px;
-}
-.app-mockup .sun-arc {
+/* Dark-hero text & decoration overrides — scoped under `.hero`.
+   The base `.hero` rule (background, spacing, layout) lives at the top
+   of this file with the rest of the hero structure. */
+.hero::after {
+  content: "";
   position: absolute;
-  bottom: 60px;
-  left: 0;
-  right: 0;
-  height: 230px;
+  inset: 0;
   pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    58% 42% at 50% 6%,
+    rgba(122, 162, 255, 0.2),
+    transparent 70%
+  );
 }
-.app-mockup .bottom-nav {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 72px;
-  background: linear-gradient(180deg, rgba(248, 249, 251, 0.88) 0%, rgba(248, 249, 251, 0.98) 40%);
-  backdrop-filter: blur(20px);
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding-bottom: 8px;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+.hero .container {
+  z-index: 1;
 }
-.app-mockup .nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
+.hero .pill {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(122, 162, 255, 0.28);
+  color: #c9d6ff;
+  box-shadow: 0 2px 18px rgba(74, 122, 247, 0.16);
 }
-.app-mockup .nav-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+.hero h1 {
+  color: #f7f8fb;
 }
-.app-mockup .nav-active {
-  color: #4a7af7;
+.hero h1 .accent {
+  background: linear-gradient(135deg, #8fb0ff 0%, #5b8af5 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
-.app-mockup .nav-inactive {
-  color: rgba(0, 0, 0, 0.3);
+.hero .hero-sub {
+  color: rgba(233, 236, 244, 0.64);
 }
-.app-mockup .home-indicator {
-  position: absolute;
-  bottom: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 134px;
-  height: 5px;
-  background: rgba(0, 0, 0, 0.15);
-  border-radius: 3px;
-}
-.app-mockup .phone-icon {
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-/* Floating decoration card — light-elevated */
-.floating-card {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(12px);
-  border: 0.5px solid var(--line-strong);
-  border-radius: 16px;
-  padding: 12px 16px;
-  box-shadow:
-    0 18px 40px rgba(26, 29, 38, 0.1),
-    0 3px 8px rgba(26, 29, 38, 0.05);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 3;
-}
-.floating-card.calls-card {
-  top: 60px;
-  left: 0;
-  animation: float 5s ease-in-out infinite;
-}
-.floating-card.meetings-card {
-  top: 280px;
-  right: 0;
-  animation: float 5s ease-in-out infinite;
-  animation-delay: -1.6s;
-}
-.floating-card.closes-card {
-  bottom: 240px;
-  left: 0;
-  animation: float 5s ease-in-out infinite;
-  animation-delay: -3.2s;
-}
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-12px);
-  }
-}
-.floating-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.floating-icon.green {
-  background: linear-gradient(135deg, #34d399, var(--green));
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.32);
-}
-.floating-icon.blue {
-  background: linear-gradient(135deg, var(--blue), var(--blue-deep));
-  box-shadow: 0 4px 14px rgba(74, 122, 247, 0.32);
-}
-.floating-icon.gold {
-  background: linear-gradient(135deg, var(--sun-light), var(--sun));
-  box-shadow: 0 4px 14px rgba(251, 191, 36, 0.32);
-}
-.floating-card-text strong {
-  display: block;
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 1px;
-}
-.floating-card-text span {
-  color: var(--ink-faint);
-  font-size: 11px;
+.hero .hero-cta-meta {
+  color: rgba(233, 236, 244, 0.44);
 }
 
 /* === STATS BLOCK === */
@@ -795,6 +541,8 @@ h2 .italic {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 600;
+  /* room for the italic slant so background-clip doesn't cut the last glyph */
+  padding-right: 0.08em;
 }
 .section-sub {
   font-size: 18px;
@@ -1247,7 +995,10 @@ h2 .italic {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 100px 32px 140px;
+  /* Top padding accounts for the fixed `.site-nav` (nominal
+     height + iOS safe-area inset) plus breathing room. */
+  padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 76px) 32px
+    140px;
   min-height: calc(100vh - 240px);
 }
 .confirm-inner {
@@ -1340,7 +1091,10 @@ h2 .italic {
   z-index: 1;
   max-width: 760px;
   margin: 0 auto;
-  padding: 80px 32px 120px;
+  /* Top padding accounts for the fixed `.site-nav` (nominal
+     height + iOS safe-area inset) plus breathing room. */
+  padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 56px) 32px
+    120px;
 }
 .legal-meta {
   font-family: var(--font-mono), monospace;
@@ -1352,33 +1106,9 @@ h2 .italic {
 
 /* === RESPONSIVE === */
 @media (max-width: 960px) {
-  .hero-grid {
-    grid-template-columns: 1fr;
-    gap: 60px;
-  }
-  .hero-grid > * {
-    min-width: 0;
-  }
   .hero-sub,
   .hero h1 {
     overflow-wrap: break-word;
-  }
-  .hero-mockup {
-    min-height: 540px;
-    max-width: 380px;
-    margin: 0 auto;
-  }
-  .floating-card.calls-card {
-    left: -20px;
-    top: 150px;
-  }
-  .floating-card.meetings-card {
-    right: -20px;
-    top: 270px;
-  }
-  .floating-card.closes-card {
-    left: -20px;
-    bottom: 160px;
   }
   .feature-grid {
     grid-template-columns: 1fr;
@@ -1410,29 +1140,10 @@ h2 .italic {
   .container {
     padding: 0 30px;
   }
-  .hero-mockup {
-    max-width: 300px;
-  }
-  .mockup-placeholder {
-    width: 100%;
-    height: 600px;
-  }
-  .hero {
-    padding: 50px 0 50px;
-  }
   .features,
   .how-section,
   .big-cta {
     padding: 80px 0;
-  }
-  .floating-card {
-    padding: 10px 14px;
-  }
-  .floating-card-text strong {
-    font-size: 12px;
-  }
-  .floating-card-text span {
-    font-size: 10px;
   }
   .legal-page {
     padding: 56px 20px 80px;
@@ -1473,28 +1184,140 @@ h2 .italic {
   animation-delay: 0.5s;
 }
 
-/* === THE FLOW — animated 3-step section === */
+/* === THE FLOW — 3-step section ===
+   FlowTabs.tsx renders a `.flow-layout` with two siblings — a
+   `.flow-tablist` (3 tab buttons) and a `.flow-stage` (3 animation
+   cards). Each tab and its matching anim share a `data-step` index.
+
+   Desktop (>960 px): 2-column CSS Grid. The tablist sits in column
+   1 as a packed flex column (tabs hug their natural heights — no
+   forced row distribution). The stage in column 2 is a portrait box
+   (aspect-ratio 4/5) with all 3 anims absolutely positioned on top
+   of each other; only the active one is opacity:1. Auto-rotates
+   every 6 s; first user click stops the rotation for the session.
+
+   Mobile (≤960 px): the `.flow-tablist` and `.flow-stage` wrappers
+   drop to `display: contents`, so their children become direct flex
+   children of `.flow-layout`. `order` keyed on `data-step` then
+   interleaves them — tab1, anim1, tab2, anim2, tab3, anim3 — and
+   every anim is fully visible. Tabs lose their interactive look and
+   become simple headers above each animation card. */
+
 .flow {
   padding: 72px 0 100px;
   position: relative;
 }
-.flow-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 40px;
-  margin-top: 56px;
+.flow h2 {
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
 }
-.flow-step {
-  display: flex;
-  flex-direction: column;
+.flow .section-sub {
+  display: none;
 }
 
-/* Gray animation placeholder — portrait, clearly a stand-in.
-   Swapped for the real motion (Framer Motion / Lottie) later. */
-.flow-anim {
+.flow-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1fr);
+  column-gap: 64px;
+  /* The tablist (short) is centered against the taller stage column. */
+  align-items: center;
+  margin-top: 56px;
+}
+
+/* --- Left column: tab list, packed flex column --- */
+.flow-tablist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.flow-tab-item {
+  width: 100%;
+}
+.flow-tab {
+  display: grid;
+  grid-template-rows: auto 0fr;
+  row-gap: 0;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-left: 2px solid transparent;
+  padding: 18px 20px;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--ink);
+  transition:
+    grid-template-rows 0.35s ease,
+    row-gap 0.35s ease,
+    border-color 0.3s ease,
+    background-color 0.2s ease;
+}
+.flow-tab:hover {
+  background-color: rgba(26, 29, 38, 0.03);
+}
+.flow-tab-item[data-active] .flow-tab {
+  grid-template-rows: auto 1fr;
+  row-gap: 10px;
+  border-left-color: var(--blue);
+}
+.flow-tab-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+.flow-tab-num {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-weight: 600;
+  font-size: 26px;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+  color: var(--ink-mute);
+  min-width: 42px;
+  transition: color 0.3s ease;
+}
+.flow-tab-item[data-active] .flow-tab-num {
+  color: var(--blue-deep);
+}
+.flow-tab-title {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.6px;
+  line-height: 1.2;
+  color: var(--ink-dim);
+  transition: color 0.3s ease;
+}
+.flow-tab-item[data-active] .flow-tab-title {
+  color: var(--ink);
+}
+.flow-tab-copy {
+  overflow: hidden;
+  font-size: 15px;
+  color: var(--ink-dim);
+  line-height: 1.55;
+  padding-left: 36px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.flow-tab-item[data-active] .flow-tab-copy {
+  opacity: 1;
+}
+
+/* --- Right column: animation stage, anims stacked via absolute --- */
+.flow-stage {
   position: relative;
   width: 100%;
+  max-width: 520px;
   aspect-ratio: 4 / 5;
+  margin: 0 auto;
+}
+.flow-anim {
+  position: absolute;
+  inset: 0;
   border-radius: 24px;
   border: 1.5px dashed var(--line-strong);
   background: repeating-linear-gradient(
@@ -1509,7 +1332,13 @@ h2 .italic {
   gap: 10px;
   text-align: center;
   padding: 28px 24px;
-  margin-bottom: 24px;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+.flow-anim[data-active] {
+  opacity: 1;
+  pointer-events: auto;
 }
 .flow-anim-badge {
   font-family: var(--font-mono), monospace;
@@ -1534,82 +1363,97 @@ h2 .italic {
   max-width: 230px;
   line-height: 1.45;
 }
-.flow-num {
-  font-family: var(--font-geist-sans), sans-serif;
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 1px;
-  color: var(--blue-deep);
-  margin-bottom: 8px;
-}
-.flow-step h4 {
-  font-family: var(--font-geist-sans), sans-serif;
-  font-size: 21px;
-  font-weight: 600;
-  letter-spacing: -0.6px;
-  margin-bottom: 10px;
-  line-height: 1.2;
-  color: var(--ink);
-}
-.flow-step p {
-  font-size: 15px;
-  color: var(--ink-dim);
-  line-height: 1.6;
-}
-
-/* === STICKY MOBILE CTA (small screens only) === */
-.mobile-cta {
-  display: none;
-}
 
 @media (max-width: 960px) {
-  .flow-grid {
-    grid-template-columns: 1fr;
-    gap: 52px;
-  }
-  .flow-step {
+  /* Drop the grid; both wrappers become transparent so their children
+     become direct flex children of .flow-layout. `order` keyed on
+     data-step then interleaves them: tab1, anim1, tab2, anim2, … */
+  .flow-layout {
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    text-align: center;
-    max-width: 440px;
-    margin: 0 auto;
+    gap: 32px;
+    margin-top: 56px;
   }
+  .flow-tablist,
+  .flow-stage {
+    display: contents;
+  }
+  .flow-tab-item {
+    max-width: 440px;
+    width: 100%;
+  }
+  .flow-tab-item[data-step="0"] { order: 1; }
+  .flow-anim[data-step="0"]     { order: 2; }
+  .flow-tab-item[data-step="1"] { order: 3; }
+  .flow-anim[data-step="1"]     { order: 4; }
+  .flow-tab-item[data-step="2"] { order: 5; }
+  .flow-anim[data-step="2"]     { order: 6; }
+
+  /* Tab becomes a non-interactive header. */
+  .flow-tab {
+    grid-template-rows: auto auto;
+    row-gap: 10px;
+    background: none;
+    cursor: default;
+    pointer-events: none;
+    border-left: 0;
+    padding: 0;
+    text-align: center;
+  }
+  .flow-tab-head {
+    justify-content: center;
+  }
+  .flow-tab-copy {
+    opacity: 1;
+    padding-left: 0;
+  }
+  .flow-tab-num,
+  .flow-tab-title {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    line-height: 1.25;
+  }
+  .flow-tab-num {
+    min-width: 30px;
+    color: var(--blue-deep);
+  }
+  .flow-tab-title {
+    color: var(--ink);
+  }
+  /* Animation card goes back into normal flow with its own size,
+     every one visible. */
   .flow-anim {
+    position: static;
+    width: 100%;
     max-width: 360px;
+    aspect-ratio: 4 / 5;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  /* H2 + section-sub revert to mobile defaults. */
+  .flow h2 {
+    text-align: left;
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .flow .section-sub {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-tab,
+  .flow-tab-num,
+  .flow-tab-title,
+  .flow-tab-copy,
+  .flow-anim {
+    transition: none;
   }
 }
 
 @media (max-width: 700px) {
-  body {
-    /* room so the fixed CTA never covers the footer */
-    padding-bottom: 78px;
-  }
-  .mobile-cta {
-    display: block;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 60;
-    padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
-    background: rgba(250, 249, 245, 0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-top: 0.5px solid var(--line);
-  }
-  .mobile-cta a {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
-    color: white;
-    padding: 14px;
-    border-radius: 100px;
-    font-weight: 600;
-    font-size: 15px;
-    text-decoration: none;
-    box-shadow: 0 8px 24px rgba(74, 122, 247, 0.36);
-  }
   .flow {
     padding: 56px 0 72px;
   }

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -22,6 +22,15 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
 });
+
+// `viewport-fit: cover` is what makes `env(safe-area-inset-top)` non-zero on
+// iOS — needed so the sticky nav's background can extend up under the
+// status bar / notch instead of leaving a transparent strip there.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://callday.app"),

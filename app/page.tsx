@@ -1,34 +1,8 @@
 import Link from "next/link";
 import { BetaApplicationForm } from "./components/BetaApplicationForm";
 import { CalldayLogo } from "./components/CalldayLogo";
-
-/**
- * Gray stand-in for an upcoming workflow animation. It holds the slot's
- * portrait dimensions and documents what the real animation will show, so
- * the layout/scroll-rhythm is final before any motion work happens. Each
- * one gets swapped for a real Framer Motion / Lottie animation later.
- */
-function AnimationSlot({
-  badge,
-  label,
-  desc,
-}: {
-  badge: string;
-  label: string;
-  desc: string;
-}) {
-  return (
-    <div
-      className="flow-anim"
-      role="img"
-      aria-label={`${label} — animation placeholder`}
-    >
-      <span className="flow-anim-badge">{badge}</span>
-      <span className="flow-anim-label">{label}</span>
-      <span className="flow-anim-desc">{desc}</span>
-    </div>
-  );
-}
+import { FlowTabs } from "./components/FlowTabs";
+import { SiteNav } from "./components/SiteNav";
 
 export default function Home() {
   return (
@@ -38,17 +12,7 @@ export default function Home() {
       <div className="bg-orb bg-orb-3" />
 
       {/* === NAV === */}
-      <nav className="site-nav">
-        <div className="container nav-inner">
-          <div className="logo">
-            <CalldayLogo size={32} />
-            Callday
-          </div>
-          <a href="#beta" className="nav-cta">
-            Apply for beta
-          </a>
-        </div>
-      </nav>
+      <SiteNav />
 
       {/* === HERO — compact, mobile-first, no device mockup ===
           The product visual now lives in the animated 3-step flow directly
@@ -100,56 +64,15 @@ export default function Home() {
       <section className="flow">
         <div className="container">
           <h2>
-            Three steps. <span className="italic">That&apos;s it.</span>
+            We take the <span className="italic">friction</span> out of cold
+            calling.
           </h2>
           <p className="section-sub">
             Import, dial, done — the whole loop, top to bottom. Nothing to set
             up.
           </p>
 
-          <div className="flow-grid">
-            <div className="flow-step reveal">
-              <AnimationSlot
-                badge="Animation 01"
-                label="Drag &amp; drop import"
-                desc="An Excel file drops into the import zone and becomes a lead list that joins your stack of audiences."
-              />
-              <div className="flow-num">01</div>
-              <h4>Drop in your list</h4>
-              <p>
-                CSV or Excel in. Ready in under a minute — no setup, no system
-                to build.
-              </p>
-            </div>
-
-            <div className="flow-step reveal delay-1">
-              <AnimationSlot
-                badge="Animation 02"
-                label="The calling loop"
-                desc="One lead card: tap to call, tap the outcome, the next card slides in — a counter ticks up on every dial."
-              />
-              <div className="flow-num">02</div>
-              <h4>Get into the rhythm</h4>
-              <p>
-                One lead per card. Tap to call, tap to log — the next lead&apos;s
-                already there. Every dial counts, even the no&apos;s.
-              </p>
-            </div>
-
-            <div className="flow-step reveal delay-2">
-              <AnimationSlot
-                badge="Animation 03"
-                label="Booked. Synced. Sent."
-                desc="A booked meeting cascades into a calendar event and a confirmation email — auto-fired before the next lead."
-              />
-              <div className="flow-num">03</div>
-              <h4>Booked in two taps</h4>
-              <p>
-                Meeting? Two taps, and the calendar event and confirmation email
-                fire before the next lead lands.
-              </p>
-            </div>
-          </div>
+          <FlowTabs />
         </div>
       </section>
 
@@ -193,8 +116,7 @@ export default function Home() {
       <section className="features">
         <div className="container">
           <h2>
-            We take the <span className="italic">friction</span> out of cold
-            calling.
+            Built to fight the <span className="italic">flinch</span>.
           </h2>
           <p className="section-sub">
             Four mechanics. Each one closes a gap where focus usually dies.
@@ -380,11 +302,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-
-      {/* === STICKY MOBILE CTA — only shows on small screens === */}
-      <div className="mobile-cta">
-        <a href="#beta">Apply for a beta spot</a>
-      </div>
     </>
   );
 }
