@@ -28,19 +28,42 @@ export function SiteNav() {
 
   useEffect(() => {
     const hero = document.querySelector(".hero");
+    const nav = document.querySelector(".site-nav") as HTMLElement | null;
+    const themeMeta = document.querySelector<HTMLMetaElement>(
+      'meta[name="theme-color"]'
+    );
+
+    // Helper: flip data-scrolled on the nav AND theme-color on the
+    // meta tag atomically, then update React state. Doing this from
+    // inside the scroll event handler (instead of via a
+    // useEffect-after-commit) means the browser paints both DOM
+    // changes in the same frame — important on iOS Safari, where the
+    // status-bar overlay otherwise visibly lags the nav bg change by
+    // a frame because React commits the attribute first and the
+    // useEffect updates theme-color one tick later.
+    const apply = (newScrolled: boolean) => {
+      if (newScrolled) {
+        nav?.setAttribute("data-scrolled", "true");
+      } else {
+        nav?.removeAttribute("data-scrolled");
+      }
+      themeMeta?.setAttribute(
+        "content",
+        newScrolled ? "#faf9f5" : "#0d0f14"
+      );
+      setScrolled(newScrolled);
+    };
+
     if (!hero) {
-      setScrolled(true);
+      apply(true);
       return;
     }
     // Read the nav's actual rendered height each scroll frame — the
     // CSS custom property --nav-h doesn't include the iOS
     // safe-area-inset-top, but the element's bounding rect does.
-    const nav = document.querySelector(".site-nav") as HTMLElement | null;
     const onScroll = () => {
       const navH = nav?.getBoundingClientRect().height ?? 72;
-      // setState bails when the value is unchanged, so this is cheap
-      // even at 60 fps.
-      setScrolled(hero.getBoundingClientRect().bottom <= navH);
+      apply(hero.getBoundingClientRect().bottom <= navH);
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
