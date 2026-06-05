@@ -21,7 +21,18 @@ const nextConfig: NextConfig = {
   // family; lhr.life is the localtunnel.me family. Add the wildcard
   // patterns so a regenerated tunnel URL keeps working without a
   // config change.
-  allowedDevOrigins: ["*.trycloudflare.com", "*.lhr.life"],
+  //
+  // Local-network IPs are also listed so a phone on the same Wi-Fi
+  // can hit the dev server directly (e.g. http://192.168.2.124:3000)
+  // without Next 16's stricter cross-origin guard blocking the HMR
+  // websocket — which on the phone manifests as the page rendering
+  // statically but never hydrating (no auto-rotate, dead buttons).
+  allowedDevOrigins: [
+    "*.trycloudflare.com",
+    "*.lhr.life",
+    "192.168.*.*",
+    "10.*.*.*",
+  ],
 };
 
 export default withMDX(nextConfig);
