@@ -35,7 +35,7 @@ export default function Home() {
 
           <div className="hero-cta-wrap reveal delay-3">
             <a href="#beta" className="hero-cta">
-              Apply for a beta spot
+              Get early access
               <svg
                 width={14}
                 height={14}
@@ -50,6 +50,9 @@ export default function Home() {
                 <polyline points="12 5 19 12 12 19" />
               </svg>
             </a>
+            <p className="hero-cta-meta">
+              Free beta access. 50% off for life.
+            </p>
           </div>
         </div>
       </section>
@@ -215,18 +218,40 @@ export default function Home() {
         </div>
       </section>
 
-      {/* === BIG CTA === */}
+      {/* === BIG CTA — early-access signup. One form, two outcomes (closed
+          beta or launch list) decided server-side; UI presents both as
+          equal wins so nobody feels like a runner-up. === */}
       <section className="big-cta" id="beta">
         <div className="container big-cta-inner">
           <h2>
-            50 spots. <span className="italic">First come, best fit.</span>
+            Get <span className="italic">early access.</span>
           </h2>
           <p className="section-sub">
-            Callday&apos;s closed beta opens with 50 testers. Free for the full
-            beta period. Founder pricing locked in for life when we launch
-            publicly. We&apos;re prioritizing solo founders, freelancers, and
-            small agencies who actually cold-call to grow.
+            Sign up once. 50 of you get into the closed beta this round.
+            Everyone else gets founder pricing locked in for life at launch
+            — plus a free month on us.
           </p>
+
+          <div className="outcome-cards">
+            <div className="outcome-card">
+              <div className="outcome-card-label">Closed beta</div>
+              <h3 className="outcome-card-title">50 spots</h3>
+              <ul className="outcome-card-list">
+                <li>Test the app today</li>
+                <li>Help shape the product</li>
+                <li>Founder pricing for life</li>
+              </ul>
+            </div>
+            <div className="outcome-card">
+              <div className="outcome-card-label">Everyone else</div>
+              <h3 className="outcome-card-title">Locked in for launch</h3>
+              <ul className="outcome-card-list">
+                <li>First access at launch</li>
+                <li>1 month free</li>
+                <li>Founder pricing for life</li>
+              </ul>
+            </div>
+          </div>
 
           <BetaApplicationForm />
         </div>

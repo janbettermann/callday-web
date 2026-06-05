@@ -82,7 +82,7 @@ export function SiteNav() {
           Callday
         </div>
         <a href="#beta" className="nav-cta">
-          Apply for beta
+          Get early access
         </a>
       </div>
     </nav>

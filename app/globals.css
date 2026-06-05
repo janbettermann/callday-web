@@ -423,6 +423,12 @@ h1 .accent {
 .hero .hero-sub {
   color: rgba(233, 236, 244, 0.64);
 }
+.hero-cta-meta {
+  margin: 18px 0 0;
+  font-size: 13px;
+  color: rgba(233, 236, 244, 0.5);
+  letter-spacing: 0.1px;
+}
 
 /* === STATS BLOCK === */
 /* All post-hero sections force their own cream bg + a stacking context
@@ -661,6 +667,67 @@ h2 .italic {
 }
 
 /* === BETA APPLICATION FORM === */
+/* === OUTCOME CARDS — sit between the section sub and the form, show
+   the two possible outcomes (closed beta / launch list) side-by-side
+   without hierarchy. Both styled as equal wins so the visitor never
+   feels like the launch-list outcome is a consolation prize. === */
+.outcome-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  max-width: 600px;
+  margin: 0 auto 40px;
+  text-align: left;
+}
+.outcome-card {
+  padding: 24px 26px;
+  border-radius: 18px;
+  background: rgba(74, 122, 247, 0.05);
+  border: 1px solid rgba(74, 122, 247, 0.18);
+}
+.outcome-card-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  color: var(--blue);
+}
+.outcome-card-title {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  line-height: 1.1;
+  color: var(--ink);
+  margin: 0 0 16px;
+}
+.outcome-card-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.outcome-card-list li {
+  font-size: 14px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+  padding-left: 18px;
+  position: relative;
+}
+.outcome-card-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blue);
+}
+
 .beta-form {
   max-width: 540px;
   margin: 0 auto;
@@ -689,6 +756,12 @@ h2 .italic {
 .beta-field-optional {
   color: var(--ink-faint);
   font-weight: 400;
+}
+.beta-field-hint {
+  font-size: 12px;
+  color: var(--ink-faint);
+  padding-left: 2px;
+  line-height: 1.4;
 }
 .beta-field input,
 .beta-field select {
@@ -796,6 +869,13 @@ h2 .italic {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
+}
+.beta-submit-meta {
+  text-align: center;
+  font-size: 14px;
+  color: #6b7280;
+  font-style: italic;
+  margin: 4px 0 0;
 }
 
 .beta-success {
@@ -991,6 +1071,9 @@ h2 .italic {
     padding: 56px 20px 80px;
   }
   .beta-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .outcome-cards {
     grid-template-columns: 1fr;
   }
 }

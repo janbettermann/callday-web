@@ -6,33 +6,51 @@ type WeeklyCalls = "" | "under_10" | "10_30" | "30_100" | "over_100";
 type CurrentTool = "" | "crm" | "spreadsheet" | "nothing" | "other";
 
 /**
- * Beta application form for the first 50 testers.
- * UI-only — submit handler logs locally and shows the success state.
- * Backend hookup (Supabase `beta_applications` table) is a separate iteration.
+ * Success outcome decided by the backend after submit. The form itself
+ * never asks the user to choose — both outcomes are equal wins:
+ *   - "beta"     → one of the 50 closed-beta slots this round
+ *   - "waitlist" → launch list with founder pricing + 1 month free
+ *
+ * MVP: backend isn't wired yet, so we always render "waitlist" after
+ * submit and Jan picks the 50 beta testers manually from the DB. When
+ * the selection logic ships, the API response will set this state.
+ */
+type SuccessVariant = "beta" | "waitlist";
+
+/**
+ * Early-access signup form. UI-only — submit handler logs locally and
+ * shows the success state. Backend hookup (Supabase `beta_applications`
+ * table + selection logic) is a separate iteration.
  */
 export function BetaApplicationForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [website, setWebsite] = useState("");
   const [weeklyCalls, setWeeklyCalls] = useState<WeeklyCalls>("");
   const [selling, setSelling] = useState("");
   const [currentTool, setCurrentTool] = useState<CurrentTool>("");
   const [hasIPhone, setHasIPhone] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [variant, setVariant] = useState<SuccessVariant>("waitlist");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!name || !email || !weeklyCalls || !currentTool || !hasIPhone) return;
 
     if (typeof window !== "undefined") {
-      console.log("[beta] application:", {
+      console.log("[early-access] signup:", {
         name,
         email,
+        website,
         weeklyCalls,
         selling,
         currentTool,
         hasIPhone,
       });
     }
+    // MVP: always waitlist. Replace with backend response once the
+    // selection endpoint exists.
+    setVariant("waitlist");
     setSubmitted(true);
   }
 
@@ -53,12 +71,24 @@ export function BetaApplicationForm() {
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </div>
-        <h3>Application received.</h3>
-        <p>
-          We&apos;re reviewing applications as they come in. If you&apos;re
-          one of the first 50, you&apos;ll get a TestFlight invite by email
-          within 48 hours.
-        </p>
+        {variant === "beta" ? (
+          <>
+            <h3>You&apos;re in.</h3>
+            <p>
+              We&apos;ll DM you on Instagram within 24h to verify, then send
+              your TestFlight invite. Welcome to the founding 50.
+            </p>
+          </>
+        ) : (
+          <>
+            <h3>You&apos;re on the launch list.</h3>
+            <p>
+              You&apos;ll be among the first to get access when we open
+              publicly — with founder pricing locked in for life and a free
+              month on us. We&apos;ll be in touch.
+            </p>
+          </>
+        )}
       </div>
     );
   }
@@ -88,6 +118,22 @@ export function BetaApplicationForm() {
           />
         </label>
       </div>
+
+      <label className="beta-field">
+        <span className="beta-field-label">
+          Your business website{" "}
+          <span className="beta-field-optional">(optional)</span>
+        </span>
+        <input
+          type="text"
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+          placeholder="yourbusiness.com"
+        />
+        <span className="beta-field-hint">
+          Helps us verify you&apos;re an active business owner.
+        </span>
+      </label>
 
       <label className="beta-field">
         <span className="beta-field-label">Cold calls you make per week</span>
@@ -159,8 +205,9 @@ export function BetaApplicationForm() {
           !name || !email || !weeklyCalls || !currentTool || !hasIPhone
         }
       >
-        Apply for a beta spot
+        Reserve my spot
       </button>
+      <p className="beta-submit-meta">Either way, you&apos;re in.</p>
     </form>
   );
 }
