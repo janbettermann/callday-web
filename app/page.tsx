@@ -7,9 +7,7 @@ import { SiteNav } from "./components/SiteNav";
 export default function Home() {
   return (
     <>
-      <div className="bg-orb bg-orb-1" />
       <div className="bg-orb bg-orb-2" />
-      <div className="bg-orb bg-orb-3" />
 
       {/* === NAV === */}
       <SiteNav />
@@ -31,7 +29,7 @@ export default function Home() {
           </h1>
 
           <p className="hero-sub reveal delay-2">
-            Cold callers don&apos;t lose to bad scripts — they lose to
+            Cold callers don&apos;t lose to bad scripts. They lose to
             procrastination. Callday keeps you on the phone, one tap at a time.
           </p>
 
@@ -52,9 +50,6 @@ export default function Home() {
                 <polyline points="12 5 19 12 12 19" />
               </svg>
             </a>
-            <p className="hero-cta-meta">
-              50 spots · Free for the full beta · iOS only · Launching 2026
-            </p>
           </div>
         </div>
       </section>
@@ -63,15 +58,12 @@ export default function Home() {
           Each step carries one workflow animation (placeholder for now). */}
       <section className="flow">
         <div className="container">
-          <h2>
-            We take the <span className="italic">friction</span> out of cold
-            calling.
-          </h2>
-          <p className="section-sub">
-            Import, dial, done — the whole loop, top to bottom. Nothing to set
-            up.
-          </p>
-
+          <header className="flow-section-head">
+            <h2>
+              Take the <span className="italic">friction</span>
+              <br /> out of cold calling.
+            </h2>
+          </header>
           <FlowTabs />
         </div>
       </section>
@@ -142,7 +134,7 @@ export default function Home() {
               <h3>One card at a time.</h3>
               <p>
                 No menus. No clutter. One card, one decision: call or skip. Each
-                tap pulls you deeper into the rhythm — never out of it.
+                tap pulls you deeper into the rhythm, never out of it.
               </p>
             </div>
 
@@ -163,7 +155,7 @@ export default function Home() {
               </div>
               <h3>Rewards the dial, not the close.</h3>
               <p>
-                Every call counts — not just the yeses. Voicemails count.
+                Every call counts, not just the yeses. Voicemails count.
                 &ldquo;Not interested&rdquo; counts. Your brain learns to crave
                 the dial, not the outcome.
               </p>
@@ -191,7 +183,7 @@ export default function Home() {
               <h3>Booked. Synced. Sent.</h3>
               <p>
                 One tap to log a meeting. Calendar event, confirmation email,
-                Zoom link — all sent before you reach the next lead. No app
+                Zoom link, all sent before you reach the next lead. No app
                 switching. No detour.
               </p>
             </div>
@@ -217,53 +209,6 @@ export default function Home() {
                 Every call, note, and outcome lives inside the app. No Notion
                 pipeline to maintain. No spreadsheet to update. The system is
                 the calling.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* === ROADMAP === */}
-      <section className="roadmap">
-        <div className="container">
-          <h2>
-            What ships in the beta.{" "}
-            <span className="italic">What&apos;s coming next.</span>
-          </h2>
-          <p className="section-sub">
-            Honest about what&apos;s live and what isn&apos;t. The
-            friction-free core ships now. AI call briefings land later this
-            year — beta testers get them free.
-          </p>
-
-          <div className="roadmap-grid">
-            <div className="roadmap-card live">
-              <div className="roadmap-status">
-                <span className="status-dot live" />
-                Shipping now · Beta
-              </div>
-              <h3>The calling loop</h3>
-              <ul>
-                <li>Tap-based card flow, one lead per card</li>
-                <li>2-tap call outcome logging</li>
-                <li>Calendar, email + Zoom auto-sync</li>
-                <li>Lead tracking inside the app</li>
-                <li>Reminder system for callbacks + follow-ups</li>
-              </ul>
-            </div>
-            <div className="roadmap-card coming">
-              <div className="roadmap-status">
-                <span className="status-dot coming" />
-                Coming · Later 2026
-              </div>
-              <h3>AI call briefings</h3>
-              <ul>
-                <li>Auto-analysis of every lead&apos;s business</li>
-                <li>Three concrete talking points before you dial</li>
-              </ul>
-              <p className="roadmap-note">
-                Beta testers keep their founder pricing when AI ships — at no
-                extra cost.
               </p>
             </div>
           </div>

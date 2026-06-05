@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { CalldayLogo } from "../../components/CalldayLogo";
 
 export const metadata: Metadata = {
-  title: "E-Mail bestätigt — Callday",
+  title: "E-Mail bestätigt bei Callday",
   description:
     "Deine E-Mail-Adresse ist verifiziert. Zurück zur Callday-App auf dem iPhone.",
   robots: { index: false, follow: false },
@@ -60,7 +60,7 @@ export default function AuthConfirmedPage() {
 
           <p className="confirm-body">
             Deine E-Mail-Adresse ist jetzt verifiziert. Geh zurück zur
-            Callday-App auf deinem iPhone und logge dich ein — dort
+            Callday-App auf deinem iPhone und logge dich ein. Dort
             geht&apos;s los.
           </p>
 

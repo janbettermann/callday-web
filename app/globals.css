@@ -66,11 +66,21 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Always dark — the notch / status-bar zone needs a static color
+     that doesn't transition, since the on-scroll dark→cream toggle
+     was causing the safe-area zone to render as transparent for at
+     least one device (user-confirmed: diagnostic bands worked, body
+     bg toggle did not). */
+  background: #0d0f14;
 }
 
 body {
   font-family: var(--font-inter), sans-serif;
-  background: var(--bg);
+  /* Always dark. Matches the html bg and the static theme-color so
+     the notch / status-bar zone is consistently dark regardless of
+     scroll position. Post-hero sections set their own cream bg
+     below so the page content beneath the hero is still readable. */
+  background: #0d0f14;
   color: var(--ink);
   overflow-x: hidden;
   line-height: 1.5;
@@ -88,10 +98,11 @@ body::before {
   mix-blend-mode: multiply;
 }
 
-/* === SUN-GLOW ORBS BACKGROUND ===
-   Replaces the dark-theme purple/blue glow with soft dawn-light washes:
-   a large warm sun on the top-left, a cool blue sky-glow on the right,
-   and a faint second sun bottom-center. */
+/* === SKY-GLOW ORB BACKGROUND ===
+   A single soft blue sky-glow on the right of the page. The two warm
+   sun-glows that used to flank it were removed — the warmth carried
+   the page toward yellow, and the dawn-light direction wasn't what
+   the brand wanted anymore. */
 .bg-orb {
   position: fixed;
   border-radius: 50%;
@@ -99,19 +110,6 @@ body::before {
   pointer-events: none;
   z-index: 0;
   animation: drift 22s ease-in-out infinite;
-}
-.bg-orb-1 {
-  width: 640px;
-  height: 640px;
-  background: radial-gradient(
-    circle,
-    rgba(253, 230, 138, 0.7) 0%,
-    rgba(251, 191, 36, 0.35) 40%,
-    transparent 70%
-  );
-  top: -12%;
-  left: -10%;
-  opacity: 0.9;
 }
 .bg-orb-2 {
   width: 540px;
@@ -126,20 +124,6 @@ body::before {
   right: -12%;
   opacity: 0.7;
   animation-delay: -8s;
-}
-.bg-orb-3 {
-  width: 420px;
-  height: 420px;
-  background: radial-gradient(
-    circle,
-    rgba(251, 191, 36, 0.32) 0%,
-    rgba(251, 191, 36, 0.1) 45%,
-    transparent 75%
-  );
-  bottom: -12%;
-  left: 28%;
-  opacity: 0.55;
-  animation-delay: -14s;
 }
 
 @keyframes drift {
@@ -177,28 +161,23 @@ body::before {
    with `viewport-fit: cover` in layout.tsx, this kills the
    transparent strip we used to have above the logo on mobile. */
 .site-nav {
-  /* `fixed` instead of `sticky` because iOS Safari's sticky has a
-     long-standing bug where the element doesn't extend its
-     background up under the status bar / notch even with
-     viewport-fit=cover + padding-top: env(safe-area-inset-top).
-     With `fixed`, the box sits at the actual top of the screen and
-     its background reaches edge-to-edge as expected. */
+  /* Solid bg so the nav-content zone shows the same color as the
+     notch zone above it. z-index is bumped to 9999 (way above the
+     body::before grain overlay at z:100) because at z:50 the nav
+     visually rendered as "transparent" on the user's iPhone — the
+     diagnostic confirmed a z:9999 fixed band paints reliably while a
+     z:50 nav did not. */
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   padding: calc(18px + env(safe-area-inset-top, 0px)) 0 18px;
-  background: rgba(13, 15, 20, 0.55);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
+  background: #0d0f14;
   border-bottom: 0.5px solid rgba(255, 255, 255, 0.06);
-  z-index: 50;
-  transition:
-    background 0.3s ease,
-    border-color 0.3s ease;
+  z-index: 9999;
 }
 .site-nav[data-scrolled="true"] {
-  background: rgba(250, 249, 245, 0.72);
+  background: #faf9f5;
   border-bottom-color: var(--line);
 }
 .nav-inner {
@@ -220,7 +199,6 @@ body::before {
    ink once we've scrolled into the light page. */
 .site-nav .logo {
   color: white;
-  transition: color 0.3s ease;
 }
 .site-nav[data-scrolled="true"] .logo {
   color: var(--ink);
@@ -242,11 +220,7 @@ body::before {
   font-weight: 500;
   text-decoration: none;
   border: 0.5px solid white;
-  transition:
-    background 0.25s ease,
-    color 0.25s ease,
-    border-color 0.25s ease,
-    transform 0.15s ease;
+  transition: transform 0.15s ease;
 }
 .nav-cta:hover {
   background: rgba(255, 255, 255, 0.88);
@@ -285,7 +259,7 @@ body::before {
   padding: calc(
       var(--nav-h) + var(--hero-buffer) + env(safe-area-inset-top, 0px) + 64px
     )
-    0 44px;
+    0 96px;
   background:
     radial-gradient(
       120% 92% at 50% -18%,
@@ -373,7 +347,7 @@ h1 .accent {
 }
 
 .hero-sub {
-  font-size: 19px;
+  font-size: 16px;
   color: var(--ink-dim);
   line-height: 1.55;
   max-width: 480px;
@@ -413,12 +387,6 @@ h1 .accent {
 .hero-cta:active {
   transform: translateY(0);
 }
-.hero-cta-meta {
-  margin-top: 18px;
-  font-size: 12px;
-  color: var(--ink-faint);
-}
-
 /* Dark-hero text & decoration overrides — scoped under `.hero`.
    The base `.hero` rule (background, spacing, layout) lives at the top
    of this file with the rest of the hero structure. */
@@ -455,25 +423,53 @@ h1 .accent {
 .hero .hero-sub {
   color: rgba(233, 236, 244, 0.64);
 }
-.hero .hero-cta-meta {
-  color: rgba(233, 236, 244, 0.44);
-}
 
 /* === STATS BLOCK === */
-.social-proof {
-  padding: 80px 0 40px;
+/* All post-hero sections force their own cream bg + a stacking context
+   above .bg-orb. Without this they'd inherit the (dynamic) body bg
+   and turn dark while the user is still scrolling through the page. */
+.social-proof,
+.flow,
+.features,
+.big-cta,
+.site-footer {
+  position: relative;
+  z-index: 1;
+  background-color: var(--bg);
 }
 
+.social-proof {
+  padding: 80px 0 60px;
+  /* Lift above the next section so the dark slab's shadow paints over
+     .features' background instead of getting clipped under it. */
+  z-index: 2;
+}
+
+/* Dark slab that echoes the hero — punctuates the page rhythm so the
+   stacked white sections (flow card → features) don't blur together,
+   and lets the brand-blue units pop. Subtle blue glow at top mirrors
+   the hero's radial highlight. */
 .stats-block {
-  background: var(--bg-page);
-  border: 0.5px solid var(--line);
+  position: relative;
   border-radius: 24px;
   padding: 56px 48px;
-  box-shadow: 0 8px 24px rgba(26, 29, 38, 0.04);
+  background:
+    radial-gradient(
+      100% 100% at 50% 0%,
+      rgba(74, 122, 247, 0.16) 0%,
+      transparent 60%
+    ),
+    linear-gradient(180deg, #0d0f14 0%, #111319 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow:
+    0 18px 48px rgba(8, 10, 20, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 .stats-row {
   display: flex;
   gap: 0;
+  position: relative;
+  z-index: 1;
 }
 .stat-cell {
   flex: 1;
@@ -482,21 +478,21 @@ h1 .accent {
 }
 .stat-divider {
   width: 0.5px;
-  background: var(--line);
+  background: rgba(255, 255, 255, 0.08);
   align-self: stretch;
 }
 .stat-num {
   font-family: var(--font-geist-sans), sans-serif;
   font-size: 56px;
   font-weight: 700;
-  color: var(--ink);
+  color: #f7f8fb;
   letter-spacing: -2.5px;
   line-height: 1;
   margin-bottom: 18px;
 }
 .stat-num .unit {
   font-size: 56px;
-  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
+  background: linear-gradient(135deg, #8fb0ff 0%, #5b8af5 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -506,7 +502,7 @@ h1 .accent {
 }
 .stat-label {
   font-size: 15px;
-  color: var(--ink-dim);
+  color: rgba(233, 236, 244, 0.6);
   line-height: 1.5;
   max-width: 240px;
   margin: 0 auto;
@@ -649,23 +645,6 @@ h2 .italic {
   text-align: center;
   position: relative;
 }
-.big-cta::before {
-  content: "";
-  position: absolute;
-  top: -40px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 80%;
-  height: 640px;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(251, 191, 36, 0.16) 0%,
-    rgba(74, 122, 247, 0.06) 35%,
-    transparent 65%
-  );
-  z-index: 0;
-  pointer-events: none;
-}
 .big-cta-inner {
   position: relative;
   z-index: 1;
@@ -679,140 +658,6 @@ h2 .italic {
   margin-left: auto;
   margin-right: auto;
   margin-bottom: 48px;
-}
-
-/* === ROADMAP === */
-.roadmap {
-  padding: 120px 0;
-  border-top: 0.5px solid var(--line);
-}
-.roadmap-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-  margin-top: 8px;
-}
-.roadmap-card {
-  background: var(--bg-page);
-  border: 0.5px solid var(--line);
-  border-radius: 24px;
-  padding: 36px 32px;
-  position: relative;
-  box-shadow: 0 4px 16px rgba(26, 29, 38, 0.04);
-}
-.roadmap-card.live {
-  background: linear-gradient(
-    135deg,
-    rgba(16, 185, 129, 0.08) 0%,
-    rgba(16, 185, 129, 0.02) 100%
-  );
-  border-color: rgba(16, 185, 129, 0.2);
-}
-.roadmap-card.coming {
-  background: linear-gradient(
-    135deg,
-    rgba(251, 191, 36, 0.1) 0%,
-    rgba(74, 122, 247, 0.04) 100%
-  );
-  border-color: rgba(251, 191, 36, 0.25);
-}
-.roadmap-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  padding: 6px 12px;
-  border-radius: 100px;
-  margin-bottom: 20px;
-  text-transform: uppercase;
-}
-.roadmap-card.live .roadmap-status {
-  background: rgba(16, 185, 129, 0.12);
-  color: var(--green-deep);
-  border: 0.5px solid rgba(16, 185, 129, 0.28);
-}
-.roadmap-card.coming .roadmap-status {
-  background: rgba(251, 191, 36, 0.14);
-  color: var(--sun-deep);
-  border: 0.5px solid rgba(251, 191, 36, 0.32);
-}
-.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.status-dot.live {
-  background: var(--green);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.22);
-  animation: pulse-status 2s ease-in-out infinite;
-}
-.status-dot.coming {
-  background: var(--sun);
-  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.22);
-}
-@keyframes pulse-status {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
-}
-.roadmap-card h3 {
-  font-family: var(--font-geist-sans), sans-serif;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.7px;
-  margin-bottom: 18px;
-  line-height: 1.2;
-  color: var(--ink);
-}
-.roadmap-card ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.roadmap-card li {
-  font-size: 15px;
-  color: var(--ink-dim);
-  line-height: 1.55;
-  padding: 8px 0 8px 24px;
-  position: relative;
-}
-.roadmap-card.live li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 14px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgba(16, 185, 129, 0.2);
-  border: 1.5px solid var(--green);
-}
-.roadmap-card.coming li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 14px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 1.5px dashed var(--sun-deep);
-}
-.roadmap-note {
-  margin-top: 20px;
-  padding: 14px 16px;
-  background: rgba(251, 191, 36, 0.1);
-  border-left: 2px solid var(--sun);
-  border-radius: 4px 12px 12px 4px;
-  font-size: 13px;
-  color: var(--ink);
-  line-height: 1.5;
 }
 
 /* === BETA APPLICATION FORM === */
@@ -1131,9 +976,6 @@ h2 .italic {
   .stat-cell {
     padding: 24px 0;
   }
-  .roadmap-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 600px) {
@@ -1150,9 +992,6 @@ h2 .italic {
   }
   .beta-form-grid {
     grid-template-columns: 1fr;
-  }
-  .roadmap-card {
-    padding: 28px 24px;
   }
 }
 
@@ -1185,84 +1024,93 @@ h2 .italic {
 }
 
 /* === THE FLOW — 3-step section ===
-   FlowTabs.tsx renders a `.flow-layout` with two siblings — a
-   `.flow-tablist` (3 tab buttons) and a `.flow-stage` (3 animation
-   cards). Each tab and its matching anim share a `data-step` index.
+   FlowTabs.tsx renders two completely separate DOM trees, one per
+   breakpoint, and CSS toggles which one is laid out:
 
-   Desktop (>960 px): 2-column CSS Grid. The tablist sits in column
-   1 as a packed flex column (tabs hug their natural heights — no
-   forced row distribution). The stage in column 2 is a portrait box
-   (aspect-ratio 4/5) with all 3 anims absolutely positioned on top
-   of each other; only the active one is opacity:1. Auto-rotates
-   every 6 s; first user click stops the rotation for the session.
+   Desktop (>960 px) — `.flow-layout` only:
+     2-column CSS Grid with a `.flow-tablist` on the left (3 packed
+     tab buttons) and a `.flow-stage` on the right — a portrait box
+     (aspect-ratio 4/5) holding 3 dashed-stripe `.flow-anim`
+     placeholders, absolutely stacked, only the active one opacity:1.
+     Auto-rotates every 6 s; first user click stops the rotation.
 
-   Mobile (≤960 px): the `.flow-tablist` and `.flow-stage` wrappers
-   drop to `display: contents`, so their children become direct flex
-   children of `.flow-layout`. `order` keyed on `data-step` then
-   interleaves them — tab1, anim1, tab2, anim2, tab3, anim3 — and
-   every anim is fully visible. Tabs lose their interactive look and
-   become simple headers above each animation card. */
+   Mobile (≤960 px) — `.flow-mobile` only:
+     A single carousel — `.flow-cards` is a grid-stack of 3
+     `.flow-card`s (white card with cream `.flow-card-media` on top +
+     white `.flow-card-text` below). All cards share one grid cell;
+     only the active one is opacity:1. Arrow buttons inside the media
+     area switch the active card; they clamp at the edges. Auto-rotate
+     still wraps until the first user tap. */
 
 .flow {
   padding: 72px 0 100px;
   position: relative;
 }
-.flow h2 {
-  text-align: center;
-  margin-left: auto;
-  margin-right: auto;
+
+/* Section heading sits in its own row above the card, aligned to the
+   container's left edge. */
+.flow-section-head {
+  max-width: 720px;
+  margin: 0 0 56px;
 }
-.flow .section-sub {
-  display: none;
+.flow-section-head h2 {
+  margin: 0 0 16px;
+}
+.flow-section-head .section-sub {
+  margin: 0;
 }
 
+/* Desktop card wrapping the 3 steps + animation stage. Anchors the
+   section as one element instead of two floating columns. */
 .flow-layout {
   display: grid;
   grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1fr);
   column-gap: 64px;
-  /* The tablist (short) is centered against the taller stage column. */
   align-items: center;
-  margin-top: 56px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+  padding: 48px 56px;
 }
 
-/* --- Left column: tab list, packed flex column --- */
+/* --- Left column: tab list, all 3 steps fully visible. Active gets
+   a blue left-border + subtle blue bg tint to indicate which animation
+   the right column is currently showing. --- */
 .flow-tablist {
   list-style: none;
   padding: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 .flow-tab-item {
   width: 100%;
 }
 .flow-tab {
-  display: grid;
-  grid-template-rows: auto 0fr;
-  row-gap: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   width: 100%;
   text-align: left;
   background: transparent;
   border: 0;
-  border-left: 2px solid transparent;
-  padding: 18px 20px;
+  border-left: 3px solid transparent;
+  padding: 16px 20px;
   font-family: inherit;
   cursor: pointer;
   color: var(--ink);
   transition:
-    grid-template-rows 0.35s ease,
-    row-gap 0.35s ease,
-    border-color 0.3s ease,
+    border-color 0.25s ease,
     background-color 0.2s ease;
 }
 .flow-tab:hover {
-  background-color: rgba(26, 29, 38, 0.03);
+  background-color: rgba(74, 122, 247, 0.03);
 }
 .flow-tab-item[data-active] .flow-tab {
-  grid-template-rows: auto 1fr;
-  row-gap: 10px;
   border-left-color: var(--blue);
+  background-color: rgba(74, 122, 247, 0.05);
 }
 .flow-tab-head {
   display: flex;
@@ -1272,59 +1120,44 @@ h2 .italic {
 .flow-tab-num {
   font-family: var(--font-geist-sans), sans-serif;
   font-weight: 600;
-  font-size: 26px;
-  letter-spacing: -0.4px;
-  line-height: 1.2;
-  color: var(--ink-mute);
-  min-width: 42px;
-  transition: color 0.3s ease;
-}
-.flow-tab-item[data-active] .flow-tab-num {
-  color: var(--blue-deep);
+  font-size: 32px;
+  letter-spacing: -0.6px;
+  line-height: 1.1;
+  color: var(--blue);
+  min-width: 48px;
 }
 .flow-tab-title {
   font-family: var(--font-geist-sans), sans-serif;
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 600;
-  letter-spacing: -0.6px;
+  letter-spacing: -0.4px;
   line-height: 1.2;
-  color: var(--ink-dim);
-  transition: color 0.3s ease;
-}
-.flow-tab-item[data-active] .flow-tab-title {
   color: var(--ink);
 }
 .flow-tab-copy {
-  overflow: hidden;
   font-size: 15px;
   color: var(--ink-dim);
-  line-height: 1.55;
-  padding-left: 36px;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-}
-.flow-tab-item[data-active] .flow-tab-copy {
-  opacity: 1;
+  line-height: 1.5;
+  padding-left: 62px;
+  margin: 0;
 }
 
-/* --- Right column: animation stage, anims stacked via absolute --- */
+/* --- Right column: cream sub-card holding the animation placeholders.
+   Sits inside the outer white card; later this is where the iPhone
+   mockup / animation lives. --- */
 .flow-stage {
   position: relative;
   width: 100%;
   max-width: 520px;
   aspect-ratio: 4 / 5;
   margin: 0 auto;
+  background: #faf6ed;
+  border-radius: 24px;
+  overflow: hidden;
 }
 .flow-anim {
   position: absolute;
   inset: 0;
-  border-radius: 24px;
-  border: 1.5px dashed var(--line-strong);
-  background: repeating-linear-gradient(
-    -45deg,
-    rgba(26, 29, 38, 0.035) 0 14px,
-    rgba(26, 29, 38, 0.06) 14px 28px
-  );
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1364,82 +1197,187 @@ h2 .italic {
   line-height: 1.45;
 }
 
+/* === Mobile carousel — separate DOM tree, hidden on desktop. === */
+.flow-mobile {
+  display: none;
+}
+
 @media (max-width: 960px) {
-  /* Drop the grid; both wrappers become transparent so their children
-     become direct flex children of .flow-layout. `order` keyed on
-     data-step then interleaves them: tab1, anim1, tab2, anim2, … */
+  /* Swap which tree is laid out — desktop grid out, mobile carousel in. */
   .flow-layout {
+    display: none;
+  }
+  .flow-mobile {
+    display: block;
+    position: relative;
+    width: 100%;
+    max-width: 440px;
+    margin: 40px auto 0;
+  }
+
+  /* Grid-stack: all 3 cards share one cell; tallest sets the height,
+     only the active one is opacity:1. Since every card has the same
+     structure (media + text) heights match — no jump on switch. */
+  .flow-cards {
+    position: relative;
+    display: grid;
+    grid-template-areas: "stack";
+    width: 100%;
+  }
+  .flow-card {
+    grid-area: stack;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 32px;
-    margin-top: 56px;
-  }
-  .flow-tablist,
-  .flow-stage {
-    display: contents;
-  }
-  .flow-tab-item {
-    max-width: 440px;
-    width: 100%;
-  }
-  .flow-tab-item[data-step="0"] { order: 1; }
-  .flow-anim[data-step="0"]     { order: 2; }
-  .flow-tab-item[data-step="1"] { order: 3; }
-  .flow-anim[data-step="1"]     { order: 4; }
-  .flow-tab-item[data-step="2"] { order: 5; }
-  .flow-anim[data-step="2"]     { order: 6; }
-
-  /* Tab becomes a non-interactive header. */
-  .flow-tab {
-    grid-template-rows: auto auto;
-    row-gap: 10px;
-    background: none;
-    cursor: default;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: 0 2px 8px rgba(8, 10, 20, 0.04);
+    overflow: hidden;
+    opacity: 0;
     pointer-events: none;
-    border-left: 0;
-    padding: 0;
-    text-align: center;
+    transition: opacity 0.3s ease;
   }
-  .flow-tab-head {
-    justify-content: center;
-  }
-  .flow-tab-copy {
-    opacity: 1;
-    padding-left: 0;
-  }
-  .flow-tab-num,
-  .flow-tab-title {
-    font-size: 18px;
-    font-weight: 600;
-    letter-spacing: -0.3px;
-    line-height: 1.25;
-  }
-  .flow-tab-num {
-    min-width: 30px;
-    color: var(--blue-deep);
-  }
-  .flow-tab-title {
-    color: var(--ink);
-  }
-  /* Animation card goes back into normal flow with its own size,
-     every one visible. */
-  .flow-anim {
-    position: static;
-    width: 100%;
-    max-width: 360px;
-    aspect-ratio: 4 / 5;
+  .flow-card[data-active] {
     opacity: 1;
     pointer-events: auto;
   }
-  /* H2 + section-sub revert to mobile defaults. */
-  .flow h2 {
+
+  /* Media area: cream background, centered placeholder content,
+     badge pinned to the top, prev/next arrows pinned to the sides. */
+  .flow-card-media {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 56px 28px 32px;
+    min-height: 280px;
+    background: #faf6ed;
+    border-bottom: 1px solid var(--line);
+    text-align: center;
+  }
+  .flow-card-badge {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono), monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    background: rgba(255, 255, 255, 0.72);
+    border: 0.5px solid var(--line-strong);
+    padding: 4px 10px;
+    border-radius: 100px;
+  }
+  .flow-card-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-dim);
+    letter-spacing: -0.2px;
+  }
+  .flow-card-desc {
+    font-size: 12px;
+    color: var(--ink-faint);
+    max-width: 220px;
+    line-height: 1.45;
+  }
+
+  /* Arrow buttons — siblings of .flow-cards inside the relative
+     .flow-mobile, so they're never under an opacity:0 stacked card.
+     Vertically centered over the media area (media min-height is
+     280px → arrows sit at ~140px from the top of .flow-mobile).
+
+     iOS touch-routing notes:
+       - `touch-action: manipulation` disables the 300ms double-tap
+         delay that otherwise swallows quick taps on small targets.
+       - The SVG child gets `pointer-events: none` so a tap on the
+         chevron line bubbles straight to the button — without this,
+         iOS sometimes treats the SVG as the tap target and the click
+         handler on the button doesn't fire.
+       - 44×44 hits Apple HIG minimum tap-target size. */
+  .flow-card-nav {
+    position: absolute;
+    top: 140px;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    z-index: 3;
+    transition: background 0.2s ease, opacity 0.2s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .flow-card-nav svg {
+    pointer-events: none;
+  }
+  .flow-card-nav:active:not(:disabled) {
+    background: #fff;
+    transform: translateY(-50%) scale(0.94);
+  }
+  .flow-card-nav:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .flow-card-nav-prev { left: 10px; }
+  .flow-card-nav-next { right: 10px; }
+
+  /* Text area: title + copy + pagination dots, all left-aligned. */
+  .flow-card-text {
+    padding: 22px 22px 20px;
+    background: #fff;
+  }
+  .flow-card-title {
+    font-family: var(--font-geist-sans), sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    line-height: 1.2;
+    color: var(--ink);
+    margin: 0 0 8px;
+  }
+  .flow-card-copy {
+    font-size: 15px;
+    color: var(--ink-dim);
+    line-height: 1.5;
+    margin: 0 0 14px;
+  }
+  .flow-card-dots {
+    display: flex;
+    gap: 7px;
+  }
+  .flow-card-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ink-mute);
+    transition: background 0.2s ease;
+  }
+  .flow-card-dot[data-active] {
+    background: var(--blue);
+  }
+
+  /* Heading aligns left of the carousel on mobile (matches body copy). */
+  .flow-section-head {
+    max-width: none;
+    margin: 0 0 40px;
     text-align: left;
+  }
+  .flow-section-head h2,
+  .flow-section-head .section-sub {
     margin-left: 0;
     margin-right: 0;
-  }
-  .flow .section-sub {
-    display: block;
   }
 }
 
@@ -1448,13 +1386,19 @@ h2 .italic {
   .flow-tab-num,
   .flow-tab-title,
   .flow-tab-copy,
-  .flow-anim {
+  .flow-anim,
+  .flow-card,
+  .flow-card-dot,
+  .flow-card-nav {
     transition: none;
   }
 }
 
 @media (max-width: 700px) {
   .flow {
-    padding: 56px 0 72px;
+    padding: 56px 0 32px;
+  }
+  .social-proof {
+    padding-top: 32px;
   }
 }

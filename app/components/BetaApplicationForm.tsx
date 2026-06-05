@@ -99,7 +99,7 @@ export function BetaApplicationForm() {
           <option value="" disabled>
             Select an answer
           </option>
-          <option value="under_10">Under 10 — just getting started</option>
+          <option value="under_10">Under 10, just getting started</option>
           <option value="10_30">10 to 30</option>
           <option value="30_100">30 to 100</option>
           <option value="over_100">Over 100</option>
@@ -147,7 +147,7 @@ export function BetaApplicationForm() {
         <span>
           I have an iPhone with iOS 17 or later
           <span className="beta-checkbox-note">
-            TestFlight requires this — Android is not supported in the beta.
+            TestFlight requires this. Android is not supported in the beta.
           </span>
         </span>
       </label>
