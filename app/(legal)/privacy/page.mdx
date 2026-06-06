@@ -4,13 +4,13 @@ export const metadata = {
     "Datenschutzerklärung für die Callday-Webseite und die Callday-iOS-App.",
 };
 
-<div className="legal-meta">// DATENSCHUTZ · STAND: 14.05.2026</div>
+<div className="legal-meta">// DATENSCHUTZ · STAND: 06.06.2026</div>
 
 # Datenschutzerklärung
 
 Diese Datenschutzerklärung beschreibt, welche personenbezogenen Daten Callday
 erhebt, wie sie verarbeitet werden und welche Rechte du in Bezug auf deine
-Daten hast. Sie gilt für die Webseite [callday.app](https://callday.app)
+Daten hast. Sie gilt für die Webseite [callday.io](https://callday.io)
 sowie die Callday-iOS-App.
 
 ## 1. Verantwortlicher
@@ -22,7 +22,7 @@ Bensberger Marktweg 338
 51069 Köln
 Deutschland
 
-E-Mail: [hello@callday.app](mailto:hello@callday.app)
+E-Mail: [hello@callday.io](mailto:hello@callday.io)
 
 ---
 
@@ -76,6 +76,30 @@ unsere Datenbank:
 Synchronisation, automatischer Mail-Versand bei gebuchten Terminen.
 **Rechtsgrundlage:** Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).
 
+### 2.4 Bei Abschluss eines Web-Abonnements (Stripe)
+
+Wenn du Callday über unsere Webseite abonnierst, läuft die Zahlungs­abwicklung
+über unseren Zahlungsdienstleister Stripe. Dabei werden verarbeitet:
+
+- E-Mail-Adresse (an Stripe übermittelt für Rechnungsstellung)
+- Rechnungsadresse (Name, Straße, Postleitzahl, Land — soweit für
+  Steuerzwecke erforderlich)
+- Zahlungsmittel-Informationen (Kreditkarte, SEPA-Lastschrift etc.) —
+  diese werden ausschließlich von Stripe verarbeitet und uns nicht
+  übermittelt; wir sehen lediglich die letzten vier Ziffern der Karte
+  bzw. die Bank zur Wiedererkennung
+- Subscription-Status (aktiv, gekündigt, pausiert) und
+  Abrechnungs­historie
+
+Beim Abschluss via Apple In-App-Purchase erhalten wir ausschließlich eine
+Apple-Transaktions-ID und den Subscription-Status — keine
+Zahlungsmittel-Daten.
+
+**Zweck:** Vertragsabwicklung, Rechnungsstellung, wiederkehrende Abrechnung,
+gesetzliche Aufbewahrung von Buchhaltungs­belegen.
+**Rechtsgrundlage:** Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) sowie
+Art. 6 Abs. 1 lit. c DSGVO (Buchführungs­pflichten gem. § 147 AO, § 257 HGB).
+
 ---
 
 ## 3. Empfänger und Drittanbieter
@@ -95,6 +119,19 @@ Wir nutzen sorgfältig ausgewählte Auftragsverarbeiter (Art. 28 DSGVO):
   diese Mails nach den Google-Datenschutzbestimmungen.
 - **Apple Inc.** ([USA](https://www.apple.com/legal/privacy/)) — Bei
   Anmeldung über „Mit Apple anmelden" und für In-App-Käufe.
+- **Stripe Payments Europe, Limited**
+  ([Irland](https://stripe.com/de/privacy)) — Zahlungsabwicklung für
+  Web-Abonnements. Stripe verarbeitet Zahlungsmittel-Daten als eigen­ständig
+  Verantwortlicher (im Sinne von Art. 4 Nr. 7 DSGVO) und ist
+  PCI-DSS Level 1 zertifiziert. Für die in unserem Auftrag erfolgenden
+  Verarbeitungen (z. B. Subscription-Verwaltung) gilt der
+  Auftrags­verarbeitungs­vertrag mit Stripe sowie EU-Standardvertragsklauseln,
+  soweit Datenflüsse in die USA notwendig sind.
+- **Resend** ([Inc., USA](https://resend.com/legal/privacy-policy)) —
+  Versand transaktionaler E-Mails (Account-Bestätigungen,
+  Abonnement-Belege, Beta-Application-Bestätigungen). Verarbeitet wird
+  ausschließlich die E-Mail-Adresse und der Mail-Inhalt. Standardvertrags­klauseln
+  gemäß DSGVO.
 
 Wir geben deine Daten nicht zu Werbezwecken an Dritte weiter und verkaufen
 sie nicht.
@@ -110,6 +147,10 @@ sie nicht.
   Account-Löschung werden alle Daten innerhalb von 30 Tagen aus den aktiven
   Systemen entfernt; Backups werden mit der nächsten Backup-Rotation
   überschrieben.
+- **Rechnungs- und Zahlungsdaten:** 10 Jahre gemäß § 147 AO und § 257 HGB
+  (gesetzliche Aufbewahrungspflicht für Buchhaltungs­unterlagen). Hiervon
+  abweichend werden Subscription-Status und Account-Verknüpfung mit
+  Account-Löschung entfernt.
 
 ---
 
@@ -130,7 +171,7 @@ Du kannst deinen Account inkl. aller Daten direkt in der App löschen:
 **Settings → Account → Account löschen**.
 
 Für sonstige Anfragen wende dich bitte an
-[hello@callday.app](mailto:hello@callday.app).
+[hello@callday.io](mailto:hello@callday.io).
 
 ---
 
@@ -159,7 +200,7 @@ Zugriffsbeschränkungen auf der Datenbankebene (Row-Level-Security).
 
 Wir passen diese Datenschutzerklärung an, sobald sich Funktionsumfang,
 rechtliche Anforderungen oder genutzte Drittanbieter ändern. Die jeweils
-aktuelle Version ist auf [callday.app/privacy](https://callday.app/privacy)
+aktuelle Version ist auf [callday.io/privacy](https://callday.io/privacy)
 abrufbar.
 
-**Stand:** 14.05.2026
+**Stand:** 06.06.2026
