@@ -1,96 +1,105 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 
 type WeeklyCalls = "" | "under_10" | "10_30" | "30_100" | "over_100";
-type CurrentTool = "" | "crm" | "spreadsheet" | "nothing" | "other";
+type CurrentTool = "" | "nothing" | "spreadsheet" | "crm" | "other";
+
+type SubmitStatus = "idle" | "submitting" | "error";
 
 /**
- * Success outcome decided by the backend after submit. The form itself
- * never asks the user to choose — both outcomes are equal wins:
- *   - "beta"     → one of the 50 closed-beta slots this round
- *   - "waitlist" → launch list with founder pricing + 1 month free
+ * Beta-Application-Form. Submitted via /api/beta/apply — die Route schreibt
+ * eine Zeile in public.applications (status='pending') und sendet die
+ * Bestätigungsmail.
  *
- * MVP: backend isn't wired yet, so we always render "waitlist" after
- * submit and Jan picks the 50 beta testers manually from the DB. When
- * the selection logic ships, the API response will set this state.
- */
-type SuccessVariant = "beta" | "waitlist";
-
-/**
- * Early-access signup form. UI-only — submit handler logs locally and
- * shows the success state. Backend hookup (Supabase `beta_applications`
- * table + selection logic) is a separate iteration.
+ * Nach erfolgreichem Submit navigiert das Form auf /beta/applied (dedicated
+ * Confirmation-Page). Bei Duplikat geht's auf /beta/applied?status=duplicate
+ * mit expliziter "we've got you already"-Message — siehe UX-Entscheidung
+ * 2026-06-06: Email-Enumeration-Protection ist für eine Beta-Waitlist
+ * weniger wert als klare Kommunikation.
+ *
+ * Tonalitaets-Vorgabe der Confirmation-Mail (siehe emails/application-
+ * confirmation.tsx + BETA_WORKFLOW_PLAN.md Template 1): erste Mail preempted
+ * KEINE Selektions-Entscheidung — nur 48h-Review + Founder-Spot-Garantie.
  */
 export function BetaApplicationForm() {
+  const router = useRouter();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
   const [weeklyCalls, setWeeklyCalls] = useState<WeeklyCalls>("");
   const [selling, setSelling] = useState("");
   const [currentTool, setCurrentTool] = useState<CurrentTool>("");
+  const [currentToolOther, setCurrentToolOther] = useState("");
   const [hasIPhone, setHasIPhone] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [variant, setVariant] = useState<SuccessVariant>("waitlist");
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const [status, setStatus] = useState<SubmitStatus>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // "other" + Freitext muss befüllt sein, sonst zählt das Form als unvollständig
+  const otherNeedsText = currentTool === "other";
+  const otherTextOk = !otherNeedsText || currentToolOther.trim().length > 0;
+  const isComplete =
+    Boolean(name) &&
+    Boolean(email) &&
+    Boolean(weeklyCalls) &&
+    Boolean(currentTool) &&
+    otherTextOk &&
+    hasIPhone;
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name || !email || !weeklyCalls || !currentTool || !hasIPhone) return;
+    if (!isComplete || status === "submitting") return;
 
-    if (typeof window !== "undefined") {
-      console.log("[early-access] signup:", {
-        name,
-        email,
-        website,
-        weeklyCalls,
-        selling,
-        currentTool,
-        hasIPhone,
+    setStatus("submitting");
+    setErrorMessage(null);
+
+    // current_tool: bei "other" speichern wir den Freitext direkt
+    // (DB-Feld ist TEXT, akzeptiert Enum-Wert oder Freitext)
+    const resolvedCurrentTool =
+      currentTool === "other" ? currentToolOther.trim() : currentTool;
+
+    try {
+      const response = await fetch("/api/beta/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          website: website.trim() || null,
+          cold_calls_per_week: weeklyCalls,
+          what_they_sell: selling.trim() || null,
+          current_tool: resolvedCurrentTool,
+          has_ios17: hasIPhone,
+        }),
       });
-    }
-    // MVP: always waitlist. Replace with backend response once the
-    // selection endpoint exists.
-    setVariant("waitlist");
-    setSubmitted(true);
-  }
 
-  if (submitted) {
-    return (
-      <div className="beta-success">
-        <div className="beta-success-icon">
-          <svg
-            width={28}
-            height={28}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#10b981"
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </div>
-        {variant === "beta" ? (
-          <>
-            <h3>You&apos;re in.</h3>
-            <p>
-              We&apos;ll email you within 24h with next steps, then send your
-              TestFlight invite. Welcome to the founding 50.
-            </p>
-          </>
-        ) : (
-          <>
-            <h3>You&apos;re on the launch list.</h3>
-            <p>
-              You&apos;ll be among the first to get access when we open
-              publicly, with founder pricing locked in for life and a free
-              month on us. We&apos;ll be in touch.
-            </p>
-          </>
-        )}
-      </div>
-    );
+      const data = (await response.json().catch(() => ({}))) as {
+        success?: boolean;
+        duplicate?: boolean;
+        error?: string;
+      };
+
+      if (response.ok && data.success) {
+        router.push(
+          data.duplicate ? "/beta/applied?status=duplicate" : "/beta/applied",
+        );
+        return;
+      }
+
+      setStatus("error");
+      setErrorMessage(
+        data.error ??
+          "Something went wrong on our end. Please try again in a minute.",
+      );
+    } catch {
+      setStatus("error");
+      setErrorMessage(
+        "We couldn't reach our servers. Check your connection and try again.",
+      );
+    }
   }
 
   return (
@@ -104,6 +113,7 @@ export function BetaApplicationForm() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Your full name"
+            disabled={status === "submitting"}
           />
         </label>
 
@@ -115,6 +125,7 @@ export function BetaApplicationForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="your@email.com"
+            disabled={status === "submitting"}
           />
         </label>
       </div>
@@ -129,6 +140,7 @@ export function BetaApplicationForm() {
           value={website}
           onChange={(e) => setWebsite(e.target.value)}
           placeholder="yourbusiness.com"
+          disabled={status === "submitting"}
         />
         <span className="beta-field-hint">
           Helps us verify you&apos;re an active business owner.
@@ -141,6 +153,7 @@ export function BetaApplicationForm() {
           required
           value={weeklyCalls}
           onChange={(e) => setWeeklyCalls(e.target.value as WeeklyCalls)}
+          disabled={status === "submitting"}
         >
           <option value="" disabled>
             Select an answer
@@ -161,6 +174,7 @@ export function BetaApplicationForm() {
           value={selling}
           onChange={(e) => setSelling(e.target.value)}
           placeholder="e.g. websites, SEO, ads, design, copywriting..."
+          disabled={status === "submitting"}
         />
       </label>
 
@@ -171,7 +185,12 @@ export function BetaApplicationForm() {
         <select
           required
           value={currentTool}
-          onChange={(e) => setCurrentTool(e.target.value as CurrentTool)}
+          onChange={(e) => {
+            const next = e.target.value as CurrentTool;
+            setCurrentTool(next);
+            if (next !== "other") setCurrentToolOther("");
+          }}
+          disabled={status === "submitting"}
         >
           <option value="" disabled>
             Select an answer
@@ -183,12 +202,27 @@ export function BetaApplicationForm() {
         </select>
       </label>
 
+      {currentTool === "other" && (
+        <label className="beta-field">
+          <span className="beta-field-label">Which tool?</span>
+          <input
+            type="text"
+            required
+            value={currentToolOther}
+            onChange={(e) => setCurrentToolOther(e.target.value)}
+            placeholder="e.g. Notion, paper notebook, custom Airtable..."
+            disabled={status === "submitting"}
+          />
+        </label>
+      )}
+
       <label className="beta-checkbox">
         <input
           type="checkbox"
           required
           checked={hasIPhone}
           onChange={(e) => setHasIPhone(e.target.checked)}
+          disabled={status === "submitting"}
         />
         <span>
           I have an iPhone with iOS 17 or later
@@ -201,12 +235,17 @@ export function BetaApplicationForm() {
       <button
         type="submit"
         className="beta-submit"
-        disabled={
-          !name || !email || !weeklyCalls || !currentTool || !hasIPhone
-        }
+        disabled={!isComplete || status === "submitting"}
       >
-        Reserve my spot
+        {status === "submitting" ? "Sending..." : "Reserve my spot"}
       </button>
+
+      {status === "error" && errorMessage && (
+        <p className="beta-submit-error" role="alert">
+          {errorMessage}
+        </p>
+      )}
+
       <p className="beta-submit-meta">Either way, you&apos;re in.</p>
     </form>
   );
