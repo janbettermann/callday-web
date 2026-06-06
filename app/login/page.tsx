@@ -43,11 +43,15 @@ function LoginForm() {
 
     const supabase = createSupabaseBrowser();
 
-    // emailRedirectTo bekommt das next als Query-Param mit — der Callback
-    // liest es daraus und schickt den User dorthin nach erfolgreichem
-    // Code-Exchange.
+    // Wir merken uns das next-Ziel in einem Cookie statt es als Query-
+    // Param in emailRedirectTo zu hängen. Supabase strippt sonst die
+    // Query-String beim URL-Matching gegen die Redirect-Allow-List und
+    // unser /auth/callback verliert das next. Cookie-Ansatz hält das
+    // Ziel sauber + sicher (SameSite=Lax + 10min Lifetime).
+    document.cookie = `login_next=${encodeURIComponent(next)}; path=/; max-age=600; SameSite=Lax`;
+
     const origin = window.location.origin;
-    const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+    const redirectTo = `${origin}/auth/callback`;
 
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
