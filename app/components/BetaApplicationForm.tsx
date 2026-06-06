@@ -75,8 +75,8 @@ export function BetaApplicationForm() {
           <>
             <h3>You&apos;re in.</h3>
             <p>
-              We&apos;ll DM you on Instagram within 24h to verify, then send
-              your TestFlight invite. Welcome to the founding 50.
+              We&apos;ll email you within 24h with next steps, then send your
+              TestFlight invite. Welcome to the founding 50.
             </p>
           </>
         ) : (
@@ -84,7 +84,7 @@ export function BetaApplicationForm() {
             <h3>You&apos;re on the launch list.</h3>
             <p>
               You&apos;ll be among the first to get access when we open
-              publicly — with founder pricing locked in for life and a free
+              publicly, with founder pricing locked in for life and a free
               month on us. We&apos;ll be in touch.
             </p>
           </>

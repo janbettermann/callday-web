@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BetaApplicationForm } from "./components/BetaApplicationForm";
 import { CalldayLogo } from "./components/CalldayLogo";
+import { FaqAccordion } from "./components/FaqAccordion";
 import { FlowTabs } from "./components/FlowTabs";
 import { SiteNav } from "./components/SiteNav";
 
@@ -254,6 +255,16 @@ export default function Home() {
           </div>
 
           <BetaApplicationForm />
+        </div>
+      </section>
+
+      {/* === FAQ === */}
+      <section className="faq" aria-label="Common questions">
+        <div className="container faq-inner">
+          <h2 className="faq-heading">
+            Common <span className="italic">questions.</span>
+          </h2>
+          <FaqAccordion />
         </div>
       </section>
 
