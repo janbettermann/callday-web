@@ -17,7 +17,7 @@ export default function LegalLayout({
 }) {
   return (
     <>
-      <nav className="site-nav">
+      <nav className="site-nav" data-scrolled="true">
         <div className="container nav-inner">
           <Link href="/" className="logo" style={{ textDecoration: "none" }}>
             <CalldayLogo size={32} />
@@ -37,6 +37,7 @@ export default function LegalLayout({
           <div className="footer-meta">
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
+            <Link href="/terms#imprint">Imprint</Link>
             <a href="mailto:hello@callday.io">hello@callday.io</a>
           </div>
         </div>

@@ -443,7 +443,8 @@ h1 .accent {
 .big-cta,
 .faq,
 .site-footer,
-.confirm-page {
+.confirm-page,
+.legal-page {
   position: relative;
   z-index: 1;
   background-color: var(--bg);
@@ -1178,6 +1179,10 @@ h2 .italic {
      height + iOS safe-area inset) plus breathing room. */
   padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 56px) 32px
     120px;
+  /* Min-height = full viewport so cream bg fills at least one screen.
+     Vermeidet dunkles Body-Bg-Durchscheinen unter dem Footer wenn der
+     Content kurz ist. Footer flowt natürlich darunter. */
+  min-height: 100dvh;
 }
 .legal-meta {
   font-family: var(--font-mono), monospace;

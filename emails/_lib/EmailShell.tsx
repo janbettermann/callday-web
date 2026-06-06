@@ -159,6 +159,17 @@ export function EmailShell({ preview, children }: EmailShellProps) {
                 >
                   Terms
                 </Link>
+                <Link
+                  href="https://callday.io/terms#imprint"
+                  style={{
+                    color: brand.textFaint,
+                    textDecoration: "none",
+                    fontSize: "13px",
+                    marginLeft: "32px",
+                  }}
+                >
+                  Imprint
+                </Link>
               </Column>
             </Row>
           </Section>
