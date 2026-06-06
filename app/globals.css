@@ -1127,7 +1127,11 @@ h2 .italic {
 
 @media (max-width: 600px) {
   .confirm-page {
-    padding: 60px 30px 80px;
+    /* Mobile: top-padding muss weiter die fixed Nav-Höhe + iOS-Notch
+       abdecken, sonst rutscht der confirm-icon hinter die Nav.
+       (Vorheriger Wert 60px war zu wenig — Nav = 72px + Safe-Area.) */
+    padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 40px) 30px
+      80px;
   }
 }
 

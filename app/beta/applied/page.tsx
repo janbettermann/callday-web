@@ -42,9 +42,8 @@ export default async function BetaAppliedPage({ searchParams }: PageProps) {
             <CalldayLogo size={32} />
             Callday
           </Link>
-          <Link href="/" className="nav-cta">
-            ← Back to homepage
-          </Link>
+          {/* Kein nav-cta — Back-to-Homepage steckt schon prominent als
+              Haupt-CTA unter dem Body. Doppelter Button war redundant. */}
         </div>
       </nav>
 
@@ -74,7 +73,7 @@ export default async function BetaAppliedPage({ searchParams }: PageProps) {
               <p className="confirm-body">
                 Your earlier application is still in review. Check your
                 inbox for the confirmation from{" "}
-                <strong>hello@callday.io</strong> — if you don&apos;t see
+                <strong>hello@callday.io</strong>. If you don&apos;t see
                 it, check spam. If anything looks broken, just reply to
                 that email and we&apos;ll take a look.
               </p>
@@ -91,7 +90,7 @@ export default async function BetaAppliedPage({ searchParams }: PageProps) {
 
               <p className="confirm-body">
                 We&apos;ll review your application and get back to you
-                within 48 hours. Check your inbox — we just sent a
+                within 48 hours. Check your inbox. We just sent a
                 confirmation from <strong>hello@callday.io</strong>. If
                 you don&apos;t see it within a few minutes, check spam.
               </p>
