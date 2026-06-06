@@ -39,6 +39,25 @@ const CODE_LENGTH = 8;
 type Mode = "signin" | "signup" | "otp-email" | "otp-code";
 type Status = "idle" | "submitting" | "error";
 
+/**
+ * Heuristik: erkennt Errors die typischerweise auftreten wenn der User
+ * mit der "falschen" Methode für sein Account einloggt (z.B. existiert
+ * via Apple-OAuth aber er probiert Email/PW).
+ *
+ * Supabase liefert keine strukturierten Error-Codes für diese Fälle,
+ * daher String-Match auf die häufigsten Messages. False-Positives sind
+ * ungefährlich — wir zeigen nur einen zusätzlichen Hint, blocken nichts.
+ */
+function isLikelyProviderConflict(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("already registered") ||
+    m.includes("already exists") ||
+    m.includes("identity already") ||
+    m.includes("invalid login credentials")
+  );
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -241,7 +260,7 @@ function LoginForm() {
             {status === "submitting" ? "Verifying..." : "Sign in"}
           </button>
 
-          {status === "error" && errorMessage && (
+          {errorMessage && (
             <p className="beta-submit-error" role="alert">
               {errorMessage}
             </p>
@@ -290,7 +309,7 @@ function LoginForm() {
             {status === "submitting" ? "Sending..." : "Send code"}
           </button>
 
-          {status === "error" && errorMessage && (
+          {errorMessage && (
             <p className="beta-submit-error" role="alert">
               {errorMessage}
             </p>
@@ -389,10 +408,18 @@ function LoginForm() {
               : "Sign in"}
         </button>
 
-        {status === "error" && errorMessage && (
-          <p className="beta-submit-error" role="alert">
-            {errorMessage}
-          </p>
+        {errorMessage && (
+          <>
+            <p className="beta-submit-error" role="alert">
+              {errorMessage}
+            </p>
+            {isLikelyProviderConflict(errorMessage) && (
+              <p className="login-hint">
+                Already signed up with Apple or Google? Try the buttons
+                above — accounts are tied to the method you first used.
+              </p>
+            )}
+          </>
         )}
       </form>
 

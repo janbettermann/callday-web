@@ -595,6 +595,14 @@ h1 .accent {
   color: var(--ink-dim);
 }
 
+.login-hint {
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-dim);
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+
 /* === CHECKOUT PAGE === */
 .checkout-page {
   position: relative;

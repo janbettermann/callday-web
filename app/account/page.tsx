@@ -25,6 +25,51 @@ interface Profile {
 }
 
 /**
+ * Human-readable label fuer einen Auth-Provider-Slug. Supabase gibt
+ * `'email'` fuer Email/Password und Magic-Link/OTP-Login zurueck —
+ * beide faellt der User-facing als "Email" weil er den Unterschied
+ * (Password vs OTP-Code) selbst nicht mehr explizit kennt.
+ */
+function providerLabel(provider: string): string {
+  switch (provider) {
+    case "apple":
+      return "Apple";
+    case "google":
+      return "Google";
+    case "email":
+      return "Email";
+    default:
+      return provider.charAt(0).toUpperCase() + provider.slice(1);
+  }
+}
+
+/**
+ * Alle Provider die mit diesem User verknuepft sind, deduped und in
+ * stabiler Reihenfolge. Supabase linkt Identities automatisch wenn
+ * Email-Match + verified — `user.app_metadata.provider` zeigt nur den
+ * ORIGINAL-Provider, `identities[]` zeigt alle. Wir zeigen alle damit
+ * der User weiss womit er sich (auch) einloggen kann.
+ */
+function linkedProviders(
+  identities:
+    | Array<{ provider?: string | null }>
+    | null
+    | undefined,
+): string[] {
+  if (!identities) return [];
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const id of identities) {
+    const p = id.provider;
+    if (p && !seen.has(p)) {
+      seen.add(p);
+      result.push(p);
+    }
+  }
+  return result;
+}
+
+/**
  * /account — Self-Service Hub für eingeloggte User.
  *
  * Drei Sektionen:
@@ -210,6 +255,16 @@ export default async function AccountPage() {
             <div className="account-row">
               <span className="account-row-label">Email</span>
               <span className="account-row-value">{profile.email}</span>
+            </div>
+            <div className="account-row">
+              <span className="account-row-label">Sign-in methods</span>
+              <span className="account-row-value">
+                {(() => {
+                  const providers = linkedProviders(user.identities);
+                  if (providers.length === 0) return "Email";
+                  return providers.map(providerLabel).join(" · ");
+                })()}
+              </span>
             </div>
 
             <details className="account-details">
