@@ -490,6 +490,111 @@ h1 .accent {
   color: var(--ink);
 }
 
+.login-oauth-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.login-oauth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    box-shadow 0.2s,
+    background 0.2s,
+    border-color 0.2s,
+    opacity 0.2s;
+  letter-spacing: -0.1px;
+}
+.login-oauth-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.login-oauth-btn-apple {
+  background: #000;
+  color: #fff;
+  border: 1px solid #000;
+}
+.login-oauth-btn-apple:hover:not(:disabled) {
+  background: #1a1a1a;
+  transform: translateY(-1px);
+}
+.login-oauth-btn-google {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+}
+.login-oauth-btn-google:hover:not(:disabled) {
+  background: var(--bg);
+  border-color: rgba(26, 29, 38, 0.2);
+  transform: translateY(-1px);
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--ink-faint);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line-strong);
+}
+
+.login-link-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.login-text-link {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--ink-dim);
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+.login-text-link:hover {
+  color: var(--blue);
+}
+.login-text-link-strong {
+  color: var(--blue);
+  font-weight: 600;
+}
+.login-text-link-strong:hover {
+  color: var(--blue-deep);
+}
+
+.login-switch-mode {
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  color: var(--ink-dim);
+}
+
 /* === CHECKOUT PAGE === */
 .checkout-page {
   position: relative;

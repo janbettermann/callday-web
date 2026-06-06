@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { CalldayLogo } from "../components/CalldayLogo";
 import { FaqAccordion } from "../components/FaqAccordion";
 import { FlowTabs } from "../components/FlowTabs";
+import { createSupabaseSSR } from "@/lib/supabase-ssr";
 
 /**
  * /v1 — Public-Launch-Version der Landing-Page.
@@ -33,7 +34,17 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function LandingV1() {
+export default async function LandingV1() {
+  // Nav zeigt "Account" statt "Sign in" wenn User eingeloggt ist.
+  // Ohne diesen Check würde "Sign in" auch eingeloggten Usern angezeigt,
+  // was verwirrend ist wenn sie auf einen Plan klicken und ohne Login-
+  // Page direkt zu Stripe gelangen.
+  const supabase = await createSupabaseSSR();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isAuthed = !!user;
+
   return (
     <>
       <div className="bg-orb bg-orb-2" />
@@ -47,7 +58,7 @@ export default function LandingV1() {
           </Link>
           <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
             <Link
-              href="/login"
+              href={isAuthed ? "/account" : "/login"}
               style={{
                 color: "var(--ink-dim)",
                 textDecoration: "none",
@@ -55,7 +66,7 @@ export default function LandingV1() {
                 fontWeight: 500,
               }}
             >
-              Sign in
+              {isAuthed ? "Account" : "Sign in"}
             </Link>
             <a href="#pricing" className="nav-cta">
               Get Callday

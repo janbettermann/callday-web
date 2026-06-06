@@ -102,13 +102,16 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    // next-URL preserved beide Params damit nach Login direkt weiter geht
+    // next-URL preserved beide Params damit nach Login direkt weiter geht.
+    // mode=signup öffnet /login direkt im Sign-Up-Modus — User die vom
+    // Pricing-CTA kommen sind fast immer Neu-User, nicht Returning.
+    // "Already have an account? Sign in" bleibt der Toggle für Existing.
     const params = new URLSearchParams();
     if (code) params.set("code", code);
     if (planParam) params.set("plan", planParam);
     const qs = params.toString();
     const next = qs ? `/checkout?${qs}` : "/checkout";
-    redirect(`/login?next=${encodeURIComponent(next)}`);
+    redirect(`/login?mode=signup&next=${encodeURIComponent(next)}`);
   }
 
   // Gate 2 — Code validation (NUR wenn Code mitgegeben)
