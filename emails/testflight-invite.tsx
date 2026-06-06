@@ -43,15 +43,14 @@ export function TestFlightInvite({ name }: TestFlightInviteProps) {
       </Text>
 
       <Text style={bodyTextStyle}>
-        The beta is free for the full period. Your founder pricing — 50%
-        off Callday for life plus your first month free — is locked in for
-        when we launch publicly.
+        The beta is free for the full period. At launch you will receive
+        50% off Callday for life plus your first month free.
       </Text>
 
       <Text style={bodyTextStyle}>
         We&apos;ll check in with you in about a week to hear how it&apos;s
-        going. If something breaks before then, just reply to this email
-        and we&apos;ll take a look.
+        going. If something breaks before then or you have any questions,
+        just reply to this email and we&apos;ll take a look.
       </Text>
 
       <Text style={{ ...bodyTextStyle, margin: "0 0 24px" }}>
