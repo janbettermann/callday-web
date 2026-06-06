@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "launch:send-codes": "tsx scripts/launch-send-codes.ts",
+    "launch:send-codes:dry": "tsx scripts/launch-send-codes.ts --dry-run"
   },
   "dependencies": {
     "@mdx-js/loader": "^3.1.1",
@@ -27,6 +29,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5"
   }
 }
