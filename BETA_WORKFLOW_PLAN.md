@@ -493,3 +493,143 @@ Phasen 3-4 brauchen erst Stripe-Setup, also nicht parallel.
    Status auf `approved` setzen (Welcome-Email mit Anweisungen geht raus). So
    landet Apples Install-Link-Email vor unserer Erklärungs-Email — User installiert
    sofort, liest unsere Anweisungen währenddessen.
+
+---
+
+## 📍 Implementierungs-Status + Out-of-Plan-Outcomes
+
+Doku-Update nach tatsächlicher Implementation. Der Original-Plan oben
+bleibt unverändert als historische Referenz, hier dokumentiere ich was
+abweicht und warum.
+
+### Phase 1 — ✅ done (callday.io live)
+- BetaApplicationForm an `/api/beta/apply` gewired
+- ApplicationConfirmation-Mail via Resend
+- /beta/applied Page (success + duplicate) statt Inline-Card
+- E2E getestet auf Prod, Mail kommt in Inbox
+
+### Phase 2 — ✅ done
+- TestFlightInvite + LaunchListWelcome Templates via @react-email
+- 2 Supabase Database Webhooks → API-Routes
+- Idempotenz via email_logs-Check
+- Manueller Workflow für Jan: App Store Connect Tester adden FIRST,
+  dann status='approved' in Studio (Apple-Mail kommt vor unserer)
+
+### Phase 3 — ✅ done + erweitert
+**Implementiert vs Plan:**
+- Auth via **8-stelliger OTP-Code** (nicht Magic-Link) — Gmail-Prefetcher
+  konsumiert Magic-Links bevor User clicken kann, OTP-Code ist immun.
+  Code-Länge matched Mobile-App-Pattern (dealswipe-app/onboarding/
+  verify-reset-code.tsx → CODE_LENGTH=8).
+- /checkout, /checkout/success Pages, /api/stripe/webhook — alle live
+- Defense-in-depth: Webhook-Handler checkt period_end auf Item- UND
+  Subscription-Level für API-Version-Drift-Toleranz
+- Middleware.ts für Supabase-Session-Cookie-Refresh (offiziell required
+  by @supabase/ssr docs)
+
+**E2E verifiziert:**
+- `/v1` Plan-Click → /login (OTP) → /checkout?plan=yearly →
+  Direct-Skip → Stripe → /checkout/success → Webhook → profiles.
+  subscription_status='active' + stripe_customer_id gesetzt + renews_at +1y
+
+### Phase 3.5 (out-of-original-plan) — ✅ done
+
+Wurde in der Praxis als nötig erkannt für Subscription-Lifecycle vom
+Public-Launch-Pov. Drei Komponenten:
+
+1. **/account Self-Service-Hub** (app/account/):
+   - Subscription-Status-Display (active/paused/canceled/none)
+   - "Manage subscription" → Stripe Customer Portal (handelt Cancel,
+     Pause, Plan-Switch, Payment-Method, Invoices komplett selbst)
+   - Account-Delete-Flow mit Email-Re-Type-Safeguard + Cascade-Cleanup
+   - Sign-out
+
+2. **/checkout flexibility**:
+   - `?code=` weiterhin pflicht-free
+   - `?plan=yearly|monthly` Direct-Skip — Plan-Click auf Landing geht
+     direkt zu Stripe ohne Picker-Zwischenstation
+   - Ohne Params: Vollpreis-Plan-Picker
+   - createCheckoutSession()-Helper als Single-Source-of-Truth
+
+3. **/v1 Public-Launch-Landing Preview** (app/v1/):
+   - Identisches Layout zur Beta-Landing
+   - Pricing-Section statt BetaApplicationForm (Yearly/Monthly Cards)
+   - "Sign in" + "Get Callday"-CTAs in Nav
+   - noindex,nofollow während Preview — bei Public-Launch: Content-Swap
+     in /page.tsx, robots auf index
+
+### Phase 3.5.4 — ⏳ pending (manuell)
+
+**Stripe Customer Portal** muss in Stripe Dashboard konfiguriert sein
+für beide Modes:
+- Test-Mode: für Dev-E2E-Test (probably done by user)
+- Live-Mode: vor Public-Launch (Settings sind separat pro Mode)
+
+Konfig-Items: Subscription-Cancel-Mode (recommended: end-of-period),
+Plan-Switch erlaubt (allowed_products: Callday), Pause optional,
+Privacy/Terms URLs.
+
+### Phase 3.6 — ⏳ next: Auth-Parity mit Mobile
+
+**Problem:** Web hat aktuell nur OTP-Code-Flow. Mobile hat **Apple +
+Google + Email/Password** (siehe CLAUDE.md im Mobile-Repo).
+Inkonsistenz für User die Web + Mobile parallel nutzen.
+
+**Plan:** /login + /signup auf Triple-Auth umstellen:
+- Apple Sign-In (Web) als Primary
+- Google Sign-In als Primary  
+- Email + Password als Tertiär (matched Mobile)
+- OTP-Code wird zum Password-Reset-Mechanismus (recycelt existing code)
+
+**Aufwand-Schätzung:** ~2.5h
+- Email+Password Sign-Up/Sign-In: 30 Min
+- Password-Reset (recycle OTP): 30 Min
+- Google OAuth (Supabase + Google Cloud Console): 30 Min
+- Apple Sign-In Web (Services ID + Key in Apple Developer Console): 60 Min
+- /login UI auf Tri-Auth-Layout: 15 Min
+
+### Phase 4 — ⏳ next nach Phase 3.6
+Launch-Day Script (Stripe Promotion-Codes generieren + FounderCodeAtLaunch-
+Mail versenden) — unverändert vom Original-Plan.
+
+### Phase 5 — ⏳ später, im Mobile-Repo
+App liest profile.subscription_status, Paywall-Trigger, OTA.
+
+### Phase 6 — ⏳ später
+BETA_ADMIN.md Runbook in callday-web.
+
+---
+
+## Strategische Entscheidungen aus dem Implementation-Diskurs
+
+### Stripe-Integration-Tier: Hosted Checkout (bleibt erstmal)
+3 Tier-Optionen: Hosted (was wir haben), Embedded (~30 Min Refactor),
+Custom mit Elements (~10h, matched Hostinger-Style). Für Single-Sub-
+Produkt ist Hosted optimal: höchste Conversion per Stripe-Daten, 3DS/
+Apple-Pay/Google-Pay/EU-VAT out-of-box, keine PCI-Scope-Sorgen. Custom
+wird Roadmap-Item wenn Multi-Product oder Brand-Cohesion-Pressure
+entsteht.
+
+### Promo-Code-Feld auf /checkout: NEIN (Premium-Pattern)
+Notion, Linear, Vercel, Stripe selbst — kein Promo-Code-Feld auf
+Standard-Checkout. Conversion-Daten zeigen "leer Promo-Field" senkt
+Conversion 8-25% durch FOMO-Effekt. Founder-Codes werden ausschliesslich
+über Email-Link mit ?code= im URL geliefert.
+
+### Magic-Link vs OTP-Code: OTP gewinnt
+Magic-Link wurde durch Gmail-Prefetcher konsumiert bevor User clicken
+konnte → "otp_expired"-Error. OTP-Code ist immun (kann nicht "geklickt"
+werden, muss manuell getippt werden). Code-Länge 8 matched Mobile.
+
+### Landing-Page-Strategie: zwei Varianten parallel
+Beta-Landing (callday.io/) bleibt für Founder-List-Aufbau. /v1 ist
+Preview der Public-Launch-Variante mit Pricing-Section. Bei Launch
+wird Content von /v1 → / geswappt (oder Redirect-Konfig). Kein
+Drüberbügeln der aktuellen Landing solange sie für Acquisition wirkt.
+
+### Founder-Code-Visibility in Stripe Checkout
+Wenn `/checkout?code=CALLDAY-XYZ` → Stripe Checkout zeigt "Coupon
+applied: Founder 50% Off Forever -50%" auf der Seite mit durchgestrichenem
+Original-Preis. User bekommt klares Visual-Confirm dass Discount drauf
+ist. Wenn `/checkout?plan=yearly` (ohne Code) → kein Discount-Display,
+korrekt €199 Vollpreis.
