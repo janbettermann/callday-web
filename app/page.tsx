@@ -279,7 +279,7 @@ export default function Home() {
           <div className="footer-meta">
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
-            <a href="mailto:hello@callday.app">hello@callday.app</a>
+            <a href="mailto:hello@callday.io">hello@callday.io</a>
           </div>
         </div>
       </footer>

@@ -41,7 +41,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://callday.app"),
+  metadataBase: new URL("https://callday.io"),
   title: "Callday. Make today a Callday.",
   description:
     "The cold calling app for solo founders and freelancers. Less avoiding. More dialing. Apply for one of 50 closed-beta spots.",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     title: "Callday. Make today a Callday.",
     description:
       "Less avoiding. More dialing. Cold calling momentum that survives the gaps where focus usually dies.",
-    url: "https://callday.app",
+    url: "https://callday.io",
     siteName: "Callday",
     locale: "en_US",
     type: "website",
