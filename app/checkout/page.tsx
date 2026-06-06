@@ -215,7 +215,10 @@ async function startCheckoutAction(formData: FormData) {
         callday_code: code,
       },
     },
-    allow_promotion_codes: false,
+    // allow_promotion_codes NICHT setzen — schließt sich per Stripe-API
+    // mit discounts gegenseitig aus. Default-Verhalten (kein Promo-Code-
+    // Feld in Stripe-Checkout) ist eh was wir wollen, weil der User den
+    // Founder-Code bereits via URL hatte und wir ihn pre-applied haben.
   });
 
   if (!session.url) {
