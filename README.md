@@ -1,10 +1,15 @@
 # Callday Web
 
-Marketing-Site für [callday.app](https://callday.app) — landing page,
+Marketing-Site für [callday.io](https://callday.io) — landing page,
 Privacy & Terms — und später Web-Checkout, Affiliate-Dashboard
 und Web-App-Routes.
 
-**Mobile-App-Repo:** `dealswipe-app` (wird umbenannt). Cross-Repo-Themen wie
+Successor to the archived
+[dealswipe-web](https://github.com/janbettermann/dealswipe-web) repo
+(pre-rebrand, May 2026).
+
+**Mobile-App-Repo:** [`dealswipe-app`](https://github.com/janbettermann/dealswipe-app)
+(Pfad bleibt aus Legacy-Gründen, kein Rename geplant). Cross-Repo-Themen wie
 Schema-Änderungen, Privacy-URL-Updates oder geteilte Marken-Tokens betreffen
 beide.
 
