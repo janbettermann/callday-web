@@ -473,6 +473,20 @@ h1 .accent {
   text-align: center;
   margin: 0 0 32px;
 }
+.login-back-link {
+  display: block;
+  margin: 24px auto 0;
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.login-back-link:hover {
+  color: var(--ink);
+}
 
 /* === CHECKOUT PAGE === */
 .checkout-page {
