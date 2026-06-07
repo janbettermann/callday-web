@@ -2350,3 +2350,438 @@ h2 .italic {
     padding-top: 32px;
   }
 }
+
+/* === CHECKOUT GRID (Headspace-style Sign-Up + Plan-Preview) ===
+   Wird auf /checkout gerendert. Liefert das 2-Spalten-Desktop-Layout
+   (links Preview/Plan/Timeline, rechts Sign-Up-Form) und den 2-Step-
+   Mobile-Flow (Preview → Form via Step-State). Lebt parallel zu den
+   alten .checkout-plans/.checkout-plan-Classes, die noch für die
+   Error-States genutzt werden. */
+
+.checkout-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
+  gap: 48px;
+  width: 100%;
+  max-width: 1080px;
+  align-items: start;
+}
+
+.checkout-grid-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.checkout-grid-form {
+  position: sticky;
+  top: calc(var(--nav-h) + 24px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Founder-Pricing-Banner über der Headline. */
+.checkout-discount-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--green-deep);
+  letter-spacing: 0.2px;
+  margin-bottom: 4px;
+}
+.checkout-discount-notice-label {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.checkout-discount-notice-code {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 1px 8px;
+  border-radius: 6px;
+  color: var(--ink);
+}
+
+/* Hero-Headline "Get the full Callday experience for €0 today" */
+.checkout-trial-headline {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: clamp(26px, 3.4vw, 34px);
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  line-height: 1.18;
+  color: var(--ink);
+  margin: 0;
+}
+.checkout-trial-zero {
+  color: var(--green);
+}
+
+/* Auth'd-User-Hint unter der Headline */
+.checkout-trial-authed-note {
+  font-size: 14px;
+  color: var(--ink-dim);
+  margin: 0;
+}
+
+/* Plan-Toggle Pill (Annual / Monthly) */
+.plan-toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  background: rgba(26, 29, 38, 0.06);
+  border-radius: 999px;
+  padding: 4px;
+}
+.plan-toggle-btn {
+  background: transparent;
+  border: none;
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--ink-dim);
+  cursor: pointer;
+  transition:
+    background 0.18s,
+    color 0.18s;
+}
+.plan-toggle-btn:hover:not(.plan-toggle-btn-active) {
+  color: var(--ink);
+}
+.plan-toggle-btn-active {
+  background: var(--ink);
+  color: #fff;
+}
+
+/* Plan-Tile mit €0 today Highlight */
+.trial-card {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-top: 4px;
+}
+.trial-card-best {
+  border-color: rgba(74, 122, 247, 0.25);
+}
+.trial-card-badge {
+  position: absolute;
+  top: -9px;
+  left: 14px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 3px 9px;
+  border-radius: 6px;
+}
+.trial-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+}
+.trial-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.2px;
+}
+.trial-card-sub {
+  font-size: 12px;
+  color: var(--ink-dim);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.trial-card-zero {
+  text-align: right;
+}
+.trial-card-zero-amount {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
+}
+.trial-card-zero-window {
+  font-size: 11px;
+  color: var(--green-deep);
+  margin-top: 1px;
+}
+
+/* "How your free trial works"-Block */
+.trial-explainer {
+  margin-top: 4px;
+}
+.trial-explainer-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.trial-explainer-body {
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+}
+.trial-explainer-cancel {
+  color: var(--blue);
+  text-decoration: underline;
+  font-weight: 500;
+}
+.trial-explainer-cancel:hover {
+  color: var(--blue-deep);
+}
+
+/* Trial-Timeline (Today / In 5 days / In 7 days) */
+.trial-timeline {
+  list-style: none;
+  padding: 0 0 0 28px;
+  margin: 12px 0 0;
+  position: relative;
+}
+.trial-timeline::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--blue),
+    #6b9bff 50%,
+    var(--blue-soft)
+  );
+  border-radius: 2px;
+}
+.trial-timeline-item {
+  position: relative;
+  padding-bottom: 12px;
+}
+.trial-timeline-item:last-child {
+  padding-bottom: 0;
+}
+.trial-timeline-icon {
+  position: absolute;
+  left: -28px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.trial-timeline-icon-today {
+  background: var(--blue);
+}
+.trial-timeline-icon-mid {
+  background: #6b9bff;
+}
+.trial-timeline-icon-end {
+  background: var(--sun);
+}
+.trial-timeline-body {
+  min-height: 20px;
+}
+.trial-timeline-when {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+}
+.trial-timeline-what {
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* "What's included"-Bulletliste */
+.included-section {
+  margin-top: 14px;
+}
+.included-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.included-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.included-list li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.included-list li svg {
+  color: var(--blue);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+/* Sign-Up-Form-Karte (rechts auf Desktop, Step-2 auf Mobile) */
+.checkout-signup-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 24px 22px;
+  max-width: 100%;
+  width: 100%;
+  box-shadow: 0 4px 14px rgba(26, 29, 38, 0.04);
+}
+.checkout-signup-card .login-headline {
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+.checkout-signup-card .login-sub {
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+/* Custom-Checkbox-Style für Terms + Updates-Opt-In */
+.checkout-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+  cursor: pointer;
+  padding: 4px 0;
+}
+.checkout-checkbox input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  accent-color: var(--blue);
+  cursor: pointer;
+}
+.checkout-checkbox a {
+  color: var(--blue);
+  text-decoration: underline;
+}
+
+/* Mobile-Step-Toggle Buttons */
+.checkout-mobile-cta {
+  display: none;
+  width: 100%;
+  padding: 14px;
+  margin-top: 18px;
+  background: linear-gradient(180deg, var(--blue), var(--blue-deep));
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  letter-spacing: -0.1px;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.checkout-mobile-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(74, 122, 247, 0.28);
+}
+.checkout-mobile-back {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--ink-dim);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  align-self: flex-start;
+  transition: color 0.15s;
+}
+.checkout-mobile-back:hover {
+  color: var(--ink);
+}
+
+/* Authed-User Stripe-Fast-Path-CTA (Link statt Button) */
+.checkout-authed-cta {
+  display: block;
+  text-align: center;
+  width: 100%;
+  padding: 14px;
+  margin-top: 18px;
+  background: linear-gradient(180deg, var(--blue), var(--blue-deep));
+  color: #fff;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  letter-spacing: -0.1px;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.checkout-authed-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(74, 122, 247, 0.28);
+  color: #fff;
+}
+
+/* === MOBILE: Step-Toggle aktiv === */
+@media (max-width: 900px) {
+  .checkout-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    max-width: 540px;
+  }
+  .checkout-grid-form {
+    position: static;
+  }
+  .checkout-mobile-cta,
+  .checkout-mobile-back {
+    display: block;
+  }
+  /* Step-State: Preview oder Form sichtbar, nie beide gleichzeitig. */
+  .checkout-grid[data-mobile-step="preview"] .checkout-grid-form {
+    display: none;
+  }
+  .checkout-grid[data-mobile-step="form"] .checkout-grid-preview {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .checkout-grid {
+    gap: 16px;
+  }
+  .checkout-signup-card {
+    padding: 20px 18px;
+    border-radius: 16px;
+  }
+  .checkout-trial-headline {
+    font-size: 24px;
+  }
+}

@@ -4,10 +4,12 @@ import type { Metadata } from "next";
 import { CalldayLogo } from "../components/CalldayLogo";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getStripe } from "@/lib/stripe";
+import { CheckoutClient, type PriceTiles } from "./CheckoutClient";
 
 export const metadata: Metadata = {
-  title: "Subscribe to Callday Pro · Callday",
-  description: "Pick a plan and start dialing.",
+  title: "Get Callday · 7-day free trial",
+  description:
+    "Start your 7-day free trial. €0 today, cancel anytime before charge.",
   robots: { index: false, follow: false },
 };
 
@@ -17,8 +19,8 @@ interface PageProps {
 
 /**
  * Erstellt eine Stripe-Checkout-Session und gibt die Redirect-URL zurück.
- * Wird vom direct-skip-Pfad (?plan= im URL) UND vom Form-Action des
- * Plan-Pickers benutzt — single source of truth.
+ * Wird vom direct-skip-Pfad (?plan= im URL) UND vom Post-Signup-Redirect
+ * benutzt — single source of truth.
  */
 async function createCheckoutSession(args: {
   plan: "monthly" | "yearly";
@@ -58,8 +60,8 @@ async function createCheckoutSession(args: {
     client_reference_id: userId,
     customer_email: userEmail ?? undefined,
     success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-    // cancel_url führt zum Plan-Picker (ohne ?plan=) damit der User bei
-    // Stripe-Abort nicht in einer Endlos-Redirect-Schleife landet.
+    // cancel_url führt zurück zur Checkout-Page (ohne ?plan=) damit der
+    // User bei Stripe-Abort nicht in einer Endlos-Redirect-Schleife landet.
     cancel_url: code
       ? `${baseUrl}/checkout?code=${encodeURIComponent(code)}`
       : `${baseUrl}/checkout`,
@@ -77,44 +79,42 @@ async function createCheckoutSession(args: {
 }
 
 /**
- * /checkout — zwei Varianten in einer Page:
+ * /checkout — die zentrale Subscription-Start-Page.
  *
- *   /checkout                 → Vollpreis-Pfad (Public-Launch + ab /account)
- *                               €24.99/mo oder €199/yr, kein Discount.
- *   /checkout?code=CALLDAY-X  → Founder-Code-Pfad (Launch-Day-Emails)
- *                               50% off + first month free, Code locked in.
+ * Drei Modi in einer Page, abhängig von URL + Auth-State:
  *
- * Auth-Gate vorgeschaltet: nicht-eingeloggte User landen auf
- * /login?next=/checkout?code=... (oder /login?next=/checkout ohne Code).
+ *   1. ?plan=monthly|yearly + auth'd  → Direct-Stripe-Skip (server-side
+ *      Redirect zu Stripe-hosted Checkout). Vom Landing-CTA + Post-Signup-
+ *      Redirect benutzt.
  *
- * Bei vorhandenem Code wird er gegen Stripe Promotion-Codes validiert.
- * Bei ungültigem/abgelaufenem Code zeigen wir einen Fehler-State statt
- * den Picker — wir wollen nicht dass ein User mit kaputtem Code dann
- * versehentlich Vollpreis zahlt.
+ *   2. Unauth (mit oder ohne ?plan=, mit oder ohne ?code=) → CheckoutClient
+ *      rendert das volle Sign-Up + Plan-Preview-Layout (Headspace-style).
+ *      Nach Sign-Up wird via Client-Side router.push zum Fast-Path-Modus 1
+ *      gewechselt.
+ *
+ *   3. Auth ohne ?plan= → CheckoutClient mit eingeloggtem User-Hint und
+ *      "Continue to payment"-CTA statt Sign-Up-Form. Praktisch z.B. wenn
+ *      ein User via /account zur Subscription kommt.
+ *
+ * Founder-Code (?code=CALLDAY-X):
+ *   - Wird gegen Stripe Promotion-Codes validiert.
+ *   - Bei ungültigem/abgelaufenem Code zeigen wir explizit eine Fehler-
+ *     Page statt den Standard-Flow — wir wollen nicht dass der User mit
+ *     kaputtem Code dann versehentlich Vollpreis zahlt.
+ *   - Bei gültigem Code: discounted Preise (50% off) werden im Mockup
+ *     angezeigt + Founder-Pricing-Banner über der Headline.
  */
 export default async function CheckoutPage({ searchParams }: PageProps) {
   const { code, plan: planParam } = await searchParams;
 
-  // Gate 1 — Auth check
+  // 1) Auth-State lesen (kein Hard-Redirect mehr — die neue Page handled
+  //    Unauth selbst über die Sign-Up-Form rechts).
   const supabase = await createSupabaseSSR();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    // next-URL preserved beide Params damit nach Login direkt weiter geht.
-    // mode=signup öffnet /login direkt im Sign-Up-Modus — User die vom
-    // Pricing-CTA kommen sind fast immer Neu-User, nicht Returning.
-    // "Already have an account? Sign in" bleibt der Toggle für Existing.
-    const params = new URLSearchParams();
-    if (code) params.set("code", code);
-    if (planParam) params.set("plan", planParam);
-    const qs = params.toString();
-    const next = qs ? `/checkout?${qs}` : "/checkout";
-    redirect(`/login?mode=signup&next=${encodeURIComponent(next)}`);
-  }
-
-  // Gate 2 — Code validation (NUR wenn Code mitgegeben)
+  // 2) Code-Validierung (nur wenn ?code= mitgegeben)
   let promotionCodeId: string | null = null;
   if (code) {
     const stripe = getStripe();
@@ -131,13 +131,17 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
       console.error("[/checkout] Stripe code lookup failed", err);
       return (
         <CheckoutShell>
-          <h1 className="checkout-headline">Couldn&apos;t verify your code</h1>
-          <p className="checkout-body">
-            Something went wrong on our end while checking the code. Try
-            again in a minute, or reach out at{" "}
-            <a href="mailto:hello@callday.io">hello@callday.io</a> and
-            we&apos;ll take a look.
-          </p>
+          <div className="checkout-inner">
+            <h1 className="checkout-headline">
+              Couldn&apos;t verify your code
+            </h1>
+            <p className="checkout-body">
+              Something went wrong on our end while checking the code. Try
+              again in a minute, or reach out at{" "}
+              <a href="mailto:hello@callday.io">hello@callday.io</a> and
+              we&apos;ll take a look.
+            </p>
+          </div>
         </CheckoutShell>
       );
     }
@@ -145,23 +149,25 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
     if (!promotionCodeId) {
       return (
         <CheckoutShell>
-          <h1 className="checkout-headline">This code isn&apos;t active</h1>
-          <p className="checkout-body">
-            The founder code <strong>{code}</strong> is either expired,
-            already used, or doesn&apos;t exist. If you think this is a
-            mistake, reply to the Callday email you got, or contact{" "}
-            <a href="mailto:hello@callday.io">hello@callday.io</a>.
-          </p>
-          <p className="checkout-body">
-            Or you can{" "}
-            <Link
-              href="/checkout"
-              style={{ color: "var(--blue)", textDecoration: "underline" }}
-            >
-              subscribe at the regular price
-            </Link>
-            .
-          </p>
+          <div className="checkout-inner">
+            <h1 className="checkout-headline">This code isn&apos;t active</h1>
+            <p className="checkout-body">
+              The founder code <strong>{code}</strong> is either expired,
+              already used, or doesn&apos;t exist. If you think this is a
+              mistake, reply to the Callday email you got, or contact{" "}
+              <a href="mailto:hello@callday.io">hello@callday.io</a>.
+            </p>
+            <p className="checkout-body">
+              Or you can{" "}
+              <Link
+                href="/checkout"
+                style={{ color: "var(--blue)", textDecoration: "underline" }}
+              >
+                subscribe at the regular price
+              </Link>
+              .
+            </p>
+          </div>
         </CheckoutShell>
       );
     }
@@ -169,10 +175,11 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
 
   const hasDiscount = promotionCodeId !== null;
 
-  // DIRECT-SKIP: wenn ?plan= in der URL ist (z.B. vom Landing-CTA),
-  // erstellen wir die Stripe-Session direkt + redirecten. Picker wird
-  // übersprungen — User klickt sich nicht zweimal durch den selben Plan.
-  if (planParam === "yearly" || planParam === "monthly") {
+  // 3) Direct-Stripe-Skip: ?plan= + auth'd → fast-path direkt zu Stripe.
+  //    Unauth + ?plan= → Client rendert Mockup mit pre-selected Plan; nach
+  //    Sign-Up routet er sich selbst zurück hierher mit derselben URL und
+  //    triggert dann diesen Skip.
+  if (user && (planParam === "yearly" || planParam === "monthly")) {
     const url = await createCheckoutSession({
       plan: planParam,
       code: code ?? null,
@@ -183,130 +190,30 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
     redirect(url);
   }
 
-  // Pricing computed mit/ohne Discount
-  const monthlyFull = "€24.99";
-  const yearlyFull = "€199";
-  const monthlyDiscounted = "€12.50";
-  const yearlyDiscounted = "€99.50";
+  // 4) Pricing-Tiles computen (mit/ohne Discount). Hard-coded statt
+  //    aus Stripe gezogen — Display-Werte ändern sich nicht oft und
+  //    sparen einen extra API-Call pro Page-Load. Bei Pricing-Pivots
+  //    hier UND die Stripe-Products anpassen.
+  const prices: PriceTiles = hasDiscount
+    ? {
+        yearly: { total: "€99.50", perMonth: "€8.29" },
+        monthly: { perMonth: "€12.50" },
+      }
+    : {
+        yearly: { total: "€199", perMonth: "€16.58" },
+        monthly: { perMonth: "€24.99" },
+      };
 
   return (
     <CheckoutShell>
-      {hasDiscount ? (
-        <>
-          <h1 className="checkout-headline">Activate your founder pricing</h1>
-          <p className="checkout-body">
-            Pick a plan and lock in 50% off Callday for life, plus your
-            first month free. Your code{" "}
-            <strong className="checkout-code">{code}</strong> is applied
-            automatically.
-          </p>
-        </>
-      ) : (
-        <>
-          <h1 className="checkout-headline">Subscribe to Callday Pro</h1>
-          <p className="checkout-body">
-            Pick a plan and start dialing. Cancel or pause anytime.
-          </p>
-        </>
-      )}
-
-      <div className="checkout-plans">
-        <form action={startCheckoutAction}>
-          <input type="hidden" name="plan" value="yearly" />
-          {code && <input type="hidden" name="code" value={code} />}
-          {promotionCodeId && (
-            <input
-              type="hidden"
-              name="promotionCodeId"
-              value={promotionCodeId}
-            />
-          )}
-          <button type="submit" className="checkout-plan checkout-plan-best">
-            <span className="checkout-plan-badge">Best value</span>
-            <span className="checkout-plan-name">Yearly</span>
-            <span className="checkout-plan-price">
-              {hasDiscount ? `${yearlyDiscounted}/year` : `${yearlyFull}/year`}
-            </span>
-            <span className="checkout-plan-note">
-              {hasDiscount
-                ? `50% off ${yearlyFull} · billed once per year · first month free`
-                : `${yearlyFull} billed once per year (saves ~33% vs monthly)`}
-            </span>
-          </button>
-        </form>
-
-        <form action={startCheckoutAction}>
-          <input type="hidden" name="plan" value="monthly" />
-          {code && <input type="hidden" name="code" value={code} />}
-          {promotionCodeId && (
-            <input
-              type="hidden"
-              name="promotionCodeId"
-              value={promotionCodeId}
-            />
-          )}
-          <button type="submit" className="checkout-plan">
-            <span className="checkout-plan-name">Monthly</span>
-            <span className="checkout-plan-price">
-              {hasDiscount
-                ? `${monthlyDiscounted}/month`
-                : `${monthlyFull}/month`}
-            </span>
-            <span className="checkout-plan-note">
-              {hasDiscount
-                ? `50% off ${monthlyFull} · first month free`
-                : `Billed monthly`}
-            </span>
-          </button>
-        </form>
-      </div>
-
-      <p className="checkout-meta">
-        You can cancel or pause anytime from your account. Payment via
-        Stripe — we never see your card.
-      </p>
+      <CheckoutClient
+        code={code ?? null}
+        hasDiscount={hasDiscount}
+        prices={prices}
+        authedEmail={user?.email ?? null}
+      />
     </CheckoutShell>
   );
-}
-
-// ---- Server Action: Stripe-Checkout-Session erstellen + redirecten ----
-async function startCheckoutAction(formData: FormData) {
-  "use server";
-
-  const plan = formData.get("plan");
-  const codeRaw = formData.get("code");
-  const promotionCodeIdRaw = formData.get("promotionCodeId");
-
-  if (typeof plan !== "string") {
-    throw new Error("invalid form data");
-  }
-  if (plan !== "monthly" && plan !== "yearly") {
-    throw new Error("invalid plan");
-  }
-
-  const code = typeof codeRaw === "string" && codeRaw ? codeRaw : null;
-  const promotionCodeId =
-    typeof promotionCodeIdRaw === "string" && promotionCodeIdRaw
-      ? promotionCodeIdRaw
-      : null;
-
-  const supabase = await createSupabaseSSR();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/login");
-  }
-
-  const url = await createCheckoutSession({
-    plan,
-    code,
-    promotionCodeId,
-    userId: user.id,
-    userEmail: user.email ?? null,
-  });
-
-  redirect(url);
 }
 
 // ---- Shared layout-shell für die Checkout-Page (Status + Error) ----
@@ -326,9 +233,7 @@ function CheckoutShell({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
 
-      <main className="checkout-page">
-        <div className="checkout-inner">{children}</div>
-      </main>
+      <main className="checkout-page">{children}</main>
 
       <footer className="site-footer">
         <div className="container footer-inner">

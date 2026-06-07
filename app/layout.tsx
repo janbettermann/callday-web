@@ -40,6 +40,24 @@ export const viewport: Viewport = {
   themeColor: "#0d0f14",
 };
 
+// Force-dynamic an der Root-Layout-Wurzel.
+//
+// Hintergrund: Next 16.2.x hat einen internen Build-Bug bei der Prerender-
+// Phase auf den Auto-Generated `_global-error` / `_not-found` Routes
+// (InvariantError: Expected workStore to be initialized — die Error-Message
+// labelt sich selbst als Next-Bug). Reproduzierbar auf 16.2.4, 16.2.7 und
+// 16.3-canary, mit Turbopack UND Webpack.
+//
+// Mit force-dynamic auf Root reduziert sich der Failing-Set von 13 Pages
+// auf 2 (die Next-internen). Sobald upstream gefixt: kann entfernt werden,
+// dann kommt die Static-Optimization auf den public-facing Routes
+// (landing, legal) wieder zurück.
+//
+// callday-web ist sowieso fast komplett auth-driven (Supabase-Cookies pro
+// Request), daher ist der Performance-Trade-off von Static → Dynamic
+// minimal — die meisten Pages waren eh schon de-facto dynamic.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://callday.io"),
   title: "Callday. Make today a Callday.",

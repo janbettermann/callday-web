@@ -5,52 +5,123 @@ import type { MDXComponents } from "mdx/types";
  * The marketing landing page lives in tsx and styles itself; these
  * defaults give the legal pages a readable typography on top of the
  * light Callday theme so they don't render as plain unstyled markdown.
+ *
+ * Plain inline styles instead of Tailwind utility classes — Next 16's
+ * MDX integration was inferring this file as a Client Component when
+ * Tailwind v4 utility classes appeared in the JSX, which broke `metadata`
+ * exports from the consuming .mdx pages. Inline styles avoid the
+ * compiler boundary issue.
  */
 export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
     h1: ({ children }) => (
-      <h1 className="font-[family-name:var(--font-geist-sans)] text-4xl md:text-5xl font-semibold tracking-[-0.04em] mb-6 mt-2 text-[#1a1d26]">
+      <h1
+        style={{
+          fontFamily: "var(--font-geist-sans), sans-serif",
+          fontSize: "clamp(28px, 5vw, 44px)",
+          fontWeight: 600,
+          letterSpacing: "-0.04em",
+          marginBottom: "24px",
+          marginTop: "8px",
+          color: "#1a1d26",
+        }}
+      >
         {children}
       </h1>
     ),
     h2: ({ children }) => (
-      <h2 className="font-[family-name:var(--font-geist-sans)] text-2xl md:text-3xl font-semibold tracking-[-0.03em] mt-12 mb-4 text-[#1a1d26]">
+      <h2
+        style={{
+          fontFamily: "var(--font-geist-sans), sans-serif",
+          fontSize: "clamp(20px, 3vw, 28px)",
+          fontWeight: 600,
+          letterSpacing: "-0.03em",
+          marginTop: "48px",
+          marginBottom: "16px",
+          color: "#1a1d26",
+        }}
+      >
         {children}
       </h2>
     ),
     h3: ({ children }) => (
-      <h3 className="font-[family-name:var(--font-geist-sans)] text-lg md:text-xl font-semibold tracking-[-0.02em] mt-8 mb-3 text-[#1a1d26]">
+      <h3
+        style={{
+          fontFamily: "var(--font-geist-sans), sans-serif",
+          fontSize: "clamp(16px, 2vw, 20px)",
+          fontWeight: 600,
+          letterSpacing: "-0.02em",
+          marginTop: "32px",
+          marginBottom: "12px",
+          color: "#1a1d26",
+        }}
+      >
         {children}
       </h3>
     ),
     p: ({ children }) => (
-      <p className="text-[15px] leading-[1.7] text-[rgba(26,29,38,0.72)] mb-4">
+      <p
+        style={{
+          fontSize: "15px",
+          lineHeight: 1.7,
+          color: "rgba(26, 29, 38, 0.72)",
+          marginBottom: "16px",
+        }}
+      >
         {children}
       </p>
     ),
     ul: ({ children }) => (
-      <ul className="list-disc pl-6 mb-4 space-y-2 text-[15px] leading-[1.7] text-[rgba(26,29,38,0.72)]">
+      <ul
+        style={{
+          listStyle: "disc",
+          paddingLeft: "24px",
+          marginBottom: "16px",
+          fontSize: "15px",
+          lineHeight: 1.7,
+          color: "rgba(26, 29, 38, 0.72)",
+        }}
+      >
         {children}
       </ul>
     ),
     ol: ({ children }) => (
-      <ol className="list-decimal pl-6 mb-4 space-y-2 text-[15px] leading-[1.7] text-[rgba(26,29,38,0.72)]">
+      <ol
+        style={{
+          listStyle: "decimal",
+          paddingLeft: "24px",
+          marginBottom: "16px",
+          fontSize: "15px",
+          lineHeight: 1.7,
+          color: "rgba(26, 29, 38, 0.72)",
+        }}
+      >
         {children}
       </ol>
     ),
     a: ({ children, href }) => (
       <a
         href={href}
-        className="text-[#3564e0] underline underline-offset-2 hover:text-[#1a1d26] transition-colors"
+        style={{
+          color: "#3564e0",
+          textDecoration: "underline",
+          textUnderlineOffset: "2px",
+        }}
       >
         {children}
       </a>
     ),
     strong: ({ children }) => (
-      <strong className="text-[#1a1d26] font-semibold">{children}</strong>
+      <strong style={{ color: "#1a1d26", fontWeight: 600 }}>{children}</strong>
     ),
     hr: () => (
-      <hr className="border-t border-[rgba(26,29,38,0.08)] my-10" />
+      <hr
+        style={{
+          border: "none",
+          borderTop: "1px solid rgba(26, 29, 38, 0.08)",
+          margin: "40px 0",
+        }}
+      />
     ),
     ...components,
   };
