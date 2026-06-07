@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { CalldayLogo } from "./components/CalldayLogo";
 import { FaqAccordion } from "./components/FaqAccordion";
 import { FlowTabs } from "./components/FlowTabs";
+import { LaunchSiteNav } from "./components/LaunchSiteNav";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 
 /**
@@ -47,31 +48,14 @@ export default async function LandingPage() {
     <>
       <div className="bg-orb bg-orb-2" />
 
-      {/* === NAV === */}
-      <nav className="site-nav" data-scrolled="true">
-        <div className="container nav-inner">
-          <Link href="/" className="logo" style={{ textDecoration: "none" }}>
-            <CalldayLogo size={32} />
-            Callday
-          </Link>
-          <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-            <Link
-              href={isAuthed ? "/account" : "/login"}
-              style={{
-                color: "var(--ink-dim)",
-                textDecoration: "none",
-                fontSize: "14px",
-                fontWeight: 500,
-              }}
-            >
-              {isAuthed ? "Account" : "Sign in"}
-            </Link>
-            <a href="#pricing" className="nav-cta">
-              Get Callday
-            </a>
-          </div>
-        </div>
-      </nav>
+      {/* === NAV ===
+          LaunchSiteNav ist das Launch-Page-Pendant zu SiteNav (Beta).
+          Beide haben dieselbe Scroll-Detection-Logik (dunkel im Hero,
+          hell danach), aber unterschiedlichen Nav-Content. Vorher war
+          hier eine inline `<nav data-scrolled="true">` mit hartem
+          Light-Mode — Header blieb auch im dunklen Hero hell, weil das
+          Attribut konstant war. */}
+      <LaunchSiteNav isAuthed={isAuthed} />
 
       {/* === HERO === */}
       <section className="hero">
