@@ -235,6 +235,26 @@ body::before {
   background: rgba(26, 29, 38, 0.85);
 }
 
+/* Sekundärer Text-Link in der Nav (z. B. "Sign in" auf der Launch-Page).
+   Flipped die Farbe parallel zum Logo + nav-cta: hell auf dem dunklen
+   Hero, gedämpftes Ink-Grau im scrolled-State. */
+.nav-link {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+.nav-link:hover {
+  color: white;
+}
+.site-nav[data-scrolled="true"] .nav-link {
+  color: var(--ink-dim);
+}
+.site-nav[data-scrolled="true"] .nav-link:hover {
+  color: var(--ink);
+}
+
 /* === HERO — dark "spotlight" band (Notion-style) ===
    The hero is the ONE intentionally dark section on an otherwise
    light-only site (see top-of-file note). A deep navy spotlight makes

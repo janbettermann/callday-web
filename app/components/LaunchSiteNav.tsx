@@ -77,15 +77,7 @@ export function LaunchSiteNav({ isAuthed }: { isAuthed: boolean }) {
           Callday
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <Link
-            href={isAuthed ? "/account" : "/login"}
-            style={{
-              color: "var(--ink-dim)",
-              textDecoration: "none",
-              fontSize: "14px",
-              fontWeight: 500,
-            }}
-          >
+          <Link href={isAuthed ? "/account" : "/login"} className="nav-link">
             {isAuthed ? "Account" : "Sign in"}
           </Link>
           <a href="#pricing" className="nav-cta">
