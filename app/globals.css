@@ -560,7 +560,7 @@ h1 .accent {
 
 .login-link-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
   margin-top: 16px;
   flex-wrap: wrap;

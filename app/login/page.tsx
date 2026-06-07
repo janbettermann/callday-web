@@ -423,15 +423,8 @@ function LoginForm() {
         )}
       </form>
 
-      <div className="login-link-row">
-        <button
-          type="button"
-          className="login-text-link"
-          onClick={() => switchMode("otp-email")}
-        >
-          Email me a code instead
-        </button>
-        {!isSignUp && (
+      {!isSignUp && (
+        <div className="login-link-row">
           <button
             type="button"
             className="login-text-link"
@@ -444,8 +437,8 @@ function LoginForm() {
           >
             Forgot password?
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="login-switch-mode">
         {isSignUp ? (
