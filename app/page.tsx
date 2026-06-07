@@ -1,21 +1,79 @@
 import Link from "next/link";
-import { BetaApplicationForm } from "./components/BetaApplicationForm";
+import type { Metadata } from "next";
 import { CalldayLogo } from "./components/CalldayLogo";
 import { FaqAccordion } from "./components/FaqAccordion";
 import { FlowTabs } from "./components/FlowTabs";
-import { SiteNav } from "./components/SiteNav";
+import { createSupabaseSSR } from "@/lib/supabase-ssr";
 
-export default function Home() {
+/**
+ * / — Public-Launch-Landing-Page.
+ *
+ * Lebt auf dem `launch-prep`-Branch. Wird beim Launch-Day-Merge nach
+ * `main` der neue Homepage-Content auf callday.io. Die Beta-Application-
+ * Landing (Waitlist-Form) bleibt auf `main` bis zum Merge-Cutover.
+ *
+ * Branch-Strategie:
+ *   - `main`           → callday.io (Beta-Landing)
+ *   - `launch-prep`    → preview-URL (Launch-Landing, diese Datei)
+ *   - Launch-Day       → merge launch-prep → main → callday.io zeigt Launch
+ *
+ * Im Vergleich zur Beta-Page:
+ *   - Hero-CTA + Sprache auf Vollpreis-Public-Launch (statt
+ *     "Get early access" → "Get Callday", statt "free beta access" →
+ *     "Cancel anytime"-Hinweis).
+ *   - BetaApplicationForm-Section ersetzt durch Pricing-Section mit
+ *     Plan-Cards (Monthly + Yearly), die zu /checkout?plan=... führen.
+ *   - Nav: "Sign in"-Link für existierende User + "Get Callday"-CTA.
+ */
+
+export const metadata: Metadata = {
+  title: "Callday — Make today a Callday.",
+  description:
+    "The cold calling app for solo founders and freelancers. Less avoiding. More dialing.",
+};
+
+export default async function LandingPage() {
+  // Nav zeigt "Account" statt "Sign in" wenn User eingeloggt ist.
+  // Ohne diesen Check würde "Sign in" auch eingeloggten Usern angezeigt,
+  // was verwirrend ist wenn sie auf einen Plan klicken und ohne Login-
+  // Page direkt zu Stripe gelangen.
+  const supabase = await createSupabaseSSR();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isAuthed = !!user;
+
   return (
     <>
       <div className="bg-orb bg-orb-2" />
 
       {/* === NAV === */}
-      <SiteNav />
+      <nav className="site-nav" data-scrolled="true">
+        <div className="container nav-inner">
+          <Link href="/" className="logo" style={{ textDecoration: "none" }}>
+            <CalldayLogo size={32} />
+            Callday
+          </Link>
+          <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+            <Link
+              href={isAuthed ? "/account" : "/login"}
+              style={{
+                color: "var(--ink-dim)",
+                textDecoration: "none",
+                fontSize: "14px",
+                fontWeight: 500,
+              }}
+            >
+              {isAuthed ? "Account" : "Sign in"}
+            </Link>
+            <a href="#pricing" className="nav-cta">
+              Get Callday
+            </a>
+          </div>
+        </div>
+      </nav>
 
-      {/* === HERO — compact, mobile-first, no device mockup ===
-          The product visual now lives in the animated 3-step flow directly
-          below, so the hero stays small and gets the visitor scrolling fast. */}
+      {/* === HERO === */}
       <section className="hero">
         <div className="container hero-inner">
           <div className="pill reveal">
@@ -35,8 +93,8 @@ export default function Home() {
           </p>
 
           <div className="hero-cta-wrap reveal delay-3">
-            <a href="#beta" className="hero-cta">
-              Get early access
+            <a href="#pricing" className="hero-cta">
+              Get Callday
               <svg
                 width={14}
                 height={14}
@@ -52,14 +110,13 @@ export default function Home() {
               </svg>
             </a>
             <p className="hero-cta-meta">
-              Free beta access. 50% off for life.
+              From €24.99/month. Cancel anytime.
             </p>
           </div>
         </div>
       </section>
 
-      {/* === THE FLOW — 3 animated steps (the centerpiece) ===
-          Each step carries one workflow animation (placeholder for now). */}
+      {/* === THE FLOW === */}
       <section className="flow">
         <div className="container">
           <header className="flow-section-head">
@@ -106,9 +163,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* === DIFFERENTIATORS — slimmed from the old 4-card grid ===
-          The workflow mechanics now live in the animated flow above, so this
-          keeps only the two "why it sticks" points that aren't shown there. */}
+      {/* === DIFFERENTIATORS === */}
       <section className="features">
         <div className="container">
           <h2>
@@ -219,42 +274,69 @@ export default function Home() {
         </div>
       </section>
 
-      {/* === BIG CTA — early-access signup. One form, two outcomes (closed
-          beta or launch list) decided server-side; UI presents both as
-          equal wins so nobody feels like a runner-up. === */}
-      <section className="big-cta" id="beta">
-        <div className="container big-cta-inner">
+      {/* === PRICING — replaces BetaApplicationForm section === */}
+      <section className="pricing-section" id="pricing">
+        <div className="container">
           <h2>
-            Get <span className="italic">early access.</span>
+            Simple <span className="italic">pricing.</span>
           </h2>
           <p className="section-sub">
-            Sign up once. 50 of you get into the closed beta this round.
-            Everyone else gets founder pricing locked in for life at launch
-            — plus a free month on us.
+            One plan, two payment cycles. Cancel anytime.
           </p>
 
-          <div className="outcome-cards">
-            <div className="outcome-card">
-              <div className="outcome-card-label">Closed beta</div>
-              <h3 className="outcome-card-title">50 spots</h3>
-              <ul className="outcome-card-list">
-                <li>Test the app today</li>
-                <li>Help shape the product</li>
-                <li>Founder pricing for life</li>
+          <div className="pricing-grid">
+            {/* Yearly — Best Value */}
+            <div className="pricing-card pricing-card-best">
+              <span className="pricing-card-badge">Best value</span>
+              <div className="pricing-card-name">Yearly</div>
+              <div className="pricing-card-price">
+                €199<span className="pricing-card-period">/year</span>
+              </div>
+              <div className="pricing-card-savings">
+                €16.58/month — save ~33% vs monthly
+              </div>
+              <ul className="pricing-card-list">
+                <li>Unlimited lead lists</li>
+                <li>Built-in iOS calendar sync</li>
+                <li>Auto meeting confirmations</li>
+                <li>iPhone app (App Store)</li>
+                <li>Cancel anytime</li>
               </ul>
+              <Link
+                href="/checkout?plan=yearly"
+                className="pricing-card-cta pricing-card-cta-primary"
+              >
+                Get Callday Yearly
+              </Link>
             </div>
-            <div className="outcome-card">
-              <div className="outcome-card-label">Everyone else</div>
-              <h3 className="outcome-card-title">Locked in for launch</h3>
-              <ul className="outcome-card-list">
-                <li>First access at launch</li>
-                <li>1 month free</li>
-                <li>Founder pricing for life</li>
+
+            {/* Monthly */}
+            <div className="pricing-card">
+              <div className="pricing-card-name">Monthly</div>
+              <div className="pricing-card-price">
+                €24.99<span className="pricing-card-period">/month</span>
+              </div>
+              <div className="pricing-card-savings">Billed monthly</div>
+              <ul className="pricing-card-list">
+                <li>Unlimited lead lists</li>
+                <li>Built-in iOS calendar sync</li>
+                <li>Auto meeting confirmations</li>
+                <li>iPhone app (App Store)</li>
+                <li>Cancel anytime</li>
               </ul>
+              <Link
+                href="/checkout?plan=monthly"
+                className="pricing-card-cta"
+              >
+                Get Callday Monthly
+              </Link>
             </div>
           </div>
 
-          <BetaApplicationForm />
+          <p className="pricing-meta">
+            Payment via Stripe — we never see your card. Already a customer?{" "}
+            <Link href="/account">Manage subscription</Link>.
+          </p>
         </div>
       </section>
 
