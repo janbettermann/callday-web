@@ -1854,19 +1854,26 @@ h2 .italic {
 }
 
 /* === LEGAL PAGE LAYOUT === */
+/* `.legal-page` ist die Full-Width-Bühne mit cream Hintergrund. Das
+   Lese-Column-Constraint von 760px lebt eine Schicht tiefer im
+   `.legal-article`-Wrapper. So füllt der cream-Hintergrund den ganzen
+   Viewport, und das dunkle html-bg (für die iOS-Statusbar-Zone) bleibt
+   nur in der Notch-Zone sichtbar, nicht links/rechts vom Lesetext. */
 .legal-page {
   position: relative;
   z-index: 1;
+  /* Min-height = full viewport so cream bg fills at least one screen.
+     Vermeidet dunkles Body-Bg-Durchscheinen unter dem Footer wenn der
+     Content kurz ist. Footer flowt natürlich darunter. */
+  min-height: 100dvh;
+}
+.legal-article {
   max-width: 760px;
   margin: 0 auto;
   /* Top padding accounts for the fixed `.site-nav` (nominal
      height + iOS safe-area inset) plus breathing room. */
   padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 56px) 32px
     120px;
-  /* Min-height = full viewport so cream bg fills at least one screen.
-     Vermeidet dunkles Body-Bg-Durchscheinen unter dem Footer wenn der
-     Content kurz ist. Footer flowt natürlich darunter. */
-  min-height: 100dvh;
 }
 .legal-meta {
   font-family: var(--font-mono), monospace;
@@ -1932,7 +1939,7 @@ h2 .italic {
   .faq-answer-inner {
     padding: 0 0 22px;
   }
-  .legal-page {
+  .legal-article {
     padding: 56px 20px 80px;
   }
   .beta-form-grid {

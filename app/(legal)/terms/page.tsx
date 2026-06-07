@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <article className="legal-article">
+    <article className="legal-article" lang="de">
       <Content />
     </article>
   );

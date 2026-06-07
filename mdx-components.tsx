@@ -24,6 +24,14 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
           marginBottom: "24px",
           marginTop: "8px",
           color: "#1a1d26",
+          // Lange deutsche Composita wie "Nutzungsbedingungen" produzieren
+          // auf schmalen Phones (<=375px) horizontalen Scroll. `hyphens`
+          // greift wenn der article-Wrapper `lang="de"` setzt + der Browser
+          // ein Deutsch-Wörterbuch hat (alle modernen Browser tun das);
+          // `overflow-wrap: break-word` ist Fallback der notfalls beliebig
+          // trennt — verhindert garantiert das horizontale Scrollen.
+          hyphens: "auto",
+          overflowWrap: "break-word",
         }}
       >
         {children}
