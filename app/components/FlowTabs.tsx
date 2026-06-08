@@ -38,7 +38,7 @@ const STEPS: Step[] = [
   },
 ];
 
-const ROTATE_MS = 6000;
+const ROTATE_MS = 10000;
 
 /**
  * The 3-step flow section.
@@ -55,11 +55,12 @@ const ROTATE_MS = 6000;
  *
  *   Mobile (≤960 px) — `.flow-mobile`:
  *     A single carousel of 3 white cards, each with a cream media area
- *     (badge + placeholder + prev/next arrows) on top and a text area
- *     (title + copy + pagination dots) below. Cards stack in one grid
- *     cell; only the active one is opacity:1. Arrows clamp at the
- *     edges (no wrap), but auto-rotate keeps wrapping until the first
- *     arrow tap.
+ *     (badge + placeholder) on top and a text area (title + copy +
+ *     pagination dots bottom-left + brand-blue Next button bottom-right)
+ *     below. Cards stack in one grid cell; only the active one is
+ *     opacity:1. The Next arrow wraps around (3 → 1) — a single-forward
+ *     story-carousel pattern, no Back button needed for 3 cards. Auto-
+ *     rotate runs every ROTATE_MS until the first user tap.
  *
  * CSS toggles the two wrappers via `display: none` so only one is
  * laid out at a time. `prefers-reduced-motion: reduce` is respected:
@@ -89,14 +90,11 @@ export function FlowTabs() {
     setUserTookOver(true);
   };
 
-  const handlePrev = () => {
-    if (activeIndex === 0) return;
-    handleSelect(activeIndex - 1);
-  };
-
+  // Single-forward navigation with wrap: tapping Next on the last card
+  // loops back to the first. Standard story-carousel pattern (iOS, IG,
+  // TikTok) and removes the need for a Back button on a 3-card set.
   const handleNext = () => {
-    if (activeIndex === STEPS.length - 1) return;
-    handleSelect(activeIndex + 1);
+    handleSelect((activeIndex + 1) % STEPS.length);
   };
 
   // Keyboard fallback for the mobile arrow buttons. We drive the arrows
@@ -210,36 +208,14 @@ export function FlowTabs() {
           })}
         </div>
 
-        {/* Arrows live OUTSIDE the card stack so they never sit under
-            an inactive-but-stacked card. Positioned absolute over the
-            media area via .flow-mobile's relative container. */}
-        <button
-          type="button"
-          className="flow-card-nav flow-card-nav-prev"
-          onPointerUp={handlePrev}
-          onKeyDown={handleKey(handlePrev)}
-          disabled={activeIndex === 0}
-          aria-label="Previous step"
-        >
-          <svg
-            width={18}
-            height={18}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
+        {/* Single Next arrow with wrap-around — lives OUTSIDE the card
+            stack so it never sits under an inactive-but-stacked card.
+            Pinned bottom-right of .flow-mobile. */}
         <button
           type="button"
           className="flow-card-nav flow-card-nav-next"
           onPointerUp={handleNext}
           onKeyDown={handleKey(handleNext)}
-          disabled={activeIndex === STEPS.length - 1}
           aria-label="Next step"
         >
           <svg
