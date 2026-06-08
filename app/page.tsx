@@ -154,7 +154,7 @@ export default async function LandingPage() {
             Built to fight the <span className="italic">flinch</span>.
           </h2>
           <p className="section-sub">
-            Four mechanics. Each one closes a gap where focus usually dies.
+            Every detail closes a gap where focus usually dies.
           </p>
 
           <div className="feature-grid">
@@ -249,9 +249,9 @@ export default async function LandingPage() {
               </div>
               <h3>No CRM. No spreadsheet.</h3>
               <p>
-                Every call, note, and outcome lives inside the app. No Notion
-                pipeline to maintain. No spreadsheet to update. The system is
-                the calling.
+                Every call, note, and outcome stays in the app. No pipeline
+                to maintain. No spreadsheet to update. The system is the
+                calling.
               </p>
             </div>
           </div>
