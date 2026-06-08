@@ -2277,27 +2277,33 @@ h2 .italic {
        - 44×44 hits Apple HIG minimum tap-target size. */
   .flow-card-nav {
     position: absolute;
-    bottom: 14px;
+    bottom: 22px;
     width: 44px;
     height: 44px;
     padding: 0;
     border-radius: 50%;
-    /* Clear, ink-tinted border instead of a shadow — gives the button
-       definition against the white card surface without the lift/pop
-       a drop-shadow would add. */
-    border: 1px solid rgba(26, 29, 38, 0.18);
-    background: #fff;
-    color: #0d1117;
+    border: none;
+    /* Brand-blue CTA-style buttons — matches the .hero-cta gradient,
+       gives the carousel controls clear discoverability so first-time
+       visitors notice that the section has multiple cards. */
+    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    /* Subtle brand-tinted lift — smaller than .hero-cta's shadow since
+       these are secondary actions, but enough to read as "live" buttons
+       against the white card surface. */
+    box-shadow:
+      0 4px 12px rgba(74, 122, 247, 0.28),
+      0 1px 3px rgba(74, 122, 247, 0.16);
     z-index: 3;
     /* Explicit property list (NOT `all`) so `transform` is excluded —
        the :active scale should be instant, not eased over 150ms. */
     transition:
-      background-color 0.15s ease,
-      border-color 0.15s ease,
+      box-shadow 0.15s ease,
+      filter 0.15s ease,
       opacity 0.15s ease;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
@@ -2307,10 +2313,13 @@ h2 .italic {
   }
   /* Hover state guarded behind `hover: hover` so iOS doesn't latch the
      sticky-hover (post-tap hover stays glued to the button until the
-     user taps elsewhere — very visible with a darker border). */
+     user taps elsewhere — very visible with a brand-color background). */
   @media (hover: hover) {
     .flow-card-nav:hover:not(:disabled) {
-      border-color: rgba(26, 29, 38, 0.28);
+      filter: brightness(1.08);
+      box-shadow:
+        0 6px 16px rgba(74, 122, 247, 0.36),
+        0 1px 3px rgba(74, 122, 247, 0.2);
     }
   }
   .flow-card-nav:active:not(:disabled) {
@@ -2321,9 +2330,7 @@ h2 .italic {
     cursor: default;
     pointer-events: none;
   }
-  /* Prev sits left of Next: right = 14 (next inset) + 44 (next width) + 10 (gap) = 68 */
-  .flow-card-nav-prev { right: 68px; left: auto; }
-  .flow-card-nav-next { right: 14px; }
+  .flow-card-nav-next { right: 22px; }
 
   /* Text area: title + copy + absolutely-positioned pagination dots.
      The dots are pinned to the card bottom-left via `position: absolute`
@@ -2334,7 +2341,7 @@ h2 .italic {
   .flow-card-text {
     position: relative;
     flex: 1;
-    padding: 22px 22px 70px;
+    padding: 22px 22px 88px;
     background: #fff;
   }
   .flow-card-title {
@@ -2350,12 +2357,20 @@ h2 .italic {
     font-size: 15px;
     color: var(--ink-dim);
     line-height: 1.5;
-    margin: 0 0 14px;
+    /* No bottom margin — dots and Next button are absolutely positioned,
+       not in flow, so the copy doesn't need to push them down. The 22px
+       gap between copy and button comes from the text area's
+       padding-bottom: 88px minus the button's top offset (22 + 44 = 66). */
+    margin: 0;
   }
   .flow-card-dots {
     position: absolute;
     left: 22px;
-    bottom: 30px;
+    /* Same 22px inset as the Next button (and as the text padding) —
+       both UI clusters are bottom-anchored to the card edge rather than
+       center-aligned to each other. Reads as one ground-line, not as
+       dots floating to match the button's mid-point. */
+    bottom: 22px;
     display: flex;
     gap: 7px;
   }
