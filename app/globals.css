@@ -2242,8 +2242,10 @@ h2 .italic {
 
   /* Arrow buttons — siblings of .flow-cards inside the relative
      .flow-mobile, so they're never under an opacity:0 stacked card.
-     Vertically centered over the media area (media min-height is
-     280px → arrows sit at ~140px from the top of .flow-mobile).
+     Pinned to the bottom-right of the carousel as a pair, sitting on
+     the same Y-line as the pagination dots (which live bottom-left
+     inside the text area). The text area reserves padding-bottom: 70px
+     so neither the dots nor the arrows ever collide with the copy.
 
      iOS touch-routing notes:
        - `touch-action: manipulation` disables the 300ms double-tap
@@ -2255,42 +2257,64 @@ h2 .italic {
        - 44×44 hits Apple HIG minimum tap-target size. */
   .flow-card-nav {
     position: absolute;
-    top: 140px;
-    transform: translateY(-50%);
+    bottom: 14px;
     width: 44px;
     height: 44px;
     padding: 0;
     border-radius: 50%;
-    border: 1px solid var(--line);
-    background: rgba(255, 255, 255, 0.95);
-    color: var(--ink);
+    /* Clear, ink-tinted border instead of a shadow — gives the button
+       definition against the white card surface without the lift/pop
+       a drop-shadow would add. */
+    border: 1px solid rgba(26, 29, 38, 0.18);
+    background: #fff;
+    color: #0d1117;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     z-index: 3;
-    transition: background 0.2s ease, opacity 0.2s ease;
+    /* Explicit property list (NOT `all`) so `transform` is excluded —
+       the :active scale should be instant, not eased over 150ms. */
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      opacity 0.15s ease;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
   .flow-card-nav svg {
     pointer-events: none;
   }
+  /* Hover state guarded behind `hover: hover` so iOS doesn't latch the
+     sticky-hover (post-tap hover stays glued to the button until the
+     user taps elsewhere — very visible with a darker border). */
+  @media (hover: hover) {
+    .flow-card-nav:hover:not(:disabled) {
+      border-color: rgba(26, 29, 38, 0.28);
+    }
+  }
   .flow-card-nav:active:not(:disabled) {
-    background: #fff;
-    transform: translateY(-50%) scale(0.94);
+    transform: scale(0.94);
   }
   .flow-card-nav:disabled {
-    opacity: 0.35;
+    opacity: 0.4;
     cursor: default;
+    pointer-events: none;
   }
-  .flow-card-nav-prev { left: 10px; }
-  .flow-card-nav-next { right: 10px; }
+  /* Prev sits left of Next: right = 14 (next inset) + 44 (next width) + 10 (gap) = 68 */
+  .flow-card-nav-prev { right: 68px; left: auto; }
+  .flow-card-nav-next { right: 14px; }
 
-  /* Text area: title + copy + pagination dots, all left-aligned. */
+  /* Text area: title + copy + absolutely-positioned pagination dots.
+     The dots are pinned to the card bottom-left via `position: absolute`
+     instead of riding in the normal flow under the copy — that way the
+     dots' Y stays fixed regardless of how many lines the copy wraps to.
+     The extra bottom padding (56px) reserves the dot strip's footprint
+     so the copy text never overlaps it. */
   .flow-card-text {
-    padding: 22px 22px 20px;
+    position: relative;
+    flex: 1;
+    padding: 22px 22px 70px;
     background: #fff;
   }
   .flow-card-title {
@@ -2309,6 +2333,9 @@ h2 .italic {
     margin: 0 0 14px;
   }
   .flow-card-dots {
+    position: absolute;
+    left: 22px;
+    bottom: 30px;
     display: flex;
     gap: 7px;
   }
