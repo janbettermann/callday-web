@@ -36,6 +36,7 @@ const STEPS: Step[] = [
     badge: "Animation 02",
     label: "The calling loop",
     desc: "One lead card: tap to call, tap the outcome, the next card slides in. A counter ticks up on every dial.",
+    hasAnimation: true,
   },
   {
     num: "03",
@@ -44,6 +45,7 @@ const STEPS: Step[] = [
     badge: "Animation 03",
     label: "Booked. Synced. Sent.",
     desc: "A booked meeting cascades into a calendar event and a confirmation email, auto-fired before the next lead.",
+    hasAnimation: true,
   },
 ];
 
@@ -172,7 +174,7 @@ export function FlowTabs() {
                 }
               >
                 {s.hasAnimation ? (
-                  <FlowAnimation isActive={active} />
+                  <FlowAnimation stepNum={s.num} isActive={active} />
                 ) : (
                   <>
                     <span className="flow-anim-badge">{s.badge}</span>
@@ -208,7 +210,7 @@ export function FlowTabs() {
                   data-has-animation={s.hasAnimation || undefined}
                 >
                   {s.hasAnimation ? (
-                    <FlowAnimation isActive={active} />
+                    <FlowAnimation stepNum={s.num} isActive={active} />
                   ) : (
                     <>
                       <span className="flow-card-badge">{s.badge}</span>
