@@ -2126,9 +2126,29 @@ h2 .italic {
   max-width: 520px;
   aspect-ratio: 4 / 5;
   margin: 0 auto;
-  background: #faf6ed;
+  /* Dark Stage-BG (matched darkPalette.backgroundGradient[0] aus der App):
+     gibt der dunkel-gehaltenen Animation 01 visuelle Kontinuitaet und
+     traegt die kommenden Animationen 02/03 ebenfalls in dunklem Setting.
+     Cream-Variante (#faf6ed) ist die Mobile-Card oben, nicht hier. */
+  background: #0f1219;
   border-radius: 24px;
   overflow: hidden;
+}
+/* Text-Color-Overrides fuer die Placeholder-Steps 02 und 03 — solange die
+   noch ohne echte Animation sind, brauchen Badge/Label/Desc Light-Text
+   damit sie auf dem dunklen Stage-BG lesbar sind. Wenn alle drei Steps
+   echte Lotties tragen, kann dieser Block raus (Lottie-Steps haben kein
+   Text-Placeholder mehr). */
+.flow-stage .flow-anim-badge {
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.flow-stage .flow-anim-label {
+  color: rgba(255, 255, 255, 0.72);
+}
+.flow-stage .flow-anim-desc {
+  color: rgba(255, 255, 255, 0.45);
 }
 .flow-anim {
   position: absolute;
@@ -2143,6 +2163,14 @@ h2 .italic {
   opacity: 0;
   transition: opacity 0.35s ease;
   pointer-events: none;
+}
+/* Lottie-Variante (data-has-animation): drop the placeholder padding so
+   the animation can use the full stage; SVG-Renderer skaliert das Asset
+   ueber den ganzen Container. Text-Placeholder-Steps behalten ihr
+   Padding unveraendert. */
+.flow-anim[data-has-animation] {
+  padding: 0;
+  gap: 0;
 }
 .flow-anim[data-active] {
   opacity: 1;
@@ -2231,6 +2259,15 @@ h2 .italic {
     background: #faf6ed;
     border-bottom: 1px solid var(--line);
     text-align: center;
+  }
+  /* Lottie-Variante: Container nimmt das Animation-Aspect-Ratio (542/560
+     ≈ fast quadratisch) statt der min-height, damit das Asset komplett
+     ohne Crop reinpasst. Padding raus, das Asset fuellt die Card-Breite. */
+  .flow-card-media[data-has-animation] {
+    aspect-ratio: 542 / 560;
+    min-height: 0;
+    padding: 0;
+    gap: 0;
   }
   .flow-card-badge {
     position: absolute;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { FlowAnimation } from "./FlowAnimation";
 
 type Step = {
   num: string;
@@ -9,6 +10,13 @@ type Step = {
   badge: string;
   label: string;
   desc: string;
+  /**
+   * Wenn true, ersetzt das Lottie-Asset (FlowAnimation) den Text-Placeholder
+   * — Desktop + Mobile gleichermassen. Steps ohne Lottie bekommen weiter
+   * den label+desc-Placeholder. So koennen Animationen einzeln nachgereicht
+   * werden ohne den ganzen Block umzubauen.
+   */
+  hasAnimation?: boolean;
 };
 
 const STEPS: Step[] = [
@@ -19,6 +27,7 @@ const STEPS: Step[] = [
     badge: "Animation 01",
     label: "Drag & drop import",
     desc: "An Excel file drops into the import zone and becomes a lead list that joins your stack of audiences.",
+    hasAnimation: true,
   },
   {
     num: "02",
@@ -156,12 +165,21 @@ export function FlowTabs() {
                 key={s.num}
                 className="flow-anim"
                 data-active={active || undefined}
+                data-has-animation={s.hasAnimation || undefined}
                 role="img"
-                aria-label={`${s.label}, animation placeholder`}
+                aria-label={
+                  s.hasAnimation ? s.label : `${s.label}, animation placeholder`
+                }
               >
-                <span className="flow-anim-badge">{s.badge}</span>
-                <span className="flow-anim-label">{s.label}</span>
-                <span className="flow-anim-desc">{s.desc}</span>
+                {s.hasAnimation ? (
+                  <FlowAnimation isActive={active} />
+                ) : (
+                  <>
+                    <span className="flow-anim-badge">{s.badge}</span>
+                    <span className="flow-anim-label">{s.label}</span>
+                    <span className="flow-anim-desc">{s.desc}</span>
+                  </>
+                )}
               </div>
             );
           })}
@@ -185,10 +203,19 @@ export function FlowTabs() {
                 data-active={active || undefined}
                 aria-hidden={!active}
               >
-                <div className="flow-card-media">
-                  <span className="flow-card-badge">{s.badge}</span>
-                  <span className="flow-card-label">{s.label}</span>
-                  <span className="flow-card-desc">{s.desc}</span>
+                <div
+                  className="flow-card-media"
+                  data-has-animation={s.hasAnimation || undefined}
+                >
+                  {s.hasAnimation ? (
+                    <FlowAnimation isActive={active} />
+                  ) : (
+                    <>
+                      <span className="flow-card-badge">{s.badge}</span>
+                      <span className="flow-card-label">{s.label}</span>
+                      <span className="flow-card-desc">{s.desc}</span>
+                    </>
+                  )}
                 </div>
                 <div className="flow-card-text">
                   <h3 className="flow-card-title">{s.title}</h3>
