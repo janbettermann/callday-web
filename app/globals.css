@@ -2298,7 +2298,7 @@ h2 .italic {
     width: 44px;
     height: 44px;
     padding: 0;
-    border-radius: 50%;
+    border-radius: 14px;
     border: none;
     /* Brand-blue CTA-style buttons — matches the .hero-cta gradient,
        gives the carousel controls clear discoverability so first-time
@@ -2392,9 +2392,9 @@ h2 .italic {
     gap: 7px;
   }
   .flow-card-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
+    width: 14px;
+    height: 6px;
+    border-radius: 2px;
     background: var(--ink-mute);
     transition: background 0.2s ease;
   }
