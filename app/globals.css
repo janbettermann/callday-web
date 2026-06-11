@@ -2176,7 +2176,16 @@ h2 .italic {
   text-align: center;
   padding: 28px 24px;
   opacity: 0;
-  transition: opacity 0.35s ease;
+  /* Sequenzieller Crossfade — alte Anim fadet zuerst komplett raus,
+     dann fadet die neue rein (Delay = Out-Dauer). Verhindert das
+     Doppel-Bild waehrend des Overlaps, das beim klassischen
+     symmetrischen Crossfade auf gestackten Lotties entsteht. Mobile
+     loest dasselbe Problem ueber z-index-Swap auf .flow-card; auf
+     Desktop geht das nicht, weil die Lotties transparente Hintergruende
+     haben und der Stage-cream-Background durch sie durchscheint —
+     z-index allein wuerde die untere Lottie nicht verdecken. Out:
+     0.2s. In: 0.3s mit 0.2s Delay. Total 0.5s. */
+  transition: opacity 0.2s ease-out;
   pointer-events: none;
 }
 /* Lottie-Variante (data-has-animation): drop the placeholder padding so
@@ -2190,6 +2199,7 @@ h2 .italic {
 .flow-anim[data-active] {
   opacity: 1;
   pointer-events: auto;
+  transition: opacity 0.3s ease-out 0.2s;
 }
 .flow-anim-badge {
   font-family: var(--font-mono), monospace;
@@ -2233,9 +2243,12 @@ h2 .italic {
     margin: 40px auto 0;
   }
 
-  /* Grid-stack: all 3 cards share one cell; tallest sets the height,
-     only the active one is opacity:1. Since every card has the same
-     structure (media + text) heights match — no jump on switch. */
+  /* Grid-stack: all 3 cards share one cell; tallest sets the height.
+     Only the active one is z-index:2 — sie liegt mit solidem weissem
+     Background ueber den anderen und deckt sie komplett ab, sodass
+     beim Step-Wechsel kein Doppel-Bild von Titel/Lottie sichtbar wird.
+     Since every card has the same structure (media + text) heights
+     match — no jump on switch. */
   .flow-cards {
     position: relative;
     display: grid;
@@ -2251,12 +2264,17 @@ h2 .italic {
     border-radius: 24px;
     box-shadow: 0 2px 8px rgba(8, 10, 20, 0.04);
     overflow: hidden;
-    opacity: 0;
+    /* KEIN opacity-Fade auf der Card-Ebene — sonst flackert sie
+       wahrnehmbar durch 0 oder ueberlagert in Mitte sichtbar mit
+       Doppel-Titel-/Doppel-Lottie-Bild. Stattdessen z-index-Swap: die
+       aktive Card liegt mit solidem weissen Background ueber den
+       anderen und deckt sie komplett ab. Wechsel ist optisch instant
+       und sauber. */
+    z-index: 1;
     pointer-events: none;
-    transition: opacity 0.3s ease;
   }
   .flow-card[data-active] {
-    opacity: 1;
+    z-index: 2;
     pointer-events: auto;
   }
 
