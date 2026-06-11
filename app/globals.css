@@ -1055,6 +1055,10 @@ h2 .italic {
   line-height: 1.55;
   margin-bottom: 64px;
 }
+.section-sub strong {
+  color: var(--ink);
+  font-weight: 600;
+}
 
 .feature-grid {
   display: grid;
@@ -1364,24 +1368,71 @@ h2 .italic {
 .outcome-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  max-width: 600px;
-  margin: 0 auto 40px;
+  gap: 14px;
+  max-width: 800px;
+  margin: 0 auto 28px;
   text-align: left;
 }
+/* Echoes the dark stats slab above (.stats-block) — radial blue glow +
+   near-black linear gradient + white-5% hairline border. Keeps the
+   outcome pair on the same visual tier as the "1 tap / 2 taps / 0 tabs"
+   block so the section reads as one chord, not two. */
 .outcome-card {
-  padding: 24px 26px;
-  border-radius: 18px;
-  background: rgba(74, 122, 247, 0.05);
-  border: 1px solid rgba(74, 122, 247, 0.18);
+  padding: 24px 26px 22px;
+  border-radius: 20px;
+  background:
+    radial-gradient(
+      120% 100% at 50% 0%,
+      rgba(74, 122, 247, 0.14) 0%,
+      transparent 65%
+    ),
+    linear-gradient(180deg, #0d0f14 0%, #111319 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow:
+    0 10px 28px rgba(8, 10, 20, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 .outcome-card-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.8px;
   text-transform: uppercase;
-  margin-bottom: 14px;
-  color: var(--blue);
+  margin-bottom: 12px;
+  color: #8fb0ff;
+}
+.outcome-card-label-dot {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8fb0ff;
+}
+.outcome-card-label-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #8fb0ff;
+  animation: outcome-dot-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes outcome-dot-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  80%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .outcome-card-label-dot::after {
+    animation: none;
+  }
 }
 .outcome-card-title {
   font-family: var(--font-geist-sans), sans-serif;
@@ -1389,8 +1440,8 @@ h2 .italic {
   font-weight: 600;
   letter-spacing: -0.4px;
   line-height: 1.1;
-  color: var(--ink);
-  margin: 0 0 16px;
+  color: #f7f8fb;
+  margin: 0 0 14px;
 }
 .outcome-card-list {
   list-style: none;
@@ -1398,29 +1449,49 @@ h2 .italic {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .outcome-card-list li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  color: rgba(247, 248, 251, 0.7);
+  line-height: 1.4;
+}
+.outcome-card-list li svg {
+  color: #8fb0ff;
+  flex-shrink: 0;
+}
+
+/* === FORM CARD — wraps the form in a single anchored card so it reads
+   as the destination of both outcome paths above. === */
+.form-card {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 36px 36px 30px;
+  background: var(--bg-page);
+  border: 0.5px solid var(--line);
+  border-radius: 24px;
+  box-shadow: 0 4px 16px rgba(26, 29, 38, 0.04);
+  text-align: left;
+}
+.form-card-title {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.form-card-subtitle {
   font-size: 14px;
   color: var(--ink-dim);
   line-height: 1.5;
-  padding-left: 18px;
-  position: relative;
-}
-.outcome-card-list li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 8px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--blue);
+  margin: 0 0 24px;
 }
 
 .beta-form {
-  max-width: 540px;
-  margin: 0 auto;
   text-align: left;
   display: flex;
   flex-direction: column;
@@ -1982,6 +2053,14 @@ h2 .italic {
   }
   .outcome-cards {
     grid-template-columns: 1fr;
+  }
+  .form-card {
+    padding: 26px 22px 24px;
+    border-radius: 20px;
+  }
+  .outcome-card {
+    padding: 22px 22px 20px;
+    border-radius: 18px;
   }
 }
 

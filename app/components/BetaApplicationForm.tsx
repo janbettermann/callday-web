@@ -142,9 +142,6 @@ export function BetaApplicationForm() {
           placeholder="yourbusiness.com"
           disabled={status === "submitting"}
         />
-        <span className="beta-field-hint">
-          Helps us verify you&apos;re an active business owner.
-        </span>
       </label>
 
       <label className="beta-field">
@@ -237,7 +234,7 @@ export function BetaApplicationForm() {
         className="beta-submit"
         disabled={!isComplete || status === "submitting"}
       >
-        {status === "submitting" ? "Sending..." : "Reserve my spot"}
+        {status === "submitting" ? "Sending..." : "Save my spot"}
       </button>
 
       {status === "error" && errorMessage && (

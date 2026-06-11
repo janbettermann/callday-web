@@ -5,6 +5,24 @@ import { FaqAccordion } from "./components/FaqAccordion";
 import { FlowTabs } from "./components/FlowTabs";
 import { SiteNav } from "./components/SiteNav";
 
+function CheckIcon() {
+  return (
+    <svg
+      width={14}
+      height={14}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
 export default function Home() {
   return (
     <>
@@ -228,33 +246,62 @@ export default function Home() {
             Get <span className="italic">early access.</span>
           </h2>
           <p className="section-sub">
-            Sign up once. 50 of you get into the closed beta this round.
-            Everyone else gets founder pricing locked in for life at launch
-            — plus a free month on us.
+            Two ways in, same form. 50 testers get the app this week.
+            Everyone gets a spot on the launch list and locks in{" "}
+            <strong>founder pricing</strong> plus a{" "}
+            <strong>free month</strong>.
           </p>
 
           <div className="outcome-cards">
             <div className="outcome-card">
-              <div className="outcome-card-label">Closed beta</div>
-              <h3 className="outcome-card-title">50 spots</h3>
+              <div className="outcome-card-label">
+                <span className="outcome-card-label-dot" />
+                50 spots open
+              </div>
+              <h3 className="outcome-card-title">Closed beta</h3>
               <ul className="outcome-card-list">
-                <li>Test the app today</li>
-                <li>Help shape the product</li>
-                <li>Founder pricing for life</li>
+                <li>
+                  <CheckIcon />
+                  Test the app for free today
+                </li>
+                <li>
+                  <CheckIcon />
+                  Founder pricing for life
+                </li>
+                <li>
+                  <CheckIcon />
+                  Help shape the product
+                </li>
               </ul>
             </div>
             <div className="outcome-card">
-              <div className="outcome-card-label">Everyone else</div>
-              <h3 className="outcome-card-title">Locked in for launch</h3>
+              <div className="outcome-card-label">
+                <span className="outcome-card-label-dot" />
+                Secure benefits
+              </div>
+              <h3 className="outcome-card-title">Launch list</h3>
               <ul className="outcome-card-list">
-                <li>First access at launch</li>
-                <li>1 month free</li>
-                <li>Founder pricing for life</li>
+                <li>
+                  <CheckIcon />
+                  Guaranteed spot
+                </li>
+                <li>
+                  <CheckIcon />
+                  Founder pricing for life
+                </li>
+                <li>
+                  <CheckIcon />
+                  1 month free at launch
+                </li>
               </ul>
             </div>
           </div>
 
-          <BetaApplicationForm />
+          <div className="form-card">
+            <div className="form-card-title">Save your spot</div>
+            <p className="form-card-subtitle">Takes 60 seconds.</p>
+            <BetaApplicationForm />
+          </div>
         </div>
       </section>
 
