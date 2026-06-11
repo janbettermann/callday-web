@@ -2324,17 +2324,10 @@ h2 .italic {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    /* Subtle brand-tinted lift — smaller than .hero-cta's shadow since
-       these are secondary actions, but enough to read as "live" buttons
-       against the white card surface. */
-    box-shadow:
-      0 4px 12px rgba(74, 122, 247, 0.28),
-      0 1px 3px rgba(74, 122, 247, 0.16);
     z-index: 3;
     /* Explicit property list (NOT `all`) so `transform` is excluded —
        the :active scale should be instant, not eased over 150ms. */
     transition:
-      box-shadow 0.15s ease,
       filter 0.15s ease,
       opacity 0.15s ease;
     touch-action: manipulation;
@@ -2349,9 +2342,6 @@ h2 .italic {
   @media (hover: hover) {
     .flow-card-nav:hover:not(:disabled) {
       filter: brightness(1.08);
-      box-shadow:
-        0 6px 16px rgba(74, 122, 247, 0.36),
-        0 1px 3px rgba(74, 122, 247, 0.2);
     }
   }
   .flow-card-nav:active:not(:disabled) {

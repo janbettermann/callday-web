@@ -80,7 +80,10 @@ const ROTATE_MS = 10000;
 export function FlowTabs() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [userTookOver, setUserTookOver] = useState(false);
+  const [isInView, setIsInView] = useState(false);
   const reduceMotion = useRef(false);
+  const desktopRef = useRef<HTMLDivElement>(null);
+  const mobileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     reduceMotion.current = window.matchMedia(
@@ -88,13 +91,52 @@ export function FlowTabs() {
     ).matches;
   }, []);
 
+  /**
+   * Spielt Lottie + Auto-Rotation nur ab waehrend der FlowTabs-Bereich
+   * im Viewport sichtbar ist. Verlaesst der User die Sektion, pausiert
+   * alles auf Frame 0; kommt er wieder rein, startet die Carousel-Story
+   * neu bei Step 01 (sofern der User nicht manuell geklickt hat — dann
+   * respektieren wir seine Auswahl auch nach Re-Entry).
+   *
+   * Wir beobachten beide DOM-Trees (.flow-layout fuer Desktop, .flow-mobile
+   * fuer Mobile). Nur der per CSS sichtbare feuert — der display:none-Tree
+   * intersected nie. Threshold 0.5 = halbe Sektion im Viewport: empirischer
+   * Sweet-Spot, bei dem der Animationsbereich (rechte Spalte auf Desktop,
+   * oberer Card-Bereich auf Mobile) garantiert vollstaendig sichtbar ist
+   * bevor wir play druecken. IntersectionObserver feuert in beide
+   * Richtungen wenn die Threshold gekreuzt wird, also auch beim
+   * Verlassen — kein Disconnect.
+   */
   useEffect(() => {
-    if (userTookOver || reduceMotion.current) return;
+    const els = [desktopRef.current, mobileRef.current].filter(
+      (el): el is HTMLDivElement => el !== null
+    );
+    if (els.length === 0) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        // Egal welcher Tree feuert: wenn irgendeiner sichtbar ist,
+        // gilt die Sektion als in-view. Beide gleichzeitig sichtbar
+        // gibt's nicht (display:none auf dem inaktiven).
+        const anyVisible = entries.some((e) => e.isIntersecting);
+        setIsInView(anyVisible);
+      },
+      { threshold: 0.5 }
+    );
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (userTookOver || reduceMotion.current || !isInView) return;
+    // Reset bei jedem Re-Entry: Story faengt wieder bei Step 01 an,
+    // damit der User die Animation von Anfang sieht — auch wenn die
+    // Rotation vor dem Wegscrollen schon weiter war.
+    setActiveIndex(0);
     const id = window.setInterval(() => {
       setActiveIndex((i) => (i + 1) % STEPS.length);
     }, ROTATE_MS);
     return () => window.clearInterval(id);
-  }, [userTookOver]);
+  }, [userTookOver, isInView]);
 
   const handleSelect = (i: number) => {
     setActiveIndex(i);
@@ -127,7 +169,7 @@ export function FlowTabs() {
   return (
     <>
       {/* === DESKTOP === */}
-      <div className="flow-layout">
+      <div className="flow-layout" ref={desktopRef}>
         <ol
           className="flow-tablist"
           role="tablist"
@@ -174,7 +216,10 @@ export function FlowTabs() {
                 }
               >
                 {s.hasAnimation ? (
-                  <FlowAnimation stepNum={s.num} isActive={active} />
+                  <FlowAnimation
+                    stepNum={s.num}
+                    isActive={active && isInView}
+                  />
                 ) : (
                   <>
                     <span className="flow-anim-badge">{s.badge}</span>
@@ -191,6 +236,7 @@ export function FlowTabs() {
       {/* === MOBILE === */}
       <div
         className="flow-mobile"
+        ref={mobileRef}
         role="region"
         aria-label="Workflow steps"
         aria-roledescription="carousel"
@@ -210,7 +256,10 @@ export function FlowTabs() {
                   data-has-animation={s.hasAnimation || undefined}
                 >
                   {s.hasAnimation ? (
-                    <FlowAnimation stepNum={s.num} isActive={active} />
+                    <FlowAnimation
+                    stepNum={s.num}
+                    isActive={active && isInView}
+                  />
                   ) : (
                     <>
                       <span className="flow-card-badge">{s.badge}</span>
@@ -220,7 +269,10 @@ export function FlowTabs() {
                   )}
                 </div>
                 <div className="flow-card-text">
-                  <h3 className="flow-card-title">{s.title}</h3>
+                  <h3 className="flow-card-title">
+                    <span className="flow-card-step">{Number(s.num)}.</span>{" "}
+                    {s.title}
+                  </h3>
                   <p className="flow-card-copy">{s.copy}</p>
                   <div className="flow-card-dots" aria-hidden="true">
                     {STEPS.map((_, j) => (
