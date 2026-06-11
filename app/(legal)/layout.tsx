@@ -37,7 +37,7 @@ export default function LegalLayout({
           <div className="footer-meta">
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
-            <Link href="/terms#imprint">Imprint</Link>
+            <Link href="/terms/de#imprint">Imprint</Link>
             <a href="mailto:hello@callday.io">hello@callday.io</a>
           </div>
         </div>

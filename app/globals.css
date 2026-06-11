@@ -1883,6 +1883,40 @@ h2 .italic {
   margin-bottom: 16px;
 }
 
+/* Sprach-Toggle: rechts ausgerichtet ueber dem Article-Body, dezent.
+   Sitzt im Article (nicht in der Nav), damit klar ist: nur Legal-Text
+   wechselt die Sprache, nicht die ganze Site. */
+.lang-toggle {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 28px;
+  font-size: 13px;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+.lang-toggle-item {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ink-faint);
+  text-decoration: none;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  transition: color 120ms ease;
+}
+.lang-toggle-item:hover {
+  color: var(--ink-dim);
+}
+.lang-toggle-item[data-active="true"] {
+  color: var(--blue-deep);
+  pointer-events: none;
+}
+.lang-toggle-sep {
+  color: var(--ink-mute);
+  font-size: 13px;
+  user-select: none;
+}
+
 /* === RESPONSIVE === */
 @media (max-width: 960px) {
   .hero-sub,
@@ -1940,7 +1974,8 @@ h2 .italic {
     padding: 0 0 22px;
   }
   .legal-article {
-    padding: 56px 20px 80px;
+    padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 32px) 20px
+      80px;
   }
   .beta-form-grid {
     grid-template-columns: 1fr;
