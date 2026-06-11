@@ -8,8 +8,8 @@ import { SiteNav } from "./components/SiteNav";
 function CheckIcon() {
   return (
     <svg
-      width={14}
-      height={14}
+      width={16}
+      height={16}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -245,51 +245,30 @@ export default function Home() {
           <h2>
             Get <span className="italic">early access.</span>
           </h2>
-          <p className="section-sub">
-            Two ways in, same form. 50 testers get the app this week.
-            Everyone gets a spot on the launch list and locks in{" "}
-            <strong>founder pricing</strong> plus a{" "}
-            <strong>free month</strong>.
-          </p>
 
-          <div className="outcome-cards">
-            <div className="outcome-card">
-              <div className="outcome-card-label">
-                <span className="outcome-card-label-dot" />
-                50 spots open
+          <div className="benefit-card">
+            <div className="benefit-grid">
+              <div className="benefit-intro">
+                <div className="benefit-label">
+                  <span className="benefit-label-dot" />
+                  Open now
+                </div>
+                <h3 className="benefit-title">What you get</h3>
+                <p className="benefit-subline">
+                  When you save your spot today.
+                </p>
               </div>
-              <h3 className="outcome-card-title">Closed beta</h3>
-              <ul className="outcome-card-list">
-                <li>
+
+              <ul className="benefit-list">
+                <li className="benefit-item">
                   <CheckIcon />
-                  Test the app for free today
+                  Get the app this week
                 </li>
-                <li>
+                <li className="benefit-item">
                   <CheckIcon />
                   Founder pricing for life
                 </li>
-                <li>
-                  <CheckIcon />
-                  Help shape the product
-                </li>
-              </ul>
-            </div>
-            <div className="outcome-card">
-              <div className="outcome-card-label">
-                <span className="outcome-card-label-dot" />
-                Secure benefits
-              </div>
-              <h3 className="outcome-card-title">Launch list</h3>
-              <ul className="outcome-card-list">
-                <li>
-                  <CheckIcon />
-                  Guaranteed spot
-                </li>
-                <li>
-                  <CheckIcon />
-                  Founder pricing for life
-                </li>
-                <li>
+                <li className="benefit-item">
                   <CheckIcon />
                   1 month free at launch
                 </li>

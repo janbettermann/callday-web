@@ -11,18 +11,12 @@ const ITEMS: FaqItem[] = [
   {
     q: "What happens after I submit?",
     a: (
-      <>
-        <p>
-          We&apos;ll email you within 24 hours with next steps. Once
-          you&apos;re confirmed, we send your TestFlight invite, usually
-          within an hour. From there, you can install Callday and start using
-          it the same day.
-        </p>
-        <p>
-          If this beta round is full, you&apos;re automatically on the launch
-          list. No extra signup needed.
-        </p>
-      </>
+      <p>
+        We&apos;ll email you within 48 hours with next steps. Once
+        you&apos;re confirmed, we send your TestFlight invite, usually
+        within an hour. From there, you can install Callday and start using
+        it the same day.
+      </p>
     ),
   },
   {
@@ -45,54 +39,15 @@ const ITEMS: FaqItem[] = [
     a: (
       <>
         <p>
-          When Callday launches publicly, every beta tester and launch list
-          member gets an email with a personal founder code.
+          When Callday launches publicly, everyone who signed up early gets
+          an email with a personal founder code. You enter the code when you
+          sign up. No expiry. As long as your subscription is active, your
+          founder rate stays.
         </p>
         <p>
-          The code locks in. Your first month free, plus 50% off the standard
-          price for life.
-        </p>
-        <p>
-          You enter the code when you sign up. No expiry. As long as your
-          subscription is active, your discounted price stays.
-        </p>
-      </>
-    ),
-  },
-  {
-    q: "What if I don't make it into the beta this round?",
-    a: (
-      <>
-        <p>
-          You&apos;re automatically on the launch list. Same founder code,
-          same 50% off for life, plus your first month free.
-        </p>
-        <p>
-          Beta testers just get access earlier. The reward for being early
-          stays the same.
-        </p>
-      </>
-    ),
-  },
-  {
-    q: "How do you select beta testers?",
-    a: (
-      <>
-        <p>
-          We&apos;re prioritizing solo founders, freelancers, and small agency
-          owners who actively cold-call to grow their business.
-        </p>
-        <p>
-          Our process. We check your application, take a quick look at your
-          business website, and may send a follow-up email if we have
-          questions. Then we decide if the closed beta is the right fit for
-          you right now. If not, you stay on the launch list with all the
-          benefits already locked in.
-        </p>
-        <p>
-          &ldquo;Best fit&rdquo; means. You actually cold-call (not just
-          curious), you run a real business, and your workflow matches what
-          Callday is built for.
+          Standard pricing at launch is €14/mo. With your founder
+          code, that drops to €7/mo for life. It stays at €7 even when we raise
+          prices later. The first month is on us either way.
         </p>
       </>
     ),

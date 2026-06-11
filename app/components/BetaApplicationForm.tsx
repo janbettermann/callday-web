@@ -28,9 +28,7 @@ export function BetaApplicationForm() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [website, setWebsite] = useState("");
   const [weeklyCalls, setWeeklyCalls] = useState<WeeklyCalls>("");
-  const [selling, setSelling] = useState("");
   const [currentTool, setCurrentTool] = useState<CurrentTool>("");
   const [currentToolOther, setCurrentToolOther] = useState("");
   const [hasIPhone, setHasIPhone] = useState(false);
@@ -68,9 +66,7 @@ export function BetaApplicationForm() {
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim(),
-          website: website.trim() || null,
           cold_calls_per_week: weeklyCalls,
-          what_they_sell: selling.trim() || null,
           current_tool: resolvedCurrentTool,
           has_ios17: hasIPhone,
         }),
@@ -131,20 +127,6 @@ export function BetaApplicationForm() {
       </div>
 
       <label className="beta-field">
-        <span className="beta-field-label">
-          Your business website{" "}
-          <span className="beta-field-optional">(optional)</span>
-        </span>
-        <input
-          type="text"
-          value={website}
-          onChange={(e) => setWebsite(e.target.value)}
-          placeholder="yourbusiness.com"
-          disabled={status === "submitting"}
-        />
-      </label>
-
-      <label className="beta-field">
         <span className="beta-field-label">Cold calls you make per week</span>
         <select
           required
@@ -160,19 +142,6 @@ export function BetaApplicationForm() {
           <option value="30_100">30 to 100</option>
           <option value="over_100">Over 100</option>
         </select>
-      </label>
-
-      <label className="beta-field">
-        <span className="beta-field-label">
-          What you sell <span className="beta-field-optional">(optional)</span>
-        </span>
-        <input
-          type="text"
-          value={selling}
-          onChange={(e) => setSelling(e.target.value)}
-          placeholder="e.g. websites, SEO, ads, design, copywriting..."
-          disabled={status === "submitting"}
-        />
       </label>
 
       <label className="beta-field">
@@ -232,7 +201,7 @@ export function BetaApplicationForm() {
       <button
         type="submit"
         className="beta-submit"
-        disabled={!isComplete || status === "submitting"}
+        disabled={status === "submitting"}
       >
         {status === "submitting" ? "Sending..." : "Save my spot"}
       </button>
@@ -242,8 +211,6 @@ export function BetaApplicationForm() {
           {errorMessage}
         </p>
       )}
-
-      <p className="beta-submit-meta">Either way, you&apos;re in.</p>
     </form>
   );
 }

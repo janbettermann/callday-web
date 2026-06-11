@@ -1361,107 +1361,139 @@ h2 .italic {
 }
 
 /* === BETA APPLICATION FORM === */
-/* === OUTCOME CARDS — sit between the section sub and the form, show
-   the two possible outcomes (closed beta / launch list) side-by-side
-   without hierarchy. Both styled as equal wins so the visitor never
-   feels like the launch-list outcome is a consolation prize. === */
-.outcome-cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
+/* === BENEFIT CARD — dark "what you get" pre-form panel. Split layout:
+   left holds label + title + subline (anchor), right holds the three
+   icon-led benefits with sublines. Border between left/right on desktop,
+   collapses to top/bottom border on mobile. === */
+.benefit-card {
+  position: relative;
+  overflow: hidden;
   max-width: 800px;
   margin: 0 auto 28px;
-  text-align: left;
-}
-/* Echoes the dark stats slab above (.stats-block) — radial blue glow +
-   near-black linear gradient + white-5% hairline border. Keeps the
-   outcome pair on the same visual tier as the "1 tap / 2 taps / 0 tabs"
-   block so the section reads as one chord, not two. */
-.outcome-card {
-  padding: 24px 26px 22px;
+  padding: 36px 40px;
   border-radius: 20px;
-  background:
-    radial-gradient(
-      120% 100% at 50% 0%,
-      rgba(74, 122, 247, 0.14) 0%,
-      transparent 65%
-    ),
-    linear-gradient(180deg, #0d0f14 0%, #111319 100%);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(135deg, #0a0e16 0%, #131826 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow:
     0 10px 28px rgba(8, 10, 20, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  text-align: left;
 }
-.outcome-card-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-  color: #8fb0ff;
-}
-.outcome-card-label-dot {
-  position: relative;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #8fb0ff;
-}
-.outcome-card-label-dot::after {
+/* Asymmetric blue glow in the upper-right — gives the dark slab a
+   light source instead of a flat field. */
+.benefit-card::before {
   content: "";
   position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: #8fb0ff;
-  animation: outcome-dot-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  top: -80px;
+  right: -80px;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(
+    circle,
+    rgba(74, 122, 247, 0.15) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
 }
-@keyframes outcome-dot-ping {
-  0% {
-    transform: scale(1);
-    opacity: 0.6;
-  }
-  80%,
+.benefit-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 40px;
+  align-items: center;
+}
+.benefit-intro {
+  padding-right: 36px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+.benefit-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  color: var(--blue);
+}
+.benefit-label-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.25);
+  animation: benefit-pulse 2s ease-in-out infinite;
+}
+@keyframes benefit-pulse {
+  0%,
   100% {
-    transform: scale(2.6);
-    opacity: 0;
+    box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(251, 191, 36, 0);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .outcome-card-label-dot::after {
+  .benefit-label-dot {
     animation: none;
   }
 }
-.outcome-card-title {
+.benefit-title {
   font-family: var(--font-geist-sans), sans-serif;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.4px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
   line-height: 1.1;
-  color: #f7f8fb;
-  margin: 0 0 14px;
+  color: #ffffff;
+  margin: 0 0 10px;
 }
-.outcome-card-list {
+.benefit-subline {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.5;
+  margin: 0;
+}
+.benefit-list {
   list-style: none;
   padding: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 14px;
 }
-.outcome-card-list li {
+.benefit-item {
   display: flex;
   align-items: center;
-  gap: 9px;
-  font-size: 14px;
-  color: rgba(247, 248, 251, 0.7);
-  line-height: 1.4;
+  gap: 11px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
+  line-height: 1.3;
+  color: #ffffff;
 }
-.outcome-card-list li svg {
-  color: #8fb0ff;
+.benefit-item svg {
+  color: var(--blue);
   flex-shrink: 0;
+}
+@media (max-width: 720px) {
+  .benefit-card {
+    padding: 28px 24px;
+  }
+  .benefit-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .benefit-intro {
+    padding-right: 0;
+    padding-bottom: 22px;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .benefit-title {
+    font-size: 24px;
+  }
 }
 
 /* === FORM CARD — wraps the form in a single anchored card so it reads
@@ -1524,28 +1556,31 @@ h2 .italic {
   padding-left: 2px;
   line-height: 1.4;
 }
+/* iOS-Settings-Style: gray fill instead of white bg, no visible border,
+   subtle focus ring. Reads as "inset cell" not "bordered input". */
 .beta-field input,
 .beta-field select {
-  background: var(--bg-page);
-  border: 0.5px solid var(--line-strong);
+  background: rgba(26, 29, 38, 0.045);
+  border: 1px solid transparent;
   border-radius: 12px;
-  padding: 13px 16px;
-  font-size: 15px;
+  padding: 15px 16px;
+  font-size: 16px;
   font-family: inherit;
   color: var(--ink);
   outline: none;
   transition:
-    border-color 0.2s,
-    box-shadow 0.2s,
-    background 0.2s;
+    border-color 0.18s,
+    box-shadow 0.18s,
+    background 0.18s;
 }
 .beta-field input::placeholder {
-  color: var(--ink-mute);
+  color: rgba(26, 29, 38, 0.36);
 }
 .beta-field input:focus,
 .beta-field select:focus {
-  border-color: var(--blue);
-  box-shadow: 0 0 0 4px rgba(74, 122, 247, 0.12);
+  background: var(--bg-page);
+  border-color: rgba(74, 122, 247, 0.5);
+  box-shadow: 0 0 0 3px rgba(74, 122, 247, 0.14);
 }
 .beta-field select {
   appearance: none;
@@ -1561,22 +1596,25 @@ h2 .italic {
   background: var(--bg-page);
   color: var(--ink);
 }
+/* Bewusst markanter als die normalen Inputs — TestFlight-Pflicht ist
+   die einzige harte Knock-Out-Bedingung im Form, die Checkbox darf
+   nicht im Grau-Fill der Inputs untergehen. */
 .beta-checkbox {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   padding: 14px 16px;
-  background: var(--bg-page);
-  border: 0.5px solid var(--line);
+  background: rgba(74, 122, 247, 0.07);
+  border: 1px solid rgba(74, 122, 247, 0.22);
   border-radius: 12px;
   cursor: pointer;
   transition:
-    background 0.2s,
-    border-color 0.2s;
+    background 0.18s,
+    border-color 0.18s;
 }
 .beta-checkbox:hover {
-  background: var(--blue-tint);
-  border-color: rgba(74, 122, 247, 0.25);
+  background: rgba(74, 122, 247, 0.1);
+  border-color: rgba(74, 122, 247, 0.32);
 }
 .beta-checkbox input {
   margin-top: 3px;
@@ -1626,17 +1664,10 @@ h2 .italic {
 .beta-submit:active:not(:disabled) {
   transform: translateY(0);
 }
+/* Submit-Status während des POST. Visuell volle CTA-Stärke beibehalten —
+   die "Sending..."-Beschriftung trägt das Feedback. */
 .beta-submit:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-.beta-submit-meta {
-  text-align: center;
-  font-size: 14px;
-  color: #6b7280;
-  font-style: italic;
-  margin: 4px 0 0;
+  cursor: wait;
 }
 .beta-submit-error {
   text-align: center;
@@ -2051,16 +2082,9 @@ h2 .italic {
   .beta-form-grid {
     grid-template-columns: 1fr;
   }
-  .outcome-cards {
-    grid-template-columns: 1fr;
-  }
   .form-card {
     padding: 26px 22px 24px;
     border-radius: 20px;
-  }
-  .outcome-card {
-    padding: 22px 22px 20px;
-    border-radius: 18px;
   }
 }
 
