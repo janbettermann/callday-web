@@ -26,7 +26,9 @@ function CheckIcon() {
 /* Boxed icons in der Benefit-Card — Box-Style siehe `.benefit-item-icon`
  * in globals.css. Drei semantisch passende Icons:
  *  - PhoneIcon  → "Get the app this week"
- *  - CouponIcon → "Founder pricing after beta" (Ticket-Shape mit % drin)
+ *  - PercentIcon → "Founder pricing after beta" (klares % statt Ticket —
+ *    die Box ist schon Coupon-Metapher, % im Inneren spielt mit statt
+ *    gegen die Box)
  *  - GiftIcon   → "1 month free at launch"
  */
 function PhoneIcon() {
@@ -48,7 +50,7 @@ function PhoneIcon() {
   );
 }
 
-function CouponIcon() {
+function PercentIcon() {
   return (
     <svg
       width={18}
@@ -61,12 +63,9 @@ function CouponIcon() {
       strokeLinejoin="round"
       aria-hidden
     >
-      {/* Ticket-Shape mit Seiten-Notches (Lucide-style) */}
-      <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z" />
-      {/* % im Inneren: zwei Punkte + Diagonale */}
-      <path d="M9 9h.01" />
-      <path d="m9 15 6-6" />
-      <path d="M15 15h.01" />
+      <line x1={19} y1={5} x2={5} y2={19} />
+      <circle cx={6.5} cy={6.5} r={2.5} />
+      <circle cx={17.5} cy={17.5} r={2.5} />
     </svg>
   );
 }
@@ -346,7 +345,7 @@ export default function Home() {
               </li>
               <li className="benefit-item">
                 <div className="benefit-item-icon">
-                  <CouponIcon />
+                  <PercentIcon />
                 </div>
                 <div className="benefit-item-text">
                   <div className="benefit-item-title">
