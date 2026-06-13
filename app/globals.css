@@ -1463,12 +1463,21 @@ h2 .italic {
 .benefit-item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
 }
-.benefit-item > svg {
-  color: #ffffff;
+/* Gerahmte 36x36-Icon-Box vor jedem Benefit — blue-tint Fill + matching
+ * Border, das SVG drin nutzt currentColor und wird so brand-blau. */
+.benefit-item-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(74, 122, 247, 0.12);
+  border: 1px solid rgba(74, 122, 247, 0.2);
+  color: var(--blue);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  margin-top: 2px;
 }
 .benefit-item-text {
   flex: 1;
