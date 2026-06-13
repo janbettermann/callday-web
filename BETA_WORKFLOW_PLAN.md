@@ -35,7 +35,7 @@ CLAUDE.md-Regel zuerst in `dealswipe-app/supabase/migrations/`.
 Launch-Day:
   /scripts/launch-send-codes.ts
        │
-       ├─► Stripe: Promotion-Codes generieren (zu "Founder 50% off"-Coupon)
+       ├─► Stripe: Promotion-Codes generieren (zu "Founder Price Lifetime"-Coupon, Fixed Amount €7 off)
        ├─► Supabase: founder_code in applications speichern
        └─► Resend: Launch-Email mit Code an alle approved/launch_list/active_beta
 
@@ -190,7 +190,8 @@ Alle Templates in `callday-web/emails/`:
   - "Got your application — thanks for putting your time on the line."
   - "We'll review it and get back to you within 48 hours with next steps."
   - "Either way, your founder spot is locked in: a personal code at launch,
-    50% off Callday for life, plus your first month free."
+    your founder price (€7/mo instead of €14/mo) locked in for life, plus
+    your first month free."
   - Signoff: "Talk soon, Jan"
 
 ### Template 2: TestFlightInvite
@@ -202,8 +203,9 @@ Alle Templates in `callday-web/emails/`:
     one with the install link. If you don't see it within a few minutes,
     check spam and confirm your Apple ID matches the email you applied with."
   - Onboarding-Hinweise + erste-Schritte-Anleitung
-  - "Beta is free for the full period. Founder pricing (€24,99/mo or €199/yr
-    with 50% off + 1 month free) locked in for life when we launch publicly."
+  - "Beta is free for the full period. At launch you will receive your
+    founder price (€7/mo instead of €14/mo) locked in for life plus your
+    first month free."
   - "I'll DM you in about a week to ask how it's going. If anything breaks,
     just reply to this email."
 
@@ -224,7 +226,7 @@ Alle Templates in `callday-web/emails/`:
     gecappt — Auswahl nach "wer gibt das schaerfste Real-World-Feedback".
     Alle anderen kriegen Day-Zero-Access mit Founder-Pricing locked in.
   - **Was sie konkret kriegen:**
-    - Personal founder code: 50% off Callday for life
+    - Personal founder code: €7/mo for life (€14/mo standard)
     - First month free
     - Day-zero access — kein waitlist, kein gate
   - **Re-Review-Offer:** "Wenn du aktiv cold-callst und einen zweiten Blick
@@ -242,7 +244,7 @@ Alle Templates in `callday-web/emails/`:
   - `{founder_code}` (prominent, monospace, copy-friendly)
   - "Your code locks in:
     - First month free
-    - 50% off the standard price for life
+    - €7/mo for life (€14/mo is the standard price)
     - Active as long as your subscription stays active"
   - **CTA:** Button "Activate your founder pricing" → callday.io/checkout?code=...
   - "If you've already been using the beta — your account stays. The code
@@ -324,7 +326,7 @@ matched über Email.
 2. Für jeden Eintrag:
    - Generiere Code: `CALLDAY-` + 6 random uppercase alphanumeric (collision-check
      via UNIQUE constraint, retry bei Konflikt)
-   - Erstelle Stripe Promotion-Code zum `Founder 50% off forever`-Coupon mit
+   - Erstelle Stripe Promotion-Code zum `Founder Price Lifetime`-Coupon mit
      diesem Code-String, `max_redemptions: 1`
    - Speichere `founder_code` + `stripe_promotion_id` in applications
 3. Versende `FounderCodeAtLaunch`-Email an alle generierten Codes
@@ -358,9 +360,11 @@ pnpm run launch:send-codes
 1. **Resend:** Domain `callday.io` verifizieren, `hello@callday.io` als Sender
    einrichten — DNS-Records bei Hostinger
 2. **Stripe-Account:**
-   - Produkte: Monthly (€24,99), Yearly (€199)
-   - Coupon: "Founder 50% off forever" (`forever`, `50% off`, applies to both
-     prices)
+   - Produkte: Monthly (€14), Yearly (€119)
+   - Coupon: "Founder Price Lifetime" (`forever`, **Fixed Amount: €7 off**,
+     applies to monthly price) — bewusst Fixed-Amount statt Percentage,
+     damit Stripe Checkout "−€7,00" rendert statt "−50%" und der
+     Founder-Status-Frame nicht durch ein Rabatt-Visual gebrochen wird.
    - Webhook-Endpoint registrieren (vorerst Placeholder, später ersetzen
      wenn Route deployed ist)
 3. **Supabase:**
@@ -629,7 +633,7 @@ Drüberbügeln der aktuellen Landing solange sie für Acquisition wirkt.
 
 ### Founder-Code-Visibility in Stripe Checkout
 Wenn `/checkout?code=CALLDAY-XYZ` → Stripe Checkout zeigt "Coupon
-applied: Founder 50% Off Forever -50%" auf der Seite mit durchgestrichenem
-Original-Preis. User bekommt klares Visual-Confirm dass Discount drauf
-ist. Wenn `/checkout?plan=yearly` (ohne Code) → kein Discount-Display,
-korrekt €199 Vollpreis.
+applied: Founder Price Lifetime −€7,00" auf der Seite mit durchgestrichenem
+Original-Preis. User bekommt klares Visual-Confirm dass der Founder-Preis
+greift, ohne Rabatt-Framing. Wenn `/checkout?plan=yearly` (ohne Code) →
+kein Discount-Display, korrekt €119 Vollpreis.
