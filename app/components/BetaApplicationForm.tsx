@@ -111,6 +111,12 @@ export function BetaApplicationForm() {
             placeholder="Your full name"
             disabled={status === "submitting"}
           />
+          {/* Helper-Text VOR dem Tippen: erklaert die LinkedIn-Match-Regel
+              kurz und an der Stelle wo die Entscheidung faellt. Die warme
+              Begruendung sitzt unten am Submit (beta-submit-note). */}
+          <span className="beta-field-help">
+            Please match your LinkedIn name.
+          </span>
         </label>
 
         <label className="beta-field">
@@ -205,6 +211,13 @@ export function BetaApplicationForm() {
       >
         {status === "submitting" ? "Sending..." : "Save my spot"}
       </button>
+
+      {/* Trust-Strip unter dem CTA: erklaert das Warum hinter der LinkedIn-
+          Match-Regel als warmes Promise statt nuechterner Instruction. */}
+      <p className="beta-submit-note">
+        We&apos;ll connect on LinkedIn to ping you for feedback in 2-3 weeks.
+        That&apos;s it.
+      </p>
 
       {status === "error" && errorMessage && (
         <p className="beta-submit-error" role="alert">
