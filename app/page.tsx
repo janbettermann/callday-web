@@ -138,7 +138,7 @@ export default function Home() {
               </svg>
             </a>
             <p className="hero-cta-meta">
-              Free beta access. Founder price, locked in for life.
+              Free beta access. Founder pricing for life.
             </p>
           </div>
         </div>
