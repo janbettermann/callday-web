@@ -70,7 +70,7 @@ export default function Home() {
               </svg>
             </a>
             <p className="hero-cta-meta">
-              Free beta access. 50% off for life.
+              Free beta access now. Then 50% off for life.
             </p>
           </div>
         </div>
@@ -247,33 +247,54 @@ export default function Home() {
           </h2>
 
           <div className="benefit-card">
-            <div className="benefit-grid">
-              <div className="benefit-intro">
-                <div className="benefit-label">
-                  <span className="benefit-label-dot" />
-                  Open now
-                </div>
-                <h3 className="benefit-title">What you get</h3>
-                <p className="benefit-subline">
-                  When you save your spot today.
-                </p>
+            <div className="benefit-intro">
+              <div className="benefit-label">
+                <span className="benefit-label-dot" />
+                Open now
               </div>
-
-              <ul className="benefit-list">
-                <li className="benefit-item">
-                  <CheckIcon />
-                  Get the app this week
-                </li>
-                <li className="benefit-item">
-                  <CheckIcon />
-                  Founder pricing for life
-                </li>
-                <li className="benefit-item">
-                  <CheckIcon />
-                  1 month free at launch
-                </li>
-              </ul>
+              <h3 className="benefit-title">What you get</h3>
+              <p className="benefit-subline">
+                When you save your spot today.
+              </p>
             </div>
+
+            <div className="benefit-divider" />
+
+            <ul className="benefit-list">
+              <li className="benefit-item">
+                <CheckIcon />
+                <div className="benefit-item-text">
+                  <div className="benefit-item-title">
+                    Get the app this week
+                  </div>
+                  <div className="benefit-item-subline">
+                    Via TestFlight, within 48 hours.
+                  </div>
+                </div>
+              </li>
+              <li className="benefit-item">
+                <CheckIcon />
+                <div className="benefit-item-text">
+                  <div className="benefit-item-title">
+                    Founder pricing for life
+                  </div>
+                  <div className="benefit-item-subline">
+                    Founding member code for 50% off.
+                  </div>
+                </div>
+              </li>
+              <li className="benefit-item">
+                <CheckIcon />
+                <div className="benefit-item-text">
+                  <div className="benefit-item-title">
+                    1 month free at launch
+                  </div>
+                  <div className="benefit-item-subline">
+                    Because we&apos;re not in a rush.
+                  </div>
+                </div>
+              </li>
+            </ul>
           </div>
 
           <div className="form-card">
