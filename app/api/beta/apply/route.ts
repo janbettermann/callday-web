@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
       from: "Callday <hello@callday.io>",
       to: [application.email],
       replyTo: "hello@callday.io",
-      subject: "Got your Callday beta application 🎯",
+      subject: "Got your Callday beta application.",
       react: ApplicationConfirmation({ name: application.name }),
     });
 
