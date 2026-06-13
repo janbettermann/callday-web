@@ -44,7 +44,8 @@ export function TestFlightInvite({ name }: TestFlightInviteProps) {
 
       <Text style={bodyTextStyle}>
         The beta is free for the full period. At launch you will receive
-        50% off Callday for life plus your first month free.
+        your founder price (€7/mo instead of €14/mo) locked in for life
+        plus your first month free.
       </Text>
 
       <Text style={bodyTextStyle}>

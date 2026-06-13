@@ -42,7 +42,8 @@ export function ApplicationConfirmation({
 
       <Text style={bodyTextStyle}>
         Either way, your founder spot is locked in: a personal code at
-        launch, 50% off Callday for life, plus your first month free.
+        launch, your founder price (€7/mo instead of €14/mo) locked in for
+        life, plus your first month free.
       </Text>
 
       <Text style={{ ...bodyTextStyle, margin: "0 0 24px" }}>

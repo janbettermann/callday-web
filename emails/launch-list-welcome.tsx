@@ -59,7 +59,7 @@ export function LaunchListWelcome({ name }: LaunchListWelcomeProps) {
       </Text>
 
       <Text style={benefitTextStyle}>
-        •&nbsp;&nbsp;A personal founder code: 50% off Callday for life
+        •&nbsp;&nbsp;A personal founder code: €7/mo for life (€14/mo standard)
       </Text>
       <Text style={benefitTextStyle}>•&nbsp;&nbsp;Your first month free</Text>
       <Text style={{ ...benefitTextStyle, margin: "0 0 16px" }}>

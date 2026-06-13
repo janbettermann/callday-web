@@ -25,11 +25,11 @@ function CheckIcon() {
 
 /* Boxed icons in der Benefit-Card — Box-Style siehe `.benefit-item-icon`
  * in globals.css. Drei semantisch passende Icons:
- *  - PhoneIcon  → "Get the app this week"
- *  - PercentIcon → "Founder pricing after beta" (klares % statt Ticket —
- *    die Box ist schon Coupon-Metapher, % im Inneren spielt mit statt
- *    gegen die Box)
- *  - GiftIcon   → "1 month free at launch"
+ *  - PhoneIcon → "Get the app this week"
+ *  - LockIcon  → "Become a founding member" (Subline sagt "€7/mo for life,
+ *    locked in" — das Icon spielt das visuell, Status + Durability statt
+ *    Discount-Frame)
+ *  - GiftIcon  → "1 month free at launch"
  */
 function PhoneIcon() {
   return (
@@ -50,7 +50,7 @@ function PhoneIcon() {
   );
 }
 
-function PercentIcon() {
+function LockIcon() {
   return (
     <svg
       width={18}
@@ -63,9 +63,8 @@ function PercentIcon() {
       strokeLinejoin="round"
       aria-hidden
     >
-      <line x1={19} y1={5} x2={5} y2={19} />
-      <circle cx={6.5} cy={6.5} r={2.5} />
-      <circle cx={17.5} cy={17.5} r={2.5} />
+      <rect x={4} y={10} width={16} height={12} rx={2} ry={2} />
+      <path d="M7 10V6a5 5 0 0 1 10 0v4" />
     </svg>
   );
 }
@@ -139,7 +138,7 @@ export default function Home() {
               </svg>
             </a>
             <p className="hero-cta-meta">
-              Free beta access. 50% off for life.
+              Free beta access. Founder price, locked in for life.
             </p>
           </div>
         </div>
@@ -345,14 +344,14 @@ export default function Home() {
               </li>
               <li className="benefit-item">
                 <div className="benefit-item-icon">
-                  <PercentIcon />
+                  <LockIcon />
                 </div>
                 <div className="benefit-item-text">
                   <div className="benefit-item-title">
-                    Founder pricing after beta
+                    Become a founding member
                   </div>
                   <div className="benefit-item-subline">
-                    Founding member code for 50% off.
+                    €7/mo for life, locked in.
                   </div>
                 </div>
               </li>

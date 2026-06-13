@@ -80,8 +80,8 @@ export default async function BetaAppliedPage({ searchParams }: PageProps) {
 
               <p className="confirm-body">
                 Either way, your founder spot is locked in: a personal
-                code at launch, 50% off Callday for life, plus your first
-                month free.
+                code at launch, your founder price (€7/mo instead of €14/mo)
+                locked in for life, plus your first month free.
               </p>
             </>
           ) : (
@@ -97,8 +97,8 @@ export default async function BetaAppliedPage({ searchParams }: PageProps) {
 
               <p className="confirm-body">
                 Either way, your founder spot is locked in: a personal
-                code at launch, 50% off Callday for life, plus your first
-                month free.
+                code at launch, your founder price (€7/mo instead of €14/mo)
+                locked in for life, plus your first month free.
               </p>
             </>
           )}

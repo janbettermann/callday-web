@@ -46,7 +46,7 @@ export function FounderCodeAtLaunch({
   const checkoutUrl = `https://callday.io/checkout?code=${encodeURIComponent(founderCode)}`;
 
   return (
-    <EmailShell preview="Callday is live in the App Store. Your founder code is inside — lock in 50% off for life.">
+    <EmailShell preview="Callday is live in the App Store. Your founder code is inside — lock in your founder price for life.">
       <Text style={bodyTextStyle}>Hi {firstName},</Text>
 
       <Text style={bodyTextStyle}>
@@ -84,7 +84,7 @@ export function FounderCodeAtLaunch({
 
       <Text style={benefitTextStyle}>•&nbsp;&nbsp;First month free</Text>
       <Text style={benefitTextStyle}>
-        •&nbsp;&nbsp;50% off the standard price for life
+        •&nbsp;&nbsp;€7/mo for life (€14/mo is the standard price)
       </Text>
       <Text style={{ ...benefitTextStyle, margin: "0 0 28px" }}>
         •&nbsp;&nbsp;Active as long as your subscription stays active
