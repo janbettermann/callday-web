@@ -1697,20 +1697,17 @@ h2 .italic {
   height: 32px;
   border-radius: 10px;
   background: var(--blue-tint);
-  border: 0.5px solid rgba(74, 122, 247, 0.22);
   color: var(--blue);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition:
     transform 0.25s ease,
-    background-color 0.2s ease,
-    border-color 0.2s ease;
+    background-color 0.2s ease;
 }
 .faq-item[data-open] .faq-icon {
   transform: rotate(180deg);
   background-color: rgba(74, 122, 247, 0.14);
-  border-color: rgba(74, 122, 247, 0.32);
 }
 .faq-answer-wrap {
   display: grid;
