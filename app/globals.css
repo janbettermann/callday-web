@@ -1508,6 +1508,11 @@ h2 .italic {
   .benefit-divider {
     margin: 18px 0;
   }
+  /* Auf Mobile mehr Atem zwischen den drei Items — Desktop bleibt bei
+   * 14px weil dort die Two-Col-Optik sonst zu locker wirkt. */
+  .benefit-list {
+    gap: 22px;
+  }
 }
 /* Desktop: zurück zum Two-Col-Layout. Intro links, vertikaler Divider
    in der Mitte, Liste rechts. Heights symmetrisch über align-items

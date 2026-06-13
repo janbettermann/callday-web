@@ -140,7 +140,7 @@ export default function Home() {
               </svg>
             </a>
             <p className="hero-cta-meta">
-              Free beta access now. Then 50% off for life.
+              Free beta access. 50% off for life.
             </p>
           </div>
         </div>
