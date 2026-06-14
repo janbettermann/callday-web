@@ -231,11 +231,12 @@ body::before {
   transform: translateY(-1px);
 }
 .site-nav[data-scrolled="true"] .nav-cta {
-  background: var(--ink);
-  color: white;
+  background: #ffffff;
+  color: var(--ink);
+  border: 0.5px solid var(--line-strong);
 }
 .site-nav[data-scrolled="true"] .nav-cta:hover {
-  background: rgba(26, 29, 38, 0.85);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 /* === HERO — dark "spotlight" band (Notion-style) ===
