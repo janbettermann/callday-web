@@ -28,7 +28,7 @@ export function ApplicationConfirmation({
   const firstName = name?.trim().split(/\s+/)[0] || "there";
 
   return (
-    <EmailShell preview="We got your Callday beta application — we'll be in touch within 48 hours.">
+    <EmailShell preview="We got your Callday beta application — we'll be in touch within 24 hours.">
       <Text style={bodyTextStyle}>Hi {firstName},</Text>
 
       <Text style={bodyTextStyle}>
@@ -36,7 +36,7 @@ export function ApplicationConfirmation({
       </Text>
 
       <Text style={bodyTextStyle}>
-        We&apos;ll review it and get back to you within 48 hours with next
+        We&apos;ll review it and get back to you within 24 hours with next
         steps.
       </Text>
 

@@ -90,7 +90,7 @@ export default async function BetaAppliedPage({ searchParams }: PageProps) {
 
               <p className="confirm-body">
                 We&apos;ll review your application and get back to you
-                within 48 hours. Check your inbox. We just sent a
+                within 24 hours. Check your inbox. We just sent a
                 confirmation from <strong>hello@callday.io</strong>. If
                 you don&apos;t see it within a few minutes, check spam.
               </p>

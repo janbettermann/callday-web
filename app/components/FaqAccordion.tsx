@@ -12,7 +12,7 @@ const ITEMS: FaqItem[] = [
     q: "What happens after I submit?",
     a: (
       <p>
-        We&apos;ll email you within 48 hours with next steps. Once
+        We&apos;ll email you within 24 hours with next steps. Once
         you&apos;re confirmed, we send your TestFlight invite, usually
         within an hour. From there, you can install Callday and start using
         it the same day.
