@@ -210,26 +210,29 @@ body::before {
   border-radius: 9px;
   box-shadow: 0 4px 14px rgba(74, 122, 247, 0.32);
 }
-/* CTA: white pill on the dark hero, dark pill once scrolled. */
+/* CTA: muted dark-mode pill on the dark hero (matches the .hero .pill
+   style — translucent white on dark + blue-tinted border, so it doesn't
+   "grell" punch through the hero atmosphere), dark pill once scrolled. */
 .nav-cta {
-  background: white;
-  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f7f8fb;
   padding: 9px 18px;
   border-radius: 100px;
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
-  border: 0.5px solid white;
-  transition: transform 0.15s ease;
+  border: none;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
 }
 .nav-cta:hover {
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.12);
   transform: translateY(-1px);
 }
 .site-nav[data-scrolled="true"] .nav-cta {
   background: var(--ink);
   color: white;
-  border-color: var(--ink);
 }
 .site-nav[data-scrolled="true"] .nav-cta:hover {
   background: rgba(26, 29, 38, 0.85);
@@ -1469,8 +1472,8 @@ h2 .italic {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: rgba(74, 122, 247, 0.12);
-  border: 1px solid rgba(74, 122, 247, 0.2);
+  background: var(--blue-tint);
+  border: 0.5px solid rgba(74, 122, 247, 0.22);
   color: var(--blue);
   display: inline-flex;
   align-items: center;
@@ -1843,7 +1846,6 @@ h2 .italic {
 }
 .faq-item[data-open] .faq-icon {
   transform: rotate(180deg);
-  background-color: rgba(74, 122, 247, 0.14);
 }
 .faq-answer-wrap {
   display: grid;
