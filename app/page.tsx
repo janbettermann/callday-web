@@ -338,7 +338,7 @@ export default function Home() {
                     Get the app this week
                   </div>
                   <div className="benefit-item-subline">
-                    Via TestFlight, within 48 hours.
+                    Via TestFlight, within 24 hours.
                   </div>
                 </div>
               </li>
@@ -351,7 +351,7 @@ export default function Home() {
                     Become a founding member
                   </div>
                   <div className="benefit-item-subline">
-                    €7/mo for life, locked in.
+                    €7/mo for life after beta.
                   </div>
                 </div>
               </li>

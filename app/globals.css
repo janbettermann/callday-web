@@ -1372,11 +1372,9 @@ h2 .italic {
   margin: 0 auto 28px;
   padding: 32px 32px 30px;
   border-radius: 20px;
-  background: linear-gradient(180deg, #0a0e16 0%, #131826 100%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow:
-    0 10px 28px rgba(8, 10, 20, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  background: var(--bg-page);
+  border: 0.5px solid var(--line);
+  box-shadow: 0 4px 16px rgba(26, 29, 38, 0.04);
   text-align: left;
 }
 /* Asymmetric blue glow in the upper-right — gives the dark slab a
@@ -1390,7 +1388,7 @@ h2 .italic {
   height: 240px;
   background: radial-gradient(
     circle,
-    rgba(74, 122, 247, 0.16) 0%,
+    rgba(74, 122, 247, 0.1) 0%,
     transparent 70%
   );
   pointer-events: none;
@@ -1401,7 +1399,7 @@ h2 .italic {
 }
 .benefit-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--line);
   margin: 20px 0;
 }
 .benefit-label {
@@ -1443,12 +1441,12 @@ h2 .italic {
   font-weight: 700;
   letter-spacing: -0.5px;
   line-height: 1.1;
-  color: #ffffff;
+  color: var(--ink);
   margin: 0 0 10px;
 }
 .benefit-subline {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--ink-dim);
   line-height: 1.5;
   margin: 0;
 }
@@ -1488,12 +1486,12 @@ h2 .italic {
   font-weight: 500;
   letter-spacing: -0.1px;
   line-height: 1.3;
-  color: #ffffff;
+  color: var(--ink);
   margin-bottom: 2px;
 }
 .benefit-item-subline {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--ink-dim);
   line-height: 1.4;
 }
 /* Mobile-first overrides für <720px: kleineres Padding, kleinerer
