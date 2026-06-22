@@ -25,28 +25,28 @@ function dateKey(d: Date): string {
 // ----------------------------------------------------------------
 // Internal-vs-Real-Filter
 //
-// Jeder Eintrag hier ist eine RegExp die gegen die volle Email
-// gematched wird. Bei Match gilt der Account als "internal" (Jans
-// eigene Tests, Reviewer, Sample-Tester). Default-View im Dashboard
-// blendet diese aus.
+// Allow-List: nur Emails die hier explizit drin stehen gelten als
+// "echte externe Tester". Alles andere ist intern (Jans Plus-Tag-
+// Accounts, Reviewer, Sample-Tester, App-Review-Accounts, etc).
 //
-// Wenn ein neuer Test-Account auftaucht: hier einen Pattern dazu,
+// Wenn ein neuer echter Tester onboarded: hier die Email dazu,
 // commit + push. Kein DB-Change noetig.
+//
+// Case-insensitive Match auf den vollen String.
 // ----------------------------------------------------------------
 
-const INTERNAL_PATTERNS: RegExp[] = [
-  /^jan\.bettermann/i,        // alle jan.bettermann*@... (Haupt + alle Plus-Tags)
-  /^tester@callday\./i,       // tester@callday.io / .ion / .ioj
-  /@dealswipe\.app$/i,        // appreview@dealswipe.app + sonstige interne dealswipe.app
-  /^screwdriver6000/i,        // screwdriver6000+9@gmail.com
-  /^1@mail\.de$/i,            // alter Test-Account
+const REAL_TESTERS: string[] = [
+  "lennartwachter@gmail.com",
+  "digitalproempirellp@outlook.com",
 ];
+
+const REAL_TESTERS_SET = new Set(REAL_TESTERS.map((e) => e.toLowerCase()));
 
 export type InternalView = "real" | "internal" | "all";
 
 export function isInternalEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  return INTERNAL_PATTERNS.some((p) => p.test(email));
+  if (!email) return true; // unbekannt = sicherheitshalber intern
+  return !REAL_TESTERS_SET.has(email.toLowerCase());
 }
 
 function matchesView(
