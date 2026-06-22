@@ -56,6 +56,25 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
   // Page, sondern werden geloggt und durch sinnvolle Defaults ersetzt.
   // In Production ist das auch der einzige Diagnose-Pfad (Server-
   // Component-Errors werden sonst auf der Boundary gemasked).
+  const formatErr = (e: unknown): string => {
+    if (e instanceof Error) return e.message;
+    if (e && typeof e === "object") {
+      const obj = e as Record<string, unknown>;
+      if (typeof obj.message === "string") {
+        const code = typeof obj.code === "string" ? ` [${obj.code}]` : "";
+        const hint =
+          typeof obj.hint === "string" && obj.hint ? ` (${obj.hint})` : "";
+        return `${obj.message}${code}${hint}`;
+      }
+      try {
+        return JSON.stringify(e);
+      } catch {
+        return String(e);
+      }
+    }
+    return String(e);
+  };
+
   const safe = async <T,>(
     fn: () => Promise<T>,
     fallback: T,
@@ -64,9 +83,8 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
     try {
       return { data: await fn(), error: null };
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
       console.error(`[admin/${label}]`, e);
-      return { data: fallback, error: msg };
+      return { data: fallback, error: formatErr(e) };
     }
   };
 
