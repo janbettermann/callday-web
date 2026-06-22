@@ -51,15 +51,52 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
     return <LoginForm error={errFlag === "1"} />;
   }
 
-  // Parallel laden — alle Server-Side, alle service_role.
+  // Parallel laden — alle Server-Side, alle service_role. Jeder Fetch
+  // bekommt einen safe-Wrapper: Einzelfehler killen nicht die ganze
+  // Page, sondern werden geloggt und durch sinnvolle Defaults ersetzt.
+  // In Production ist das auch der einzige Diagnose-Pfad (Server-
+  // Component-Errors werden sonst auf der Boundary gemasked).
+  const safe = async <T,>(
+    fn: () => Promise<T>,
+    fallback: T,
+    label: string,
+  ): Promise<{ data: T; error: string | null }> => {
+    try {
+      return { data: await fn(), error: null };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`[admin/${label}]`, e);
+      return { data: fallback, error: msg };
+    }
+  };
+
   const [funnel, callers, mix, feedback, topUsers, inactive] = await Promise.all([
-    fetchFunnel(),
-    fetchDailyCallers(),
-    fetchOutcomeMix(),
-    fetchLatestFeedback(),
-    fetchTopUsers(),
-    fetchInactiveUsers(),
+    safe(
+      fetchFunnel,
+      {
+        applications: 0,
+        signups: 0,
+        withList: 0,
+        withFirstCall: 0,
+        activeLast7Days: 0,
+      },
+      "funnel",
+    ),
+    safe(fetchDailyCallers, [], "callers"),
+    safe(fetchOutcomeMix, [], "mix"),
+    safe(fetchLatestFeedback, [], "feedback"),
+    safe(fetchTopUsers, [], "topUsers"),
+    safe(fetchInactiveUsers, [], "inactive"),
   ]);
+
+  const errors = [
+    funnel.error && ["funnel", funnel.error],
+    callers.error && ["callers", callers.error],
+    mix.error && ["mix", mix.error],
+    feedback.error && ["feedback", feedback.error],
+    topUsers.error && ["topUsers", topUsers.error],
+    inactive.error && ["inactive", inactive.error],
+  ].filter(Boolean) as [string, string][];
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
@@ -82,40 +119,55 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
         </form>
       </header>
 
+      {errors.length > 0 ? (
+        <div className="mb-8 rounded-xl border border-[#dc2626]/30 bg-[#dc2626]/[0.04] p-4">
+          <div className="mb-2 text-xs font-medium uppercase tracking-wider text-[#dc2626]">
+            Some sections failed to load
+          </div>
+          <ul className="space-y-1 font-mono text-xs text-[#1a1d26]/80">
+            {errors.map(([label, msg]) => (
+              <li key={label}>
+                <span className="font-semibold">{label}</span>: {msg}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <Section title="Activation funnel" subtitle="Where users drop off">
-        <FunnelCards data={funnel} />
+        <FunnelCards data={funnel.data} />
       </Section>
 
       <Section
         title="Daily active callers"
         subtitle="Distinct users with at least one call, last 30 days"
       >
-        <DailyCallersChart data={callers} />
+        <DailyCallersChart data={callers.data} />
       </Section>
 
       <Section
         title="Outcome mix"
         subtitle="Per-day breakdown, last 7 days"
       >
-        <OutcomeMixChart data={mix} />
+        <OutcomeMixChart data={mix.data} />
       </Section>
 
       <Section
         title="Latest feedback"
         subtitle="Click email to reply"
       >
-        <FeedbackTable rows={feedback} />
+        <FeedbackTable rows={feedback.data} />
       </Section>
 
       <Section title="Top users" subtitle="By call count, last 90 days">
-        <UserTable rows={topUsers} />
+        <UserTable rows={topUsers.data} />
       </Section>
 
       <Section
         title="Inactive users"
         subtitle="Signed up but quiet — never called or no call in 7+ days"
       >
-        <InactiveUsersTable rows={inactive} />
+        <InactiveUsersTable rows={inactive.data} />
       </Section>
 
       <footer className="mt-16 flex justify-between border-t border-[#1a1d26]/[0.06] pt-6 font-mono text-[11px] uppercase tracking-[1.5px] text-[#1a1d26]/40">
