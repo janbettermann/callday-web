@@ -10,18 +10,14 @@ type SubmitStatus = "idle" | "submitting" | "error";
 
 /**
  * Beta-Application-Form. Submitted via /api/beta/apply — die Route schreibt
- * eine Zeile in public.applications (status='pending') und sendet die
- * Bestätigungsmail.
+ * eine Zeile in public.applications (status='approved', Instant-Approval)
+ * und sendet die Bestätigungsmail mit TestFlight-Public-Link.
  *
  * Nach erfolgreichem Submit navigiert das Form auf /beta/applied (dedicated
  * Confirmation-Page). Bei Duplikat geht's auf /beta/applied?status=duplicate
  * mit expliziter "we've got you already"-Message — siehe UX-Entscheidung
  * 2026-06-06: Email-Enumeration-Protection ist für eine Beta-Waitlist
  * weniger wert als klare Kommunikation.
- *
- * Tonalitaets-Vorgabe der Confirmation-Mail (siehe emails/application-
- * confirmation.tsx + BETA_WORKFLOW_PLAN.md Template 1): erste Mail preempted
- * KEINE Selektions-Entscheidung — nur 48h-Review + Founder-Spot-Garantie.
  */
 export function BetaApplicationForm() {
   const router = useRouter();

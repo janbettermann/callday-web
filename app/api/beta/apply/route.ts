@@ -2,9 +2,14 @@
  * POST /api/beta/apply
  *
  * Beta-Application-Form-Submit-Handler. Validiert das eingegangene
- * Form-Payload, schreibt eine Zeile in public.applications (status='pending'),
- * versendet die Confirmation-Email via Resend und loggt den Versand in
- * public.email_logs.
+ * Form-Payload, schreibt eine Zeile in public.applications (status='approved',
+ * testflight_invited_at=now() — Instant-Approval, kein manueller Schritt mehr),
+ * versendet die Confirmation-Email mit TestFlight-Public-Link via Resend und
+ * loggt den Versand in public.email_logs.
+ *
+ * Der frühere zweistufige Flow (status='pending' → manueller Approve im
+ * Studio → Database-Webhook feuert TestFlightInvite-Mail) ist abgeschafft.
+ * Die TestFlight-Liste ist eh public, also genehmigen wir direkt.
  *
  * Wire-Format: snake_case durchgehend (matched DB-Schema). Form muss
  * snake_case-Keys senden.
@@ -115,14 +120,33 @@ export async function POST(request: NextRequest) {
   }
   const application = result.data;
 
+  // TestFlight-Public-Link wird in die Email gerendert. Wenn die Env-Var
+  // fehlt, brechen wir hart ab — sonst verschicken wir eine Mail ohne Link
+  // und der User landet in einem Sackgassen-State.
+  const testflightLink = process.env.TESTFLIGHT_PUBLIC_LINK;
+  if (!testflightLink) {
+    console.error("[/api/beta/apply] TESTFLIGHT_PUBLIC_LINK missing");
+    return Response.json(
+      { error: "beta signup is temporarily unavailable" },
+      { status: 500 },
+    );
+  }
+
   const supabase = getServerSupabase();
 
   // INSERT — UNIQUE-Constraint auf email faengt Duplikate ab.
+  // status='approved' + testflight_invited_at=now() spiegeln den Instant-
+  // Approval-Flow: die Mail mit dem TestFlight-Link geht im naechsten Schritt
+  // direkt raus, also ist der Tester ab diesem INSERT "drin".
   // .select('id').single() liefert die neue UUID zurueck, die wir fuer
   // email_logs.application_id brauchen.
   const insertResult = await supabase
     .from("applications")
-    .insert(application)
+    .insert({
+      ...application,
+      status: "approved",
+      testflight_invited_at: new Date().toISOString(),
+    })
     .select("id")
     .single();
 
@@ -169,8 +193,11 @@ export async function POST(request: NextRequest) {
       from: "Callday <hello@callday.io>",
       to: [application.email],
       replyTo: "hello@callday.io",
-      subject: "Got your Callday beta application.",
-      react: ApplicationConfirmation({ name: application.name }),
+      subject: "You're in — install Callday from TestFlight",
+      react: ApplicationConfirmation({
+        name: application.name,
+        testflightLink,
+      }),
     });
 
     if (sendResult.error) {

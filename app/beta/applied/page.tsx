@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { CalldayLogo } from "../../components/CalldayLogo";
 
 export const metadata: Metadata = {
-  title: "You're on the list · Callday",
-  description: "Your Callday beta application is in.",
+  title: "You're in · Callday",
+  description: "Your Callday TestFlight invite is on the way.",
   robots: { index: false, follow: false },
 };
 
@@ -71,34 +71,31 @@ export default async function BetaAppliedPage({ searchParams }: PageProps) {
               </h1>
 
               <p className="confirm-body">
-                Your earlier application is still in review. Check your
-                inbox for the confirmation from{" "}
-                <strong>hello@callday.io</strong>. If you don&apos;t see
-                it, check spam. If anything looks broken, just reply to
-                that email and we&apos;ll take a look.
+                Your TestFlight link went out with the original
+                confirmation from <strong>hello@callday.io</strong>. Check
+                your inbox (and spam) — the email has the install button.
+                If anything looks broken, just reply to that email and
+                we&apos;ll take a look.
               </p>
 
               <p className="confirm-body">
-                Either way, your founder spot is locked in: a personal
-                code at launch, your founder price (€7/mo instead of €14/mo)
-                locked in for life, plus your first month free.
+                Your founder spot is locked in: 50% off Callday for life
+                once we launch.
               </p>
             </>
           ) : (
             <>
-              <h1 className="confirm-headline">You&apos;re on the list.</h1>
+              <h1 className="confirm-headline">You&apos;re in.</h1>
 
               <p className="confirm-body">
-                We&apos;ll review your application and get back to you
-                within 24 hours. Check your inbox. We just sent a
-                confirmation from <strong>hello@callday.io</strong>. If
-                you don&apos;t see it within a few minutes, check spam.
+                Your TestFlight invite is on the way. We just sent it from{" "}
+                <strong>hello@callday.io</strong> with the install link.
+                If you don&apos;t see it within a few minutes, check spam.
               </p>
 
               <p className="confirm-body">
-                Either way, your founder spot is locked in: a personal
-                code at launch, your founder price (€7/mo instead of €14/mo)
-                locked in for life, plus your first month free.
+                Your founder spot is locked in: 50% off Callday for life
+                once we launch.
               </p>
             </>
           )}

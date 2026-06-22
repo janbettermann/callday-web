@@ -1,10 +1,12 @@
 /**
  * Shared Handler für Status-Lifecycle-Webhooks (applications.status →
- * 'approved' bzw. 'launch_list' triggert die jeweilige Email).
+ * 'launch_list' triggert die Launch-List-Welcome-Mail).
  *
- * Beide Routes (send-testflight-invite + send-launch-list-welcome)
- * sind nur dünne Wrapper um diese Funktion — sie unterscheiden sich
- * nur in (expectedStatus, emailType, subject, Template).
+ * Aktuell nur noch von send-launch-list-welcome benutzt. Der ehemalige
+ * Zwilling send-testflight-invite ist im Juni 2026 entfallen, weil die
+ * TestFlight-Einladung jetzt direkt aus /api/beta/apply mitgeht (Instant-
+ * Approval, kein zweistufiger Flow mehr). Wrapper-Struktur bleibt, falls
+ * später weitere Status-Lifecycle-Mails dazukommen.
  *
  * Auth: Supabase Database Webhook schickt einen custom X-Webhook-Secret-
  * Header (vom User im Studio konfiguriert), wir verifizieren ihn gegen

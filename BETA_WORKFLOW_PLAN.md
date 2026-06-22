@@ -3,6 +3,16 @@
 Implementierungs-Plan für den vollständigen Lifecycle von Beta-Application
 bis Founder-Code-Redemption beim Launch.
 
+> **Update 2026-06-22 — Instant-Approval:** Der zweistufige Beta-Flow
+> (status='pending' → manueller Approve im Studio → TestFlightInvite-Mail
+> per Database-Webhook) ist abgeschafft. `/api/beta/apply` setzt jetzt
+> direkt `status='approved'` + `testflight_invited_at=now()` und schickt
+> die TestFlight-Einladung in der ersten Mail mit. Template 2
+> (`testflight-invite.tsx`) und die Route `/api/email/send-testflight-invite`
+> sind entfernt. Template 1 (`application-confirmation.tsx`) trägt jetzt
+> den TestFlight-Public-Link via `TESTFLIGHT_PUBLIC_LINK`-Env-Var. Die
+> Founder-Code-Phase (Launch-Day) ist davon unberührt.
+
 **Status:** Plan — noch nicht umgesetzt.
 **Repo-Aufteilung:** Implementation in `callday-web`. Schema-Migration laut
 CLAUDE.md-Regel zuerst in `dealswipe-app/supabase/migrations/`.
