@@ -23,6 +23,63 @@ function dateKey(d: Date): string {
 }
 
 // ----------------------------------------------------------------
+// Internal-vs-Real-Filter
+//
+// Jeder Eintrag hier ist eine RegExp die gegen die volle Email
+// gematched wird. Bei Match gilt der Account als "internal" (Jans
+// eigene Tests, Reviewer, Sample-Tester). Default-View im Dashboard
+// blendet diese aus.
+//
+// Wenn ein neuer Test-Account auftaucht: hier einen Pattern dazu,
+// commit + push. Kein DB-Change noetig.
+// ----------------------------------------------------------------
+
+const INTERNAL_PATTERNS: RegExp[] = [
+  /^jan\.bettermann/i,        // alle jan.bettermann*@... (Haupt + alle Plus-Tags)
+  /^tester@callday\./i,       // tester@callday.io / .ion / .ioj
+  /@dealswipe\.app$/i,        // appreview@dealswipe.app + sonstige interne dealswipe.app
+  /^screwdriver6000/i,        // screwdriver6000+9@gmail.com
+  /^1@mail\.de$/i,            // alter Test-Account
+];
+
+export type InternalView = "real" | "internal" | "all";
+
+export function isInternalEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return INTERNAL_PATTERNS.some((p) => p.test(email));
+}
+
+function matchesView(
+  email: string | null | undefined,
+  view: InternalView,
+): boolean {
+  if (view === "all") return true;
+  const internal = isInternalEmail(email);
+  return view === "internal" ? internal : !internal;
+}
+
+/**
+ * Holt die Profile passend zum View. Returnt sowohl die rohe Liste
+ * (fuer Top/Inactive-Tabellen) als auch ein Set der user_ids
+ * (zum Joinen gegen call_outcomes / lead_lists).
+ */
+async function getProfilesForView(view: InternalView) {
+  const sb = getServerSupabase();
+  const { data, error } = await sb
+    .from("profiles")
+    .select("id, email, name, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  const all = data ?? [];
+  const filtered = all.filter((p) => matchesView(p.email, view));
+  return {
+    profiles: filtered,
+    userIds: new Set(filtered.map((p) => p.id)),
+  };
+}
+
+// ----------------------------------------------------------------
 // Activation Funnel
 // ----------------------------------------------------------------
 
@@ -34,46 +91,53 @@ export type FunnelMetrics = {
   activeLast7Days: number;
 };
 
-export async function fetchFunnel(): Promise<FunnelMetrics> {
+export async function fetchFunnel(view: InternalView): Promise<FunnelMetrics> {
   const sb = getServerSupabase();
   const since7d = daysAgo(7);
 
   const [
-    applications,
-    signups,
-    usersWithList,
-    usersWithCall,
-    activeUsers,
+    { profiles, userIds },
+    appsRes,
+    listsRes,
+    outcomesRes,
+    recentOutcomesRes,
   ] = await Promise.all([
-    sb.from("applications").select("id", { count: "exact", head: true }),
-    sb.from("profiles").select("id", { count: "exact", head: true }),
-    sb
-      .from("lead_lists")
-      .select("user_id", { count: "exact", head: false })
-      .then((r) => ({
-        count: new Set((r.data ?? []).map((row) => row.user_id)).size,
-      })),
-    sb
-      .from("call_outcomes")
-      .select("user_id", { count: "exact", head: false })
-      .then((r) => ({
-        count: new Set((r.data ?? []).map((row) => row.user_id)).size,
-      })),
-    sb
-      .from("call_outcomes")
-      .select("user_id, called_at")
-      .gte("called_at", since7d)
-      .then((r) => ({
-        count: new Set((r.data ?? []).map((row) => row.user_id)).size,
-      })),
+    getProfilesForView(view),
+    sb.from("applications").select("email"),
+    sb.from("lead_lists").select("user_id"),
+    sb.from("call_outcomes").select("user_id"),
+    sb.from("call_outcomes").select("user_id").gte("called_at", since7d),
   ]);
 
+  // Applications filtern per email-pattern (kein user_id-Join möglich,
+  // applications kommen vor dem signup)
+  const apps = (appsRes.data ?? []).filter((r) =>
+    matchesView(r.email, view),
+  );
+
+  // user_id-basierte counts auf die View einschränken
+  const usersWithList = new Set(
+    (listsRes.data ?? [])
+      .map((r) => r.user_id)
+      .filter((id) => userIds.has(id)),
+  );
+  const usersWithCall = new Set(
+    (outcomesRes.data ?? [])
+      .map((r) => r.user_id)
+      .filter((id) => userIds.has(id)),
+  );
+  const activeUsers = new Set(
+    (recentOutcomesRes.data ?? [])
+      .map((r) => r.user_id)
+      .filter((id) => userIds.has(id)),
+  );
+
   return {
-    applications: applications.count ?? 0,
-    signups: signups.count ?? 0,
-    withList: usersWithList.count,
-    withFirstCall: usersWithCall.count,
-    activeLast7Days: activeUsers.count,
+    applications: apps.length,
+    signups: profiles.length,
+    withList: usersWithList.size,
+    withFirstCall: usersWithCall.size,
+    activeLast7Days: activeUsers.size,
   };
 }
 
@@ -87,20 +151,26 @@ export type DailyCallerPoint = {
   calls: number;
 };
 
-export async function fetchDailyCallers(): Promise<DailyCallerPoint[]> {
+export async function fetchDailyCallers(
+  view: InternalView,
+): Promise<DailyCallerPoint[]> {
   const sb = getServerSupabase();
   const since = daysAgo(30);
 
-  const { data } = await sb
-    .from("call_outcomes")
-    .select("user_id, called_at")
-    .gte("called_at", since);
+  const [{ userIds }, outcomesRes] = await Promise.all([
+    getProfilesForView(view),
+    sb
+      .from("call_outcomes")
+      .select("user_id, called_at")
+      .gte("called_at", since),
+  ]);
 
   // Bucket pro UTC-Tag. Wir nehmen UTC bewusst — der Dashboard-User
   // sitzt in Europa, aber 1 Tag Drift macht hier optisch nichts kaputt
   // und spart eine TZ-Lib.
   const byDay = new Map<string, { callers: Set<string>; calls: number }>();
-  for (const row of data ?? []) {
+  for (const row of outcomesRes.data ?? []) {
+    if (view !== "all" && !userIds.has(row.user_id)) continue;
     const d = dateKey(new Date(row.called_at));
     let bucket = byDay.get(d);
     if (!bucket) {
@@ -127,74 +197,6 @@ export async function fetchDailyCallers(): Promise<DailyCallerPoint[]> {
 }
 
 // ----------------------------------------------------------------
-// Outcome Mix (letzte 7 Tage, stacked-bar pro Tag)
-// ----------------------------------------------------------------
-
-export type OutcomeMixPoint = {
-  date: string;
-  meeting: number;
-  callback: number;
-  not_reached: number;
-  no_interest: number;
-  blocked: number;
-  other: number;
-};
-
-const OUTCOME_KEYS = [
-  "meeting",
-  "callback",
-  "not_reached",
-  "no_interest",
-  "blocked",
-] as const;
-
-export async function fetchOutcomeMix(): Promise<OutcomeMixPoint[]> {
-  const sb = getServerSupabase();
-  const since = daysAgo(7);
-
-  const { data } = await sb
-    .from("call_outcomes")
-    .select("outcome, called_at")
-    .gte("called_at", since);
-
-  const byDay = new Map<string, OutcomeMixPoint>();
-  function ensure(d: string): OutcomeMixPoint {
-    let p = byDay.get(d);
-    if (!p) {
-      p = {
-        date: d,
-        meeting: 0,
-        callback: 0,
-        not_reached: 0,
-        no_interest: 0,
-        blocked: 0,
-        other: 0,
-      };
-      byDay.set(d, p);
-    }
-    return p;
-  }
-
-  for (const row of data ?? []) {
-    const d = dateKey(new Date(row.called_at));
-    const p = ensure(d);
-    const k = row.outcome as (typeof OUTCOME_KEYS)[number];
-    if ((OUTCOME_KEYS as readonly string[]).includes(k)) {
-      (p as unknown as Record<string, number>)[k] += 1;
-    } else {
-      p.other += 1;
-    }
-  }
-
-  const out: OutcomeMixPoint[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = dateKey(new Date(Date.now() - i * ONE_DAY));
-    out.push(ensure(d));
-  }
-  return out;
-}
-
-// ----------------------------------------------------------------
 // Top Users
 // ----------------------------------------------------------------
 
@@ -209,33 +211,28 @@ export type TopUserRow = {
   most_common_outcome: string | null;
 };
 
-export async function fetchTopUsers(limit = 20): Promise<TopUserRow[]> {
+export async function fetchTopUsers(
+  view: InternalView,
+  limit = 20,
+): Promise<TopUserRow[]> {
   const sb = getServerSupabase();
 
-  // 1) Alle Profiles ziehen — bei <200 Beta-Usern unkritisch
-  const { data: profiles } = await sb
-    .from("profiles")
-    .select("id, email, name, created_at")
-    .order("created_at", { ascending: false });
+  const [{ profiles }, outcomesRes, listsRes] = await Promise.all([
+    getProfilesForView(view),
+    sb
+      .from("call_outcomes")
+      .select("user_id, outcome, called_at")
+      .gte("called_at", daysAgo(90))
+      .order("called_at", { ascending: false }),
+    sb.from("lead_lists").select("user_id"),
+  ]);
 
-  if (!profiles || profiles.length === 0) return [];
-
-  // 2) Outcomes der letzten 90 Tage ziehen — fuer "most_common_outcome"
-  //    und "last_called_at" reicht das. Bei langer Beta-Phase ggf. cap
-  //    raufziehen.
-  const { data: outcomes } = await sb
-    .from("call_outcomes")
-    .select("user_id, outcome, called_at")
-    .gte("called_at", daysAgo(90))
-    .order("called_at", { ascending: false });
-
-  // 3) Listen pro User
-  const { data: lists } = await sb.from("lead_lists").select("user_id");
+  if (profiles.length === 0) return [];
 
   const callsByUser = new Map<string, number>();
   const lastByUser = new Map<string, string>();
   const outcomeFreq = new Map<string, Map<string, number>>();
-  for (const row of outcomes ?? []) {
+  for (const row of outcomesRes.data ?? []) {
     callsByUser.set(row.user_id, (callsByUser.get(row.user_id) ?? 0) + 1);
     if (!lastByUser.has(row.user_id)) {
       lastByUser.set(row.user_id, row.called_at);
@@ -249,7 +246,7 @@ export async function fetchTopUsers(limit = 20): Promise<TopUserRow[]> {
   }
 
   const listsByUser = new Map<string, number>();
-  for (const row of lists ?? []) {
+  for (const row of listsRes.data ?? []) {
     listsByUser.set(row.user_id, (listsByUser.get(row.user_id) ?? 0) + 1);
   }
 
@@ -295,25 +292,24 @@ export type InactiveUserRow = {
   reason: "never_called" | "stalled";
 };
 
-export async function fetchInactiveUsers(limit = 30): Promise<InactiveUserRow[]> {
+export async function fetchInactiveUsers(
+  view: InternalView,
+  limit = 30,
+): Promise<InactiveUserRow[]> {
   const sb = getServerSupabase();
   const sevenDaysAgo = new Date(Date.now() - 7 * ONE_DAY);
 
-  const { data: profiles } = await sb
-    .from("profiles")
-    .select("id, email, name, created_at")
-    .order("created_at", { ascending: false });
-
-  if (!profiles) return [];
-
-  const { data: outcomes } = await sb
-    .from("call_outcomes")
-    .select("user_id, called_at")
-    .order("called_at", { ascending: false });
+  const [{ profiles }, outcomesRes] = await Promise.all([
+    getProfilesForView(view),
+    sb
+      .from("call_outcomes")
+      .select("user_id, called_at")
+      .order("called_at", { ascending: false }),
+  ]);
 
   const callsByUser = new Map<string, number>();
   const lastByUser = new Map<string, string>();
-  for (const row of outcomes ?? []) {
+  for (const row of outcomesRes.data ?? []) {
     callsByUser.set(row.user_id, (callsByUser.get(row.user_id) ?? 0) + 1);
     if (!lastByUser.has(row.user_id)) {
       lastByUser.set(row.user_id, row.called_at);
@@ -373,13 +369,16 @@ export type FeedbackRow = {
   created_at: string;
 };
 
-export async function fetchLatestFeedback(limit = 20): Promise<FeedbackRow[]> {
+export async function fetchLatestFeedback(
+  view: InternalView,
+  limit = 20,
+): Promise<FeedbackRow[]> {
   const sb = getServerSupabase();
   const { data, error } = await sb
     .from("beta_feedback")
     .select("id, email, rating, text, app_version, created_at")
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(limit * 3); // ueberholen, dann clientseitig filtern
 
   if (error) {
     // Tabelle existiert evtl. noch nicht (Migration nicht deployed) —
@@ -387,5 +386,6 @@ export async function fetchLatestFeedback(limit = 20): Promise<FeedbackRow[]> {
     if (error.code === "42P01") return [];
     throw error;
   }
-  return (data as FeedbackRow[]) ?? [];
+  const rows = (data as FeedbackRow[]) ?? [];
+  return rows.filter((r) => matchesView(r.email, view)).slice(0, limit);
 }

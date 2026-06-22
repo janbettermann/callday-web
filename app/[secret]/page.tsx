@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
@@ -11,14 +12,13 @@ import {
   fetchFunnel,
   fetchInactiveUsers,
   fetchLatestFeedback,
-  fetchOutcomeMix,
   fetchTopUsers,
+  type InternalView,
 } from "@/lib/admin/queries";
 
 import { LoginForm } from "./_components/LoginForm";
 import { FunnelCards } from "./_components/FunnelCards";
 import { DailyCallersChart } from "./_components/DailyCallersChart";
-import { OutcomeMixChart } from "./_components/OutcomeMixChart";
 import { FeedbackTable } from "./_components/FeedbackTable";
 import { UserTable } from "./_components/UserTable";
 import { InactiveUsersTable } from "./_components/InactiveUsersTable";
@@ -31,12 +31,27 @@ import { logoutAction } from "./actions";
 
 type PageProps = {
   params: Promise<{ secret: string }>;
-  searchParams: Promise<{ e?: string }>;
+  searchParams: Promise<{ e?: string; view?: string }>;
+};
+
+const VALID_VIEWS: InternalView[] = ["real", "internal", "all"];
+
+function parseView(raw: string | undefined): InternalView {
+  if (raw && (VALID_VIEWS as readonly string[]).includes(raw)) {
+    return raw as InternalView;
+  }
+  return "real";
+}
+
+const VIEW_LABELS: Record<InternalView, string> = {
+  real: "Real users",
+  internal: "Internal",
+  all: "All",
 };
 
 export default async function AdminPage({ params, searchParams }: PageProps) {
   const { secret } = await params;
-  const { e: errFlag } = await searchParams;
+  const { e: errFlag, view: viewRaw } = await searchParams;
 
   const adminPath = getAdminPath();
   if (!adminPath || secret !== adminPath) {
@@ -50,6 +65,8 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
   if (!authed) {
     return <LoginForm error={errFlag === "1"} />;
   }
+
+  const view = parseView(viewRaw);
 
   // Parallel laden — alle Server-Side, alle service_role. Jeder Fetch
   // bekommt einen safe-Wrapper: Einzelfehler killen nicht die ganze
@@ -88,9 +105,9 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
     }
   };
 
-  const [funnel, callers, mix, feedback, topUsers, inactive] = await Promise.all([
+  const [funnel, callers, feedback, topUsers, inactive] = await Promise.all([
     safe(
-      fetchFunnel,
+      () => fetchFunnel(view),
       {
         applications: 0,
         signups: 0,
@@ -100,17 +117,15 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
       },
       "funnel",
     ),
-    safe(fetchDailyCallers, [], "callers"),
-    safe(fetchOutcomeMix, [], "mix"),
-    safe(fetchLatestFeedback, [], "feedback"),
-    safe(fetchTopUsers, [], "topUsers"),
-    safe(fetchInactiveUsers, [], "inactive"),
+    safe(() => fetchDailyCallers(view), [], "callers"),
+    safe(() => fetchLatestFeedback(view), [], "feedback"),
+    safe(() => fetchTopUsers(view), [], "topUsers"),
+    safe(() => fetchInactiveUsers(view), [], "inactive"),
   ]);
 
   const errors = [
     funnel.error && ["funnel", funnel.error],
     callers.error && ["callers", callers.error],
-    mix.error && ["mix", mix.error],
     feedback.error && ["feedback", feedback.error],
     topUsers.error && ["topUsers", topUsers.error],
     inactive.error && ["inactive", inactive.error],
@@ -118,7 +133,7 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <header className="mb-10 flex items-center justify-between">
+      <header className="mb-8 flex items-center justify-between">
         <div>
           <div className="font-mono text-[11px] uppercase tracking-[1.5px] text-[#1a1d26]/40">
             Internal · {new Date().toUTCString()}
@@ -130,12 +145,14 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
         <form action={logoutAction}>
           <button
             type="submit"
-            className="rounded-lg border border-[#1a1d26]/12 bg-white px-3 py-1.5 text-sm text-[#1a1d26]/70 transition hover:bg-[#1a1d26]/5"
+            className="rounded-lg border border-[#1a1d26]/[0.12] bg-white px-3 py-1.5 text-sm text-[#1a1d26]/70 transition hover:bg-[#1a1d26]/5"
           >
             Sign out
           </button>
         </form>
       </header>
+
+      <ViewTabs current={view} basePath={`/${secret}`} />
 
       {errors.length > 0 ? (
         <div className="mb-8 rounded-xl border border-[#dc2626]/30 bg-[#dc2626]/[0.04] p-4">
@@ -164,13 +181,6 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
       </Section>
 
       <Section
-        title="Outcome mix"
-        subtitle="Per-day breakdown, last 7 days"
-      >
-        <OutcomeMixChart data={mix.data} />
-      </Section>
-
-      <Section
         title="Latest feedback"
         subtitle="Click email to reply"
       >
@@ -192,6 +202,36 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
         <span>refresh page for latest</span>
         <span>callday · internal</span>
       </footer>
+    </div>
+  );
+}
+
+function ViewTabs({
+  current,
+  basePath,
+}: {
+  current: InternalView;
+  basePath: string;
+}) {
+  return (
+    <div className="mb-10 inline-flex rounded-xl border border-[#1a1d26]/[0.08] bg-white p-1 shadow-sm">
+      {VALID_VIEWS.map((v) => {
+        const active = v === current;
+        const href = v === "real" ? basePath : `${basePath}?view=${v}`;
+        return (
+          <Link
+            key={v}
+            href={href}
+            className={
+              active
+                ? "rounded-lg bg-[#1a1d26] px-3.5 py-1.5 text-sm font-medium text-white"
+                : "rounded-lg px-3.5 py-1.5 text-sm font-medium text-[#1a1d26]/60 hover:text-[#1a1d26]"
+            }
+          >
+            {VIEW_LABELS[v]}
+          </Link>
+        );
+      })}
     </div>
   );
 }
