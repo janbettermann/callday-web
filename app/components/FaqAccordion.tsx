@@ -14,9 +14,7 @@ const ITEMS: FaqItem[] = [
       <>
         <p>
           Check your inbox. We just sent your TestFlight invite from{" "}
-          <strong>hello@callday.io</strong>. Tap the install button on
-          your iPhone and the Callday app is on your phone within a
-          minute.
+          <strong>hello@callday.io</strong>.
         </p>
         <p>If you don&apos;t see the email, check spam.</p>
       </>
@@ -26,8 +24,8 @@ const ITEMS: FaqItem[] = [
     q: "Is the beta really free?",
     a: (
       <p>
-        Yes. No credit card, no charge. We only want you to use the app
-        and give us honest feedback.
+        Yes. No credit card, no charge. We only want you to burn through
+        your lead list with Callday and give us honest feedback.
       </p>
     ),
   },
