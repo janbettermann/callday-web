@@ -1,44 +1,41 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
-import type { LottieRefCurrentProps } from "lottie-react";
-import desktop01 from "../animations/animation-1-desktop.json";
-import mobile01 from "../animations/animation-1-mobile.json";
-import desktop02 from "../animations/animation-2-desktop.json";
-import mobile02 from "../animations/animation-2-mobile.json";
-import desktop03 from "../animations/animation-3-desktop.json";
-import mobile03 from "../animations/animation-3-mobile.json";
-
-/**
- * Lottie wird Client-only geladen — lottie-web greift auf window/document zu,
- * also gibt's bei SSR-Render Errors. `dynamic` mit `ssr: false` schiebt das
- * Modul in einen Client-Bundle-Chunk; das Loading-State faellt auf den
- * Container-Hintergrund (cream/dark je nach FlowTab-Variante) zurueck.
- */
-const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 
 const BREAKPOINT_PX = 960;
 
 /**
- * Asset-Lookup per Step-Nummer. Pro Step zwei Varianten:
+ * Asset-Lookup per Step-Nummer.
+ *
+ * Pro Step zwei Varianten:
  *   - desktop: 520x650 (4:5 portrait) → matcht .flow-stage
  *   - mobile:  520x520 (1:1 square)   → matcht .flow-card-media[data-has-animation]
  *
- * Neue Animationen einfach hier eintragen + im FlowTabs-Step das
+ * MP4 statt Lottie: hardware-decoded → smooth auch auf alten iPhones. Die
+ * Lottie-Exporte stutterten dort weil lottie-web auf dem Main-Thread
+ * rendert. Source-of-Truth fuer die Animation bleibt das Jitter-Projekt;
+ * MP4-Exports liegen in public/animations/.
+ *
+ * Neue Animation: Eintrag hier ergaenzen + im FlowTabs-Step das
  * hasAnimation-Flag setzen.
  */
-const ANIMATIONS: Record<
-  string,
-  { desktop: object; mobile: object }
-> = {
-  "01": { desktop: desktop01, mobile: mobile01 },
-  "02": { desktop: desktop02, mobile: mobile02 },
-  "03": { desktop: desktop03, mobile: mobile03 },
+const ANIMATIONS: Record<string, { desktop: string; mobile: string }> = {
+  "01": {
+    desktop: "/animations/animation-1-desktop.mp4",
+    mobile: "/animations/animation-1-mobile.mp4",
+  },
+  "02": {
+    desktop: "/animations/animation-2-desktop.mp4",
+    mobile: "/animations/animation-2-mobile.mp4",
+  },
+  "03": {
+    desktop: "/animations/animation-3-desktop.mp4",
+    mobile: "/animations/animation-3-mobile.mp4",
+  },
 };
 
 /**
- * Renders die richtige Lottie-Animation pro FlowTabs-Step:
+ * Renders die richtige Animation pro FlowTabs-Step:
  *   - Step 01 (Drag & drop import)
  *   - Step 02 (The calling loop)
  *   - Step 03 (Booked. Synced. Sent.)
@@ -47,10 +44,10 @@ const ANIMATIONS: Record<
  *   - Desktop (>960 px): 520x650 4:5 portrait
  *   - Mobile  (≤960 px): 520x520 quadratisch
  *
- * Respektiert prefers-reduced-motion: bei aktivem System-Flag wird Lottie
- * mit autoplay=false gerendert und auf Frame 0 pausiert. Lottie nutzt
- * `loop=true` damit die Animation bei der Desktop-Auto-Rotation immer
- * laeuft, statt mitten in den letzten Frame zu fallen.
+ * Respektiert prefers-reduced-motion: bei aktivem System-Flag wird das
+ * Video auf Frame 0 pausiert. Sonst loop=true damit die Animation bei der
+ * Desktop-Auto-Rotation immer laeuft, statt mitten im letzten Frame zu
+ * hängen.
  */
 type FlowAnimationProps = {
   /**
@@ -71,7 +68,6 @@ type FlowAnimationProps = {
 export function FlowAnimation({ stepNum, isActive }: FlowAnimationProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const lottieRef = useRef<LottieRefCurrentProps>(null);
 
   useEffect(() => {
     const mqlBreakpoint = window.matchMedia(`(max-width: ${BREAKPOINT_PX}px)`);
@@ -91,32 +87,58 @@ export function FlowAnimation({ stepNum, isActive }: FlowAnimationProps) {
     };
   }, []);
 
-  /**
-   * Imperatives Play/Pause via lottieRef.
-   *
-   * lottie-react re-initialisiert die Animation nicht zuverlaessig wenn
-   * sich nur das `autoplay`-Prop aendert — Steps die mit isActive=false
-   * mounten (z.B. Step 03 bei initialem activeIndex=0) wuerden bei der
-   * spaeteren Carousel-Rotation stuck bleiben. Mit dem Ref steuern wir
-   * play()/pause() direkt, sobald sich isActive aendert.
-   *
-   * Beim Pausieren auf Frame 0 zuruecksetzen, damit der nicht-aktive
-   * Step nicht ein eingefrorenes Frame mittendrin zeigt waehrend der
-   * Crossfade laeuft.
-   */
-  useEffect(() => {
-    const inst = lottieRef.current;
-    if (!inst) return;
-    if (isActive && !reducedMotion) {
-      inst.goToAndPlay(0, true);
-    } else {
-      inst.goToAndStop(0, true);
-    }
-  }, [isActive, reducedMotion]);
-
   const asset = ANIMATIONS[stepNum];
   if (!asset) return null;
-  const animationData = isMobile ? asset.mobile : asset.desktop;
+  const src = isMobile ? asset.mobile : asset.desktop;
+
+  return (
+    <VideoStage src={src} isActive={isActive} reducedMotion={reducedMotion} />
+  );
+}
+
+/**
+ * MP4-Backend. Hardware-decoded → smooth auch auf alten iPhones, fixt das
+ * Stutter-Problem das wir mit Lottie hatten.
+ *
+ * Wichtige Attribute fuer iOS Safari:
+ *   - muted        → Pflicht fuer Autoplay (Browser-Policy)
+ *   - playsInline  → ohne reisst iOS das Video in Fullscreen
+ *   - preload="metadata" → laedt nur den Header initial, full payload erst
+ *                          beim Play. Halbiert initial-load fuer Steps die
+ *                          beim Mount inaktiv sind.
+ *   - disablePictureInPicture → kein PiP-Button im Long-Press-Menue
+ *
+ * `key={src}` forciert Re-Mount wenn der Breakpoint vom Resize wechselt
+ * (Mobile↔Desktop). Ohne den Key wuerde das Video weiter aus dem alten
+ * Asset-Buffer spielen.
+ *
+ * Play/Pause via Ref damit isActive-Aenderungen ohne Re-Render greifen.
+ * `void play().catch()` schluckt den Autoplay-Reject (kann auftreten wenn
+ * der Browser unmuted-policy hinzufuegt) — dann bleibt das Video einfach
+ * auf Frame 0 stehen statt Console-Errors zu werfen.
+ */
+function VideoStage({
+  src,
+  isActive,
+  reducedMotion,
+}: {
+  src: string;
+  isActive: boolean;
+  reducedMotion: boolean;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (isActive && !reducedMotion) {
+      v.currentTime = 0;
+      void v.play().catch(() => {});
+    } else {
+      v.pause();
+      v.currentTime = 0;
+    }
+  }, [isActive, reducedMotion, src]);
 
   return (
     <div
@@ -128,25 +150,21 @@ export function FlowAnimation({ stepNum, isActive }: FlowAnimationProps) {
         justifyContent: "center",
       }}
     >
-      <Lottie
-        lottieRef={lottieRef}
-        animationData={animationData}
+      <video
+        key={src}
+        ref={videoRef}
+        src={src}
+        autoPlay={isActive && !reducedMotion}
+        muted
+        playsInline
         loop
-        autoplay={isActive && !reducedMotion}
-        style={{ width: "100%", height: "100%" }}
-        rendererSettings={{
-          /**
-           * SVG-Renderer statt Canvas: die Jitter-Exports fuer Animation 01
-           * und 02 nutzen Track-Mattes (alpha masks) — lottie-web's
-           * Canvas-Renderer rendert die nicht zuverlaessig (Animation 01
-           * laedt gar nicht, 02 blinkt nur kurz). SVG ist ein bisschen
-           * langsamer bei vielen Shapes, dafuer feature-complete.
-           *
-           * Falls die Performance in Prod nicht reicht, ist der naechste
-           * Schritt @lottiefiles/dotlottie-react (Rust+WASM, schneller +
-           * track-matte-fest), aber ~150 KB extra Bundle-Size.
-           */
-          preserveAspectRatio: "xMidYMid meet",
+        preload="metadata"
+        disablePictureInPicture
+        aria-hidden
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
         }}
       />
     </div>
