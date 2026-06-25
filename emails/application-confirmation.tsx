@@ -3,8 +3,9 @@
  * rausgeht. Trägt die TestFlight-Public-Link-Einladung direkt mit, kein
  * manueller Approval-Schritt mehr.
  *
- * Tonalität: warm + funktional. Founder-Spot bestätigen, dann zwei klare
- * Install-Steps. Kein konkreter Preis (Dollar/EUR-Mix, noch nicht final).
+ * Tonalität: warm + funktional. Kurzbestätigung, dann zwei klare
+ * Install-Steps. Preis-Themen (Founder-Code etc.) bleiben raus —
+ * Pricing soll vor dem Launch nicht in der Aufmerksamkeit der Tester sein.
  */
 
 import { Button, Link, Text } from "@react-email/components";
@@ -50,11 +51,8 @@ export function ApplicationConfirmation({
       <Text style={bodyTextStyle}>Hi {firstName},</Text>
 
       <Text style={bodyTextStyle}>
-        You&apos;re in. Your founder spot is locked in — 50% off Callday
-        for life once we launch.
+        You&apos;re in. Two steps to start calling:
       </Text>
-
-      <Text style={bodyTextStyle}>Two steps to start calling:</Text>
 
       <Text style={stepStyle}>
         <strong>1.</strong> Install <strong>TestFlight</strong> from the
@@ -83,9 +81,9 @@ export function ApplicationConfirmation({
       </Text>
 
       <Text style={bodyTextStyle}>
-        Heads up: TestFlight needs iOS 17 or later. The beta is free for
-        the full testing period — if anything breaks or you have a
-        question, just reply to this email and we&apos;ll take a look.
+        Heads up: TestFlight needs iOS 17 or later. If anything breaks or
+        you have a question, just reply to this email and we&apos;ll take
+        a look.
       </Text>
 
       <Text style={{ ...bodyTextStyle, margin: "0 0 24px" }}>

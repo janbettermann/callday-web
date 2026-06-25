@@ -77,11 +77,6 @@ export default async function BetaAppliedPage({ searchParams }: PageProps) {
                 If anything looks broken, just reply to that email and
                 we&apos;ll take a look.
               </p>
-
-              <p className="confirm-body">
-                Your founder spot is locked in: 50% off Callday for life
-                once we launch.
-              </p>
             </>
           ) : (
             <>
@@ -91,11 +86,6 @@ export default async function BetaAppliedPage({ searchParams }: PageProps) {
                 Your TestFlight invite is on the way. We just sent it from{" "}
                 <strong>hello@callday.io</strong> with the install link.
                 If you don&apos;t see it within a few minutes, check spam.
-              </p>
-
-              <p className="confirm-body">
-                Your founder spot is locked in: 50% off Callday for life
-                once we launch.
               </p>
             </>
           )}

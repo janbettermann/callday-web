@@ -11,78 +11,35 @@ const ITEMS: FaqItem[] = [
   {
     q: "What happens after I submit?",
     a: (
-      <p>
-        We&apos;ll email you within 24 hours with next steps. Once
-        you&apos;re confirmed, we send your TestFlight invite, usually
-        within an hour. From there, you can install Callday and start using
-        it the same day.
-      </p>
+      <>
+        <p>
+          Check your inbox. We just sent your TestFlight invite from{" "}
+          <strong>hello@callday.io</strong>. Tap the install button on
+          your iPhone and the Callday app is on your phone within a
+          minute.
+        </p>
+        <p>If you don&apos;t see the email, check spam.</p>
+      </>
     ),
   },
   {
     q: "Is the beta really free?",
     a: (
-      <>
-        <p>
-          Yes. Free for the full beta period. No credit card, no hidden charge,
-          no upgrade prompt.
-        </p>
-        <p>
-          The only thing we ask. Actually use the app for real cold calls, and
-          tell us what&apos;s broken or confusing.
-        </p>
-      </>
-    ),
-  },
-  {
-    q: "What's “founder pricing” and how do I get it?",
-    a: (
-      <>
-        <p>
-          When Callday launches publicly, everyone who signed up early gets
-          an email with a personal founder code. You enter the code when you
-          sign up. No expiry. As long as your subscription is active, your
-          founder rate stays.
-        </p>
-        <p>
-          Standard pricing at launch is €14/mo. With your founder
-          code, that drops to €7/mo for life. It stays at €7 even when we raise
-          prices later. The first month is on us either way.
-        </p>
-      </>
-    ),
-  },
-  {
-    q: "What do beta testers actually do?",
-    a: (
-      <>
-        <p>Use the app for actual cold calls. That&apos;s it.</p>
-        <p>
-          About a week in, we&apos;ll email you to ask how it&apos;s going. If
-          something feels broken or wrong, you tell us. No surveys, no
-          scheduled meetings, no homework.
-        </p>
-      </>
+      <p>
+        Yes. No credit card, no charge. We only want you to use the app
+        and give us honest feedback.
+      </p>
     ),
   },
   {
     q: "How does TestFlight work?",
     a: (
-      <>
-        <p>
-          TestFlight is Apple&apos;s official beta-testing tool. You need an
-          iPhone with iOS 17 or later.
-        </p>
-        <p>
-          After we confirm your application, we send a TestFlight invite link
-          by email. You install the TestFlight app, tap the link, and Callday
-          installs like any normal app. Updates arrive automatically.
-        </p>
-        <p>
-          Android isn&apos;t supported in the beta. We&apos;re focused on iOS
-          first.
-        </p>
-      </>
+      <p>
+        TestFlight is Apple&apos;s official beta-testing app. You need an
+        iPhone with iOS 17 or later. Install TestFlight from the App
+        Store, tap the invite link from our email, and Callday installs
+        from there (like any other regular app).
+      </p>
     ),
   },
 ];

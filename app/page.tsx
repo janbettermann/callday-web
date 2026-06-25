@@ -5,92 +5,6 @@ import { FaqAccordion } from "./components/FaqAccordion";
 import { FlowTabs } from "./components/FlowTabs";
 import { SiteNav } from "./components/SiteNav";
 
-function CheckIcon() {
-  return (
-    <svg
-      width={16}
-      height={16}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
-}
-
-/* Boxed icons in der Benefit-Card — Box-Style siehe `.benefit-item-icon`
- * in globals.css. Drei semantisch passende Icons:
- *  - PhoneIcon → "Get the app this week"
- *  - LockIcon  → "Become a founding member" (Subline sagt "€7/mo for life,
- *    locked in" — das Icon spielt das visuell, Status + Durability statt
- *    Discount-Frame)
- *  - GiftIcon  → "1 month free at launch"
- */
-function PhoneIcon() {
-  return (
-    <svg
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <rect x={5} y={2} width={14} height={20} rx={2.5} ry={2.5} />
-      <line x1={12} y1={18} x2={12.01} y2={18} />
-    </svg>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <rect x={4} y={10} width={16} height={12} rx={2} ry={2} />
-      <path d="M7 10V6a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}
-
-function GiftIcon() {
-  return (
-    <svg
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <polyline points="20 12 20 22 4 22 4 12" />
-      <rect x={2} y={7} width={20} height={5} />
-      <line x1={12} y1={22} x2={12} y2={7} />
-      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
-      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
-    </svg>
-  );
-}
-
 export default function Home() {
   return (
     <>
@@ -138,7 +52,7 @@ export default function Home() {
               </svg>
             </a>
             <p className="hero-cta-meta">
-              Free beta access. Founder pricing for life.
+              Start calling today. Free iOS beta.
             </p>
           </div>
         </div>
@@ -314,66 +228,11 @@ export default function Home() {
             Get <span className="italic">early access.</span>
           </h2>
 
-          <div className="benefit-card">
-            <div className="benefit-intro">
-              <div className="benefit-label">
-                <span className="benefit-label-dot" />
-                Open now
-              </div>
-              <h3 className="benefit-title">What you get</h3>
-              <p className="benefit-subline">
-                When you save your spot today.
-              </p>
-            </div>
-
-            <div className="benefit-divider" />
-
-            <ul className="benefit-list">
-              <li className="benefit-item">
-                <div className="benefit-item-icon">
-                  <PhoneIcon />
-                </div>
-                <div className="benefit-item-text">
-                  <div className="benefit-item-title">
-                    Get the app this week
-                  </div>
-                  <div className="benefit-item-subline">
-                    Via TestFlight, within 24 hours.
-                  </div>
-                </div>
-              </li>
-              <li className="benefit-item">
-                <div className="benefit-item-icon">
-                  <LockIcon />
-                </div>
-                <div className="benefit-item-text">
-                  <div className="benefit-item-title">
-                    Become a founding member
-                  </div>
-                  <div className="benefit-item-subline">
-                    €7/mo for life after beta.
-                  </div>
-                </div>
-              </li>
-              <li className="benefit-item">
-                <div className="benefit-item-icon">
-                  <GiftIcon />
-                </div>
-                <div className="benefit-item-text">
-                  <div className="benefit-item-title">
-                    1 month free at launch
-                  </div>
-                  <div className="benefit-item-subline">
-                    Because we&apos;re not in a rush.
-                  </div>
-                </div>
-              </li>
-            </ul>
-          </div>
-
           <div className="form-card">
-            <div className="form-card-title">Save your spot</div>
-            <p className="form-card-subtitle">Takes 60 seconds.</p>
+            <div className="form-card-title">Start calling today</div>
+            <p className="form-card-subtitle">
+              We send your TestFlight invite the moment you sign up.
+            </p>
             <BetaApplicationForm />
           </div>
         </div>

@@ -38,7 +38,6 @@ interface ApplicationPayload {
   name?: unknown;
   email?: unknown;
   website?: unknown;
-  cold_calls_per_week?: unknown;
   what_they_sell?: unknown;
   current_tool?: unknown;
   has_ios17?: unknown;
@@ -48,7 +47,6 @@ interface ValidatedApplication {
   name: string;
   email: string;
   website: string | null;
-  cold_calls_per_week: string;
   what_they_sell: string | null;
   current_tool: string;
   has_ios17: boolean;
@@ -78,9 +76,6 @@ function validate(body: ApplicationPayload):
   if (!isNonEmptyString(body.email) || !EMAIL_REGEX.test(body.email.trim())) {
     return { ok: false, error: "valid email is required" };
   }
-  if (!isNonEmptyString(body.cold_calls_per_week)) {
-    return { ok: false, error: "cold_calls_per_week is required" };
-  }
   if (!isNonEmptyString(body.current_tool)) {
     return { ok: false, error: "current_tool is required" };
   }
@@ -98,7 +93,6 @@ function validate(body: ApplicationPayload):
       name: body.name.trim(),
       email: body.email.trim().toLowerCase(),
       website: nullableString(body.website),
-      cold_calls_per_week: body.cold_calls_per_week.trim(),
       what_they_sell: nullableString(body.what_they_sell),
       current_tool: body.current_tool.trim(),
       has_ios17: true,

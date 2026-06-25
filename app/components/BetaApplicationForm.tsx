@@ -3,7 +3,6 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
-type WeeklyCalls = "" | "under_10" | "10_30" | "30_100" | "over_100";
 type CurrentTool = "" | "nothing" | "spreadsheet" | "crm" | "other";
 
 type SubmitStatus = "idle" | "submitting" | "error";
@@ -24,7 +23,6 @@ export function BetaApplicationForm() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [weeklyCalls, setWeeklyCalls] = useState<WeeklyCalls>("");
   const [currentTool, setCurrentTool] = useState<CurrentTool>("");
   const [currentToolOther, setCurrentToolOther] = useState("");
   const [hasIPhone, setHasIPhone] = useState(false);
@@ -38,7 +36,6 @@ export function BetaApplicationForm() {
   const isComplete =
     Boolean(name) &&
     Boolean(email) &&
-    Boolean(weeklyCalls) &&
     Boolean(currentTool) &&
     otherTextOk &&
     hasIPhone;
@@ -62,7 +59,6 @@ export function BetaApplicationForm() {
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim(),
-          cold_calls_per_week: weeklyCalls,
           current_tool: resolvedCurrentTool,
           has_ios17: hasIPhone,
         }),
@@ -107,12 +103,6 @@ export function BetaApplicationForm() {
             placeholder="Your full name"
             disabled={status === "submitting"}
           />
-          {/* Helper-Text VOR dem Tippen: erklaert die LinkedIn-Match-Regel
-              kurz und an der Stelle wo die Entscheidung faellt. Die warme
-              Begruendung sitzt unten am Submit (beta-submit-note). */}
-          <span className="beta-field-help">
-            Please match your LinkedIn name.
-          </span>
         </label>
 
         <label className="beta-field">
@@ -127,24 +117,6 @@ export function BetaApplicationForm() {
           />
         </label>
       </div>
-
-      <label className="beta-field">
-        <span className="beta-field-label">Cold calls you make per week</span>
-        <select
-          required
-          value={weeklyCalls}
-          onChange={(e) => setWeeklyCalls(e.target.value as WeeklyCalls)}
-          disabled={status === "submitting"}
-        >
-          <option value="" disabled>
-            Select an answer
-          </option>
-          <option value="under_10">Under 10, just getting started</option>
-          <option value="10_30">10 to 30</option>
-          <option value="30_100">30 to 100</option>
-          <option value="over_100">Over 100</option>
-        </select>
-      </label>
 
       <label className="beta-field">
         <span className="beta-field-label">
@@ -205,15 +177,8 @@ export function BetaApplicationForm() {
         className="beta-submit"
         disabled={status === "submitting"}
       >
-        {status === "submitting" ? "Sending..." : "Save my spot"}
+        {status === "submitting" ? "Sending..." : "Send my invite"}
       </button>
-
-      {/* Trust-Strip unter dem CTA: erklaert das Warum hinter der LinkedIn-
-          Match-Regel als warmes Promise statt nuechterner Instruction. */}
-      <p className="beta-submit-note">
-        We&apos;ll connect on LinkedIn to ping you for feedback in 2-3 weeks.
-        That&apos;s it.
-      </p>
 
       {status === "error" && errorMessage && (
         <p className="beta-submit-error" role="alert">
