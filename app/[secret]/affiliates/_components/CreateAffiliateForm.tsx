@@ -5,16 +5,65 @@ import { useState, useTransition, type FormEvent } from "react";
 import { createAffiliateAction } from "../actions";
 
 /**
- * Inline-Create-Form auf der Affiliates-Liste. Bewusst expanded-by-default
- * statt versteckt — der haeufigste Use-Case ist "neuen Affiliate anlegen".
- *
- * Slug + Name + Email sind required. Founder-Tier ist Toggle (Plan-Default
- * = ersten 20-30 = Founding, danach Cap geschlossen). Notes ist frei
- * fuer Cohort-Tags wie "kennt Sarah" oder "Twitter outreach".
- *
- * Nach erfolgreichem Create resetten wir das Form und revalidatePath im
- * Server-Action triggert frischen Render der Liste.
+ * Inline-Create-Form mit Brand-Aesthetik (cream-bg-page, form-card-style
+ * white panel, beta-field-Inputs, brand-blue Primary-Button).
  */
+
+const cardStyle: React.CSSProperties = {
+  background: "#ffffff",
+  border: "0.5px solid var(--line)",
+  borderRadius: 24,
+  padding: "28px 28px 24px",
+  boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
+};
+
+const fieldRowStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: 16,
+  marginBottom: 18,
+};
+
+const inputBaseStyle: React.CSSProperties = {
+  width: "100%",
+  background: "rgba(26, 29, 38, 0.045)",
+  border: "1px solid transparent",
+  borderRadius: 12,
+  padding: "12px 14px",
+  fontSize: 15,
+  color: "var(--ink)",
+  outline: "none",
+  fontFamily: "inherit",
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: 600,
+  color: "var(--ink-dim)",
+  letterSpacing: 0.2,
+  marginBottom: 6,
+};
+
+const hintStyle: React.CSSProperties = {
+  fontSize: 11,
+  color: "var(--ink-faint)",
+  marginTop: 4,
+  fontWeight: 400,
+};
+
+const primaryButtonStyle: React.CSSProperties = {
+  background: "linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%)",
+  color: "#ffffff",
+  border: "none",
+  borderRadius: 12,
+  padding: "12px 24px",
+  fontSize: 15,
+  fontWeight: 600,
+  cursor: "pointer",
+  boxShadow:
+    "0 6px 18px rgba(37,99,232,0.22), 0 2px 6px rgba(74,122,247,0.18)",
+  transition: "transform 0.15s, opacity 0.15s",
+};
 
 export function CreateAffiliateForm() {
   const [error, setError] = useState<string | null>(null);
@@ -36,33 +85,26 @@ export function CreateAffiliateForm() {
         return;
       }
       const slug = String(formData.get("slug") ?? "");
-      setSuccess(`Created ${slug}. Use the row's "Send invite" to email them.`);
+      setSuccess(
+        `Created ${slug}. Open the row to send the welcome mail.`,
+      );
       form.reset();
     });
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-xl border border-[#1a1d26]/[0.06] bg-white p-5 shadow-sm"
-    >
-      <div className="mb-4 flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold tracking-tight">
-          New affiliate
-        </h3>
-        <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-[#1a1d26]/40">
-          callday.io/a/[slug]
-        </span>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <Field label="Slug" hint="lowercase, dashes ok, 2–30 chars">
+    <form onSubmit={handleSubmit} style={cardStyle} noValidate>
+      <div style={fieldRowStyle}>
+        <Field label="Slug" hint="lowercase · dashes ok · 2–30 chars">
           <input
             name="slug"
             required
             placeholder="joe"
             autoComplete="off"
-            className="w-full rounded-lg border border-[#1a1d26]/12 bg-[#faf9f5] px-3 py-2 text-sm font-mono outline-none focus:border-[#4a7af7] focus:bg-white"
+            style={{
+              ...inputBaseStyle,
+              fontFamily: "var(--font-mono), monospace",
+            }}
           />
         </Field>
 
@@ -72,7 +114,7 @@ export function CreateAffiliateForm() {
             required
             placeholder="Joe Bautista"
             autoComplete="off"
-            className="w-full rounded-lg border border-[#1a1d26]/12 bg-[#faf9f5] px-3 py-2 text-sm outline-none focus:border-[#4a7af7] focus:bg-white"
+            style={inputBaseStyle}
           />
         </Field>
 
@@ -83,43 +125,69 @@ export function CreateAffiliateForm() {
             required
             placeholder="joe@example.com"
             autoComplete="off"
-            className="w-full rounded-lg border border-[#1a1d26]/12 bg-[#faf9f5] px-3 py-2 text-sm outline-none focus:border-[#4a7af7] focus:bg-white"
+            style={inputBaseStyle}
           />
         </Field>
 
-        <Field label="Notes (optional)" hint="Cohort tag, intro context">
+        <Field label="Notes" hint="cohort tag · intro context · optional">
           <input
             name="notes"
             placeholder="Twitter outreach · cold caller cohort"
             autoComplete="off"
-            className="w-full rounded-lg border border-[#1a1d26]/12 bg-[#faf9f5] px-3 py-2 text-sm outline-none focus:border-[#4a7af7] focus:bg-white"
+            style={inputBaseStyle}
           />
         </Field>
       </div>
 
-      <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-[#1a1d26]/70">
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          fontSize: 14,
+          color: "var(--ink-dim)",
+          cursor: "pointer",
+          marginBottom: 22,
+        }}
+      >
         <input
           type="checkbox"
           name="founder_tier"
           defaultChecked
-          className="h-4 w-4 rounded border-[#1a1d26]/30"
+          style={{ width: 16, height: 16, accentColor: "var(--blue-deep)" }}
         />
         Founding affiliate (first ~20–30 cohort)
       </label>
 
-      <div className="mt-5 flex items-center justify-between gap-4">
-        <div className="min-h-[20px] text-sm">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ fontSize: 14, minHeight: 20, flex: 1 }}>
           {error ? (
-            <span className="text-[#dc2626]">{error}</span>
+            <span style={{ color: "#b91c1c" }}>{error}</span>
           ) : success ? (
-            <span className="text-[#16a34a]">{success}</span>
-          ) : null}
+            <span style={{ color: "#15803d" }}>{success}</span>
+          ) : (
+            <span style={{ color: "var(--ink-faint)" }}>
+              Slug becomes <code style={{ fontFamily: "var(--font-mono), monospace" }}>callday.io/a/[slug]</code> — make it stable.
+            </span>
+          )}
         </div>
         <button
           type="submit"
           disabled={isPending}
           aria-busy={isPending}
-          className="rounded-lg bg-[#3564e0] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#2b56c4] disabled:cursor-wait disabled:opacity-70"
+          style={{
+            ...primaryButtonStyle,
+            opacity: isPending ? 0.7 : 1,
+            cursor: isPending ? "wait" : "pointer",
+          }}
         >
           {isPending ? "Creating…" : "Create affiliate"}
         </button>
@@ -138,14 +206,10 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs font-medium text-[#1a1d26]/65">
-        {label}
-        {hint ? (
-          <span className="ml-2 font-normal text-[#1a1d26]/35">{hint}</span>
-        ) : null}
-      </span>
+    <label style={{ display: "block" }}>
+      <div style={labelStyle}>{label}</div>
       {children}
+      {hint ? <div style={hintStyle}>{hint}</div> : null}
     </label>
   );
 }

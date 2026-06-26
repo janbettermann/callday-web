@@ -14,14 +14,8 @@ interface Props {
 }
 
 /**
- * Affiliate-Tabelle. Client-Component damit:
- *   - Search-Input live filtert
- *   - Detail-Drawer per Row-Click oeffnet (lokaler State)
- *
- * Server-Side waeren beide via URL-Params + Modal-Route loesbar, aber
- * der UX-Gewinn (sofortiges Filtern beim Tippen) ist es wert.
- *
- * Such-Match: case-insensitive ueber slug, name, email, notes.
+ * Affiliate-Tabelle, on-brand. Card-Wrapper, weiche Lines, Sun-Tint
+ * fuer Founding-Badge, soft tinted Status-Pills.
  */
 export function AffiliateTable({ rows, search: initialSearch }: Props) {
   const [search, setSearch] = useState(initialSearch);
@@ -30,75 +24,141 @@ export function AffiliateTable({ rows, search: initialSearch }: Props) {
   const q = search.trim().toLowerCase();
   const filtered = q
     ? rows.filter((r) =>
-        [r.slug, r.name, r.email, r.notes ?? ""]
-          .some((field) => field.toLowerCase().includes(q)),
+        [r.slug, r.name, r.email, r.notes ?? ""].some((field) =>
+          field.toLowerCase().includes(q),
+        ),
       )
     : rows;
 
   return (
     <>
-      <div className="mb-4">
+      <div style={{ marginBottom: 16 }}>
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search slug, name, email, notes…"
-          className="w-full max-w-sm rounded-lg border border-[#1a1d26]/12 bg-white px-3 py-2 text-sm outline-none focus:border-[#4a7af7]"
+          style={{
+            width: "100%",
+            maxWidth: 360,
+            background: "rgba(26,29,38,0.045)",
+            border: "1px solid transparent",
+            borderRadius: 12,
+            padding: "10px 14px",
+            fontSize: 14,
+            color: "var(--ink)",
+            outline: "none",
+            fontFamily: "inherit",
+          }}
         />
       </div>
 
       {filtered.length === 0 ? (
         <EmptyState hasAffiliates={rows.length > 0} hasSearch={q.length > 0} />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-[#1a1d26]/[0.06] bg-white shadow-sm">
-          <table className="w-full text-sm">
-            <thead className="bg-[#faf9f5] text-left text-[11px] uppercase tracking-wider text-[#1a1d26]/45">
+        <div
+          style={{
+            background: "#ffffff",
+            border: "0.5px solid var(--line)",
+            borderRadius: 24,
+            overflow: "hidden",
+            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
+          }}
+        >
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
               <tr>
-                <th className="px-4 py-3">Slug · Name</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3 text-right">Sign-ups</th>
-                <th className="px-4 py-3 text-right">Activated</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Created</th>
-                <th className="px-4 py-3 text-right">{/* edit chevron */}</th>
+                <Th>Slug · Name</Th>
+                <Th>Email</Th>
+                <Th align="right">Sign-ups</Th>
+                <Th align="right">Activated</Th>
+                <Th>Status</Th>
+                <Th align="right">Created</Th>
+                <Th align="right" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1a1d26]/[0.06]">
-              {filtered.map((row) => (
+            <tbody>
+              {filtered.map((row, index) => (
                 <tr
                   key={row.id}
                   onClick={() => setSelected(row)}
-                  className="cursor-pointer hover:bg-[#1a1d26]/[0.02]"
+                  style={{
+                    cursor: "pointer",
+                    borderTop:
+                      index === 0
+                        ? "0.5px solid var(--line)"
+                        : "0.5px solid var(--line)",
+                    transition: "background 0.12s",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "rgba(26,29,38,0.02)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
                 >
-                  <td className="px-4 py-3">
-                    <div className="font-mono text-[13px] font-medium text-[#1a1d26]">
-                      {row.slug}
+                  <Td>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: "var(--font-mono), monospace",
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: "var(--ink)",
+                        }}
+                      >
+                        {row.slug}
+                      </span>
                       {row.founder_tier ? (
-                        <span className="ml-2 rounded bg-[#fde68a] px-1.5 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-wider text-[#92400e]">
-                          Founding
-                        </span>
+                        <FoundingBadge />
                       ) : null}
                     </div>
-                    <div className="text-[12px] text-[#1a1d26]/55">
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--ink-faint)",
+                        marginTop: 2,
+                      }}
+                    >
                       {row.name}
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-[#1a1d26]/75">{row.email}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {row.signup_count}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {row.activated_count}
-                  </td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td>
+                    <span style={{ color: "var(--ink-dim)", fontSize: 14 }}>
+                      {row.email}
+                    </span>
+                  </Td>
+                  <Td align="right">
+                    <NumCell value={row.signup_count} />
+                  </Td>
+                  <Td align="right">
+                    <NumCell value={row.activated_count} muted />
+                  </Td>
+                  <Td>
                     <StatusPill status={row.status} />
-                  </td>
-                  <td className="px-4 py-3 text-right text-[#1a1d26]/55 tabular-nums">
-                    {row.created_at.slice(0, 10)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-[#1a1d26]/35">
-                    ›
-                  </td>
+                  </Td>
+                  <Td align="right">
+                    <span
+                      style={{
+                        color: "var(--ink-faint)",
+                        fontSize: 13,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {row.created_at.slice(0, 10)}
+                    </span>
+                  </Td>
+                  <Td align="right">
+                    <span style={{ color: "var(--ink-faint)", fontSize: 18 }}>
+                      ›
+                    </span>
+                  </Td>
                 </tr>
               ))}
             </tbody>
@@ -115,16 +175,126 @@ export function AffiliateTable({ rows, search: initialSearch }: Props) {
   );
 }
 
+function Th({
+  children,
+  align,
+}: {
+  children?: React.ReactNode;
+  align?: "right";
+}) {
+  return (
+    <th
+      style={{
+        padding: "14px 18px",
+        background: "var(--bg)",
+        fontFamily: "var(--font-mono), monospace",
+        fontSize: 10,
+        textTransform: "uppercase",
+        letterSpacing: "1.2px",
+        color: "var(--ink-faint)",
+        fontWeight: 600,
+        textAlign: align === "right" ? "right" : "left",
+      }}
+    >
+      {children}
+    </th>
+  );
+}
+
+function Td({
+  children,
+  align,
+}: {
+  children: React.ReactNode;
+  align?: "right";
+}) {
+  return (
+    <td
+      style={{
+        padding: "14px 18px",
+        textAlign: align === "right" ? "right" : "left",
+        verticalAlign: "middle",
+      }}
+    >
+      {children}
+    </td>
+  );
+}
+
+function NumCell({ value, muted }: { value: number; muted?: boolean }) {
+  return (
+    <span
+      style={{
+        fontFamily: "var(--font-mono), monospace",
+        fontSize: 14,
+        fontWeight: muted ? 500 : 600,
+        color: muted ? "var(--ink-dim)" : "var(--ink)",
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      {value}
+    </span>
+  );
+}
+
+function FoundingBadge() {
+  return (
+    <span
+      style={{
+        background: "var(--sun-tint)",
+        color: "var(--sun-deep)",
+        fontSize: 10,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.6px",
+        padding: "3px 8px",
+        borderRadius: 6,
+      }}
+    >
+      Founding
+    </span>
+  );
+}
+
 function StatusPill({ status }: { status: AffiliateStatus }) {
-  const styles: Record<AffiliateStatus, string> = {
-    active: "bg-[#16a34a]/10 text-[#15803d]",
-    paused: "bg-[#f59e0b]/15 text-[#a16207]",
-    removed: "bg-[#1a1d26]/8 text-[#1a1d26]/50",
+  const styles: Record<AffiliateStatus, React.CSSProperties> = {
+    active: {
+      background: "rgba(16, 185, 129, 0.12)",
+      color: "#047857",
+    },
+    paused: {
+      background: "rgba(245, 158, 11, 0.15)",
+      color: "#a16207",
+    },
+    removed: {
+      background: "rgba(26, 29, 38, 0.07)",
+      color: "var(--ink-faint)",
+    },
   };
   return (
     <span
-      className={`rounded px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${styles[status]}`}
+      style={{
+        ...styles[status],
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "4px 10px",
+        borderRadius: 100,
+        fontSize: 11,
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.6px",
+      }}
     >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 3,
+          background: "currentColor",
+        }}
+      />
       {status}
     </span>
   );
@@ -137,23 +307,25 @@ function EmptyState({
   hasAffiliates: boolean;
   hasSearch: boolean;
 }) {
-  if (hasSearch) {
-    return (
-      <div className="rounded-xl border border-dashed border-[#1a1d26]/12 bg-white p-8 text-center text-sm text-[#1a1d26]/55">
-        No matches.
-      </div>
-    );
-  }
-  if (!hasAffiliates) {
-    return (
-      <div className="rounded-xl border border-dashed border-[#1a1d26]/12 bg-white p-8 text-center text-sm text-[#1a1d26]/55">
-        No affiliates yet. Use the form above to add your first one.
-      </div>
-    );
-  }
+  let message: string;
+  if (hasSearch) message = "No matches.";
+  else if (!hasAffiliates)
+    message = "No affiliates yet. Use the form above to add your first one.";
+  else message = "No affiliates in this filter.";
+
   return (
-    <div className="rounded-xl border border-dashed border-[#1a1d26]/12 bg-white p-8 text-center text-sm text-[#1a1d26]/55">
-      No affiliates in this filter.
+    <div
+      style={{
+        background: "#ffffff",
+        border: "0.5px dashed var(--line)",
+        borderRadius: 24,
+        padding: "48px 24px",
+        textAlign: "center",
+        color: "var(--ink-faint)",
+        fontSize: 14,
+      }}
+    >
+      {message}
     </div>
   );
 }

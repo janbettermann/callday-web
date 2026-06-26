@@ -19,14 +19,21 @@ interface Props {
 }
 
 /**
- * Status-Filter-Pills. Wir nutzen Link-Navigation (Query-Param) statt
- * Client-State, damit der Filter share-bar ist und beim Refresh stehen
- * bleibt. Counts werden vom Server-Component vorberechnet und als Pill-
- * Badge angezeigt.
+ * Status-Filter — pill-group im Stil der Landing-Page-Pills
+ * (rounded, soft shadow, segmented active state).
  */
 export function StatusFilter({ current, counts, basePath }: Props) {
   return (
-    <div className="mb-6 inline-flex rounded-xl border border-[#1a1d26]/[0.08] bg-white p-1 shadow-sm">
+    <div
+      style={{
+        display: "inline-flex",
+        background: "#ffffff",
+        border: "0.5px solid var(--line)",
+        borderRadius: 14,
+        padding: 4,
+        boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
+      }}
+    >
       {ORDER.map((value) => {
         const active = value === current;
         const href = value === "all" ? basePath : `${basePath}?status=${value}`;
@@ -34,19 +41,39 @@ export function StatusFilter({ current, counts, basePath }: Props) {
           <Link
             key={value}
             href={href}
-            className={
+            style={
               active
-                ? "flex items-center gap-1.5 rounded-lg bg-[#1a1d26] px-3.5 py-1.5 text-sm font-medium text-white"
-                : "flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium text-[#1a1d26]/60 hover:text-[#1a1d26]"
+                ? {
+                    background: "var(--ink)",
+                    color: "#ffffff",
+                    borderRadius: 10,
+                    padding: "6px 14px",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }
+                : {
+                    color: "var(--ink-dim)",
+                    borderRadius: 10,
+                    padding: "6px 14px",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }
             }
           >
             {LABEL[value]}
             <span
-              className={
-                active
-                  ? "tabular-nums opacity-70"
-                  : "tabular-nums text-[#1a1d26]/35"
-              }
+              style={{
+                fontVariantNumeric: "tabular-nums",
+                opacity: active ? 0.65 : 0.45,
+              }}
             >
               {counts[value]}
             </span>

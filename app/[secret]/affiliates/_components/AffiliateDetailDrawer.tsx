@@ -14,17 +14,9 @@ import {
 } from "../actions";
 
 /**
- * Edit-Sheet das von rechts in den Viewport sliced. Wird via Hash-State
- * gesteuert (`#a-<id>`), damit Linking + Back-Button funktionieren.
- *
- * Inhalt:
- *   - Edit-Form (Name, Email, Founder-Toggle, Notes; Slug ist permanent)
- *   - Status-Actions (Pause / Resume / Remove)
- *   - Resend-Invite-Button (triggert Welcome-Mail erneut)
- *
- * Slug ist bewusst NICHT editierbar — Vertragsklausel "Permanent-Link
- * callday.io/a/{slug}" (Plan-Memory). Wenn Slug-Aenderung wirklich noetig:
- * direkt in Supabase.
+ * Detail-Drawer, on-brand. Slide-in von rechts, weisser Panel mit
+ * cream-tinted Sections, brand-blue Primary-Buttons, Sun-Tint fuer
+ * "Founding"-Toggle. Slug ist permanent (Vertragsklausel).
  */
 
 interface Props {
@@ -49,7 +41,6 @@ function DrawerBody({
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionInfo, setActionInfo] = useState<string | null>(null);
 
-  // Esc → close
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -98,39 +89,103 @@ function DrawerBody({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 50,
+        display: "flex",
+      }}
       role="dialog"
       aria-modal="true"
       aria-label={`Edit affiliate ${affiliate.slug}`}
     >
-      {/* Backdrop */}
       <button
         type="button"
         onClick={onClose}
         aria-label="Close"
-        className="flex-1 bg-[#1a1d26]/30 backdrop-blur-[2px]"
+        style={{
+          flex: 1,
+          background: "rgba(26,29,38,0.30)",
+          backdropFilter: "blur(2px)",
+          border: "none",
+          cursor: "pointer",
+        }}
       />
 
-      {/* Sheet */}
-      <div className="flex w-full max-w-md flex-col overflow-y-auto bg-white shadow-2xl">
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-[#1a1d26]/[0.06] bg-white px-6 py-4">
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 440,
+          background: "var(--bg)",
+          overflowY: "auto",
+          boxShadow: "-16px 0 48px rgba(0,0,0,0.12)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <header
+          style={{
+            position: "sticky",
+            top: 0,
+            background: "var(--bg)",
+            borderBottom: "0.5px solid var(--line)",
+            padding: "20px 28px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            zIndex: 10,
+          }}
+        >
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[1.2px] text-[#1a1d26]/40">
+            <div
+              style={{
+                fontFamily: "var(--font-mono), monospace",
+                fontSize: 10,
+                textTransform: "uppercase",
+                letterSpacing: "1.2px",
+                color: "var(--ink-faint)",
+              }}
+            >
               Affiliate
             </div>
-            <div className="mt-0.5 font-mono text-lg font-semibold tracking-tight">
+            <div
+              style={{
+                marginTop: 4,
+                fontFamily: "var(--font-mono), monospace",
+                fontSize: 22,
+                fontWeight: 700,
+                letterSpacing: "-0.4px",
+                color: "var(--ink)",
+              }}
+            >
               {affiliate.slug}
+            </div>
+            <div
+              style={{
+                marginTop: 2,
+                fontSize: 13,
+                color: "var(--ink-dim)",
+              }}
+            >
+              {affiliate.name}
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-[#1a1d26]/50 hover:bg-[#1a1d26]/5"
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              padding: 6,
+              borderRadius: 8,
+              color: "var(--ink-faint)",
+            }}
             aria-label="Close"
           >
             <svg
-              width="20"
-              height="20"
+              width="18"
+              height="18"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -142,111 +197,216 @@ function DrawerBody({
           </button>
         </header>
 
-        <div className="space-y-8 px-6 py-6">
+        <div
+          style={{
+            padding: "28px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 28,
+            flex: 1,
+          }}
+        >
           <StatsRow affiliate={affiliate} />
 
-          <SectionHeader label="Status" />
-          <div className="flex flex-wrap gap-2">
-            <StatusButton
-              label="Active"
-              active={affiliate.status === "active"}
-              disabled={isPending || affiliate.status === "active"}
-              onClick={() => handleStatusChange("active")}
-              variant="primary"
-            />
-            <StatusButton
-              label="Paused"
-              active={affiliate.status === "paused"}
-              disabled={isPending || affiliate.status === "paused"}
-              onClick={() => handleStatusChange("paused")}
-              variant="warn"
-            />
-            <StatusButton
-              label="Removed"
-              active={affiliate.status === "removed"}
-              disabled={isPending || affiliate.status === "removed"}
-              onClick={() => handleStatusChange("removed")}
-              variant="danger"
-            />
-          </div>
-
-          <SectionHeader label="Invite" />
-          <div className="rounded-xl border border-[#1a1d26]/[0.06] bg-[#faf9f5] p-4">
-            <div className="mb-2 text-sm text-[#1a1d26]/70">
-              {affiliate.invited_at
-                ? `Last sent ${fmtDateTime(affiliate.invited_at)}`
-                : "Not yet invited."}
+          <Section label="Status">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <StatusButton
+                label="Active"
+                active={affiliate.status === "active"}
+                disabled={isPending || affiliate.status === "active"}
+                onClick={() => handleStatusChange("active")}
+                color="#10b981"
+              />
+              <StatusButton
+                label="Paused"
+                active={affiliate.status === "paused"}
+                disabled={isPending || affiliate.status === "paused"}
+                onClick={() => handleStatusChange("paused")}
+                color="#f59e0b"
+              />
+              <StatusButton
+                label="Removed"
+                active={affiliate.status === "removed"}
+                disabled={isPending || affiliate.status === "removed"}
+                onClick={() => handleStatusChange("removed")}
+                color="#94a3b8"
+              />
             </div>
-            <button
-              type="button"
-              onClick={handleResendInvite}
-              disabled={isPending || affiliate.status === "removed"}
-              aria-busy={isPending}
-              className="rounded-lg border border-[#1a1d26]/15 bg-white px-3.5 py-2 text-sm font-medium text-[#1a1d26] transition hover:bg-[#1a1d26]/5 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {affiliate.invited_at ? "Resend invite" : "Send invite"}
-            </button>
-            {affiliate.status === "removed" ? (
-              <p className="mt-2 text-xs text-[#1a1d26]/45">
-                Cannot send to removed affiliates. Set Active first.
-              </p>
-            ) : null}
-          </div>
+          </Section>
 
-          <SectionHeader label="Details" />
-          <form action={handleUpdate} className="space-y-3">
-            <Field label="Name">
-              <input
-                name="name"
-                defaultValue={affiliate.name}
-                required
-                className="w-full rounded-lg border border-[#1a1d26]/12 bg-[#faf9f5] px-3 py-2 text-sm outline-none focus:border-[#4a7af7] focus:bg-white"
-              />
-            </Field>
-            <Field label="Email">
-              <input
-                name="email"
-                type="email"
-                defaultValue={affiliate.email}
-                required
-                className="w-full rounded-lg border border-[#1a1d26]/12 bg-[#faf9f5] px-3 py-2 text-sm outline-none focus:border-[#4a7af7] focus:bg-white"
-              />
-            </Field>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-[#1a1d26]/70">
-              <input
-                type="checkbox"
-                name="founder_tier"
-                defaultChecked={affiliate.founder_tier}
-                className="h-4 w-4 rounded border-[#1a1d26]/30"
-              />
-              Founding affiliate
-            </label>
-            <Field label="Notes">
-              <textarea
-                name="notes"
-                rows={3}
-                defaultValue={affiliate.notes ?? ""}
-                className="w-full rounded-lg border border-[#1a1d26]/12 bg-[#faf9f5] px-3 py-2 text-sm outline-none focus:border-[#4a7af7] focus:bg-white"
-              />
-            </Field>
-            <button
-              type="submit"
-              disabled={isPending}
-              aria-busy={isPending}
-              className="rounded-lg bg-[#3564e0] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#2b56c4] disabled:cursor-wait disabled:opacity-70"
+          <Section label="Invite">
+            <div
+              style={{
+                background: "#ffffff",
+                border: "0.5px solid var(--line)",
+                borderRadius: 16,
+                padding: 18,
+              }}
             >
-              {isPending ? "Saving…" : "Save details"}
-            </button>
-          </form>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "var(--ink-dim)",
+                  marginBottom: 12,
+                }}
+              >
+                {affiliate.invited_at
+                  ? `Last sent ${fmtDateTime(affiliate.invited_at)}`
+                  : "Not yet invited."}
+              </div>
+              <button
+                type="button"
+                onClick={handleResendInvite}
+                disabled={isPending || affiliate.status === "removed"}
+                aria-busy={isPending}
+                style={{
+                  background: affiliate.invited_at
+                    ? "#ffffff"
+                    : "linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%)",
+                  color: affiliate.invited_at ? "var(--ink)" : "#ffffff",
+                  border: affiliate.invited_at
+                    ? "1px solid var(--line)"
+                    : "none",
+                  borderRadius: 10,
+                  padding: "10px 18px",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor:
+                    isPending || affiliate.status === "removed"
+                      ? "not-allowed"
+                      : "pointer",
+                  opacity:
+                    isPending || affiliate.status === "removed" ? 0.5 : 1,
+                  boxShadow: affiliate.invited_at
+                    ? "none"
+                    : "0 6px 18px rgba(37,99,232,0.22)",
+                }}
+              >
+                {affiliate.invited_at ? "Resend invite" : "Send invite"}
+              </button>
+              {affiliate.status === "removed" ? (
+                <p
+                  style={{
+                    marginTop: 10,
+                    fontSize: 12,
+                    color: "var(--ink-faint)",
+                  }}
+                >
+                  Cannot send to removed affiliates. Set Active first.
+                </p>
+              ) : null}
+            </div>
+          </Section>
+
+          <Section label="Details">
+            <form
+              action={handleUpdate}
+              style={{
+                background: "#ffffff",
+                border: "0.5px solid var(--line)",
+                borderRadius: 16,
+                padding: 18,
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+              }}
+            >
+              <Field label="Name">
+                <DrawerInput name="name" defaultValue={affiliate.name} required />
+              </Field>
+              <Field label="Email">
+                <DrawerInput
+                  name="email"
+                  type="email"
+                  defaultValue={affiliate.email}
+                  required
+                />
+              </Field>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  fontSize: 14,
+                  color: "var(--ink-dim)",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  name="founder_tier"
+                  defaultChecked={affiliate.founder_tier}
+                  style={{
+                    width: 16,
+                    height: 16,
+                    accentColor: "var(--blue-deep)",
+                  }}
+                />
+                Founding affiliate
+              </label>
+              <Field label="Notes">
+                <textarea
+                  name="notes"
+                  rows={3}
+                  defaultValue={affiliate.notes ?? ""}
+                  style={{
+                    width: "100%",
+                    background: "rgba(26,29,38,0.045)",
+                    border: "1px solid transparent",
+                    borderRadius: 12,
+                    padding: "10px 14px",
+                    fontSize: 14,
+                    color: "var(--ink)",
+                    outline: "none",
+                    fontFamily: "inherit",
+                    resize: "vertical",
+                  }}
+                />
+              </Field>
+              <button
+                type="submit"
+                disabled={isPending}
+                aria-busy={isPending}
+                style={{
+                  alignSelf: "flex-start",
+                  background:
+                    "linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%)",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "10px 18px",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: isPending ? "wait" : "pointer",
+                  opacity: isPending ? 0.7 : 1,
+                  boxShadow: "0 6px 18px rgba(37,99,232,0.22)",
+                }}
+              >
+                {isPending ? "Saving…" : "Save details"}
+              </button>
+            </form>
+          </Section>
         </div>
 
         {(actionError || actionInfo) && (
-          <div className="sticky bottom-0 border-t border-[#1a1d26]/[0.06] bg-white px-6 py-3">
+          <div
+            style={{
+              position: "sticky",
+              bottom: 0,
+              background: "var(--bg)",
+              borderTop: "0.5px solid var(--line)",
+              padding: "14px 28px",
+            }}
+          >
             {actionError ? (
-              <p className="text-sm text-[#dc2626]">{actionError}</p>
+              <p style={{ margin: 0, fontSize: 14, color: "#b91c1c" }}>
+                {actionError}
+              </p>
             ) : null}
             {actionInfo ? (
-              <p className="text-sm text-[#16a34a]">{actionInfo}</p>
+              <p style={{ margin: 0, fontSize: 14, color: "#15803d" }}>
+                {actionInfo}
+              </p>
             ) : null}
           </div>
         )}
@@ -256,39 +416,86 @@ function DrawerBody({
 }
 
 function StatsRow({ affiliate }: { affiliate: AffiliateRow }) {
+  const cr =
+    affiliate.signup_count === 0
+      ? "—"
+      : `${Math.round(
+          (affiliate.activated_count / affiliate.signup_count) * 100,
+        )}%`;
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 10,
+      }}
+    >
       <Stat label="Sign-ups" value={affiliate.signup_count} />
       <Stat label="Activated" value={affiliate.activated_count} />
-      <Stat
-        label="CR"
-        value={
-          affiliate.signup_count === 0
-            ? "—"
-            : `${Math.round(
-                (affiliate.activated_count / affiliate.signup_count) * 100,
-              )}%`
-        }
-      />
+      <Stat label="CR" value={cr} />
     </div>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl border border-[#1a1d26]/[0.06] bg-[#faf9f5] px-3 py-2">
-      <div className="font-mono text-[10px] uppercase tracking-[1.2px] text-[#1a1d26]/40">
+    <div
+      style={{
+        background: "#ffffff",
+        border: "0.5px solid var(--line)",
+        borderRadius: 14,
+        padding: "12px 14px",
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "var(--font-mono), monospace",
+          fontSize: 10,
+          textTransform: "uppercase",
+          letterSpacing: "1.2px",
+          color: "var(--ink-faint)",
+        }}
+      >
         {label}
       </div>
-      <div className="mt-1 text-lg font-semibold tabular-nums">{value}</div>
+      <div
+        style={{
+          marginTop: 4,
+          fontSize: 20,
+          fontWeight: 700,
+          fontVariantNumeric: "tabular-nums",
+          color: "var(--ink)",
+          letterSpacing: "-0.3px",
+        }}
+      >
+        {value}
+      </div>
     </div>
   );
 }
 
-function SectionHeader({ label }: { label: string }) {
+function Section({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="-mb-2 font-mono text-[10px] uppercase tracking-[1.2px] text-[#1a1d26]/40">
-      {label}
+    <div>
+      <div
+        style={{
+          fontFamily: "var(--font-mono), monospace",
+          fontSize: 10,
+          textTransform: "uppercase",
+          letterSpacing: "1.2px",
+          color: "var(--ink-faint)",
+          marginBottom: 10,
+        }}
+      >
+        {label}
+      </div>
+      {children}
     </div>
   );
 }
@@ -301,12 +508,39 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs font-medium text-[#1a1d26]/65">
+    <label style={{ display: "block" }}>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 600,
+          color: "var(--ink-dim)",
+          marginBottom: 6,
+        }}
+      >
         {label}
-      </span>
+      </div>
       {children}
     </label>
+  );
+}
+
+function DrawerInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      style={{
+        width: "100%",
+        background: "rgba(26,29,38,0.045)",
+        border: "1px solid transparent",
+        borderRadius: 12,
+        padding: "10px 14px",
+        fontSize: 14,
+        color: "var(--ink)",
+        outline: "none",
+        fontFamily: "inherit",
+        ...(props.style ?? {}),
+      }}
+    />
   );
 }
 
@@ -315,29 +549,42 @@ function StatusButton({
   active,
   disabled,
   onClick,
-  variant,
+  color,
 }: {
   label: string;
   active: boolean;
   disabled: boolean;
   onClick: () => void;
-  variant: "primary" | "warn" | "danger";
+  color: string;
 }) {
-  const activeBg =
-    variant === "primary"
-      ? "bg-[#16a34a]/10 border-[#16a34a]/40 text-[#15803d]"
-      : variant === "warn"
-        ? "bg-[#f59e0b]/10 border-[#f59e0b]/40 text-[#a16207]"
-        : "bg-[#dc2626]/10 border-[#dc2626]/40 text-[#b91c1c]";
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={
+      style={
         active
-          ? `rounded-lg border px-3.5 py-1.5 text-sm font-medium ${activeBg}`
-          : "rounded-lg border border-[#1a1d26]/15 bg-white px-3.5 py-1.5 text-sm font-medium text-[#1a1d26]/70 transition hover:bg-[#1a1d26]/5 disabled:cursor-not-allowed disabled:opacity-50"
+          ? {
+              background: `${color}1F`,
+              border: `1px solid ${color}66`,
+              color: color,
+              borderRadius: 10,
+              padding: "8px 16px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "default",
+            }
+          : {
+              background: "#ffffff",
+              border: "1px solid var(--line)",
+              color: "var(--ink-dim)",
+              borderRadius: 10,
+              padding: "8px 16px",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: disabled ? "not-allowed" : "pointer",
+              opacity: disabled ? 0.5 : 1,
+            }
       }
     >
       {label}
