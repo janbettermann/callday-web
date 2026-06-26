@@ -19,6 +19,7 @@ import { EmailShell } from "./_lib/EmailShell";
 export interface AffiliateWelcomeProps {
   name: string;
   affiliateLink: string;
+  dashboardSignInUrl: string;
 }
 
 const bodyTextStyle = {
@@ -72,9 +73,22 @@ const fineStyle = {
   margin: "24px 0 0",
 } as const;
 
+const secondaryButtonStyle = {
+  backgroundColor: "#ffffff",
+  color: brand.text,
+  border: `1px solid ${brand.border}`,
+  fontSize: "15px",
+  fontWeight: 600,
+  textDecoration: "none",
+  padding: "12px 24px",
+  borderRadius: "10px",
+  display: "inline-block",
+} as const;
+
 export function AffiliateWelcome({
   name,
   affiliateLink,
+  dashboardSignInUrl,
 }: AffiliateWelcomeProps) {
   const firstName = name?.trim().split(/\s+/)[0] || "there";
 
@@ -92,6 +106,22 @@ export function AffiliateWelcome({
         <Button href={affiliateLink} style={buttonStyle}>
           Open your link
         </Button>
+      </Text>
+
+      <Text style={sectionLabelStyle}>Your dashboard</Text>
+      <Text style={bulletStyle}>
+        Use the link below to sign in to your affiliate dashboard. You can
+        always come back to callday.io/affiliate/login later and request a
+        new sign-in link there.
+      </Text>
+      <Text style={{ textAlign: "center" as const, margin: "8px 0 24px" }}>
+        <Button href={dashboardSignInUrl} style={secondaryButtonStyle}>
+          Sign in to your dashboard
+        </Button>
+      </Text>
+      <Text style={{ ...fineStyle, marginTop: 0 }}>
+        This sign-in link expires in 24 hours. After that, request a fresh
+        one at callday.io/affiliate/login.
       </Text>
 
       <Text style={sectionLabelStyle}>How it works</Text>

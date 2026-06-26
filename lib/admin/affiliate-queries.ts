@@ -11,9 +11,18 @@ import { getServerSupabase } from "../supabase-server";
  *
  * Activated-Count: distinct profiles mit mindestens einer lead_list.
  * Per Plan-Decision = "list uploaded".
+ *
+ * Lifecycle-Types + deriveLifecycle leben in ./affiliate-lifecycle.ts
+ * damit Client-Components sie importieren koennen — diese Datei hier
+ * ist server-only wegen der DB-Calls.
  */
 
-export type AffiliateStatus = "active" | "paused" | "removed";
+export type {
+  AffiliateStatus,
+  AffiliateLifecycle,
+} from "./affiliate-lifecycle";
+export { deriveLifecycle } from "./affiliate-lifecycle";
+import type { AffiliateStatus } from "./affiliate-lifecycle";
 
 export interface AffiliateRow {
   id: string;
@@ -24,6 +33,8 @@ export interface AffiliateRow {
   founder_tier: boolean;
   notes: string | null;
   invited_at: string | null;
+  first_login_at: string | null;
+  last_login_at: string | null;
   created_at: string;
   signup_count: number;
   activated_count: number;
@@ -38,6 +49,8 @@ interface RawAffiliate {
   founder_tier: boolean;
   notes: string | null;
   invited_at: string | null;
+  first_login_at: string | null;
+  last_login_at: string | null;
   created_at: string;
 }
 
@@ -56,7 +69,7 @@ export async function fetchAffiliates(): Promise<AffiliateRow[]> {
   const { data, error } = await sb
     .from("affiliates")
     .select(
-      "id, slug, name, email, status, founder_tier, notes, invited_at, created_at",
+      "id, slug, name, email, status, founder_tier, notes, invited_at, first_login_at, last_login_at, created_at",
     )
     .order("created_at", { ascending: false });
 
@@ -84,7 +97,7 @@ export async function fetchAffiliateById(
   const { data, error } = await sb
     .from("affiliates")
     .select(
-      "id, slug, name, email, status, founder_tier, notes, invited_at, created_at",
+      "id, slug, name, email, status, founder_tier, notes, invited_at, first_login_at, last_login_at, created_at",
     )
     .eq("id", id)
     .maybeSingle();

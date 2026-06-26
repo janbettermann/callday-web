@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 
-import type {
-  AffiliateRow,
-  AffiliateStatus,
-} from "@/lib/admin/affiliate-queries";
+import type { AffiliateRow } from "@/lib/admin/affiliate-queries";
+import type { AffiliateLifecycle } from "@/lib/admin/affiliate-lifecycle";
+import { deriveLifecycle } from "@/lib/admin/affiliate-lifecycle";
 import { AffiliateDetailDrawer } from "./AffiliateDetailDrawer";
 
 interface Props {
@@ -133,7 +132,7 @@ export function AffiliateTable({ rows, search: initialSearch }: Props) {
                     <NumCell value={row.activated_count} muted />
                   </Td>
                   <Td>
-                    <StatusPill status={row.status} />
+                    <LifecyclePill lifecycle={deriveLifecycle(row)} />
                   </Td>
                   <Td align="right">
                     <span
@@ -248,25 +247,43 @@ function FoundingBadge() {
   );
 }
 
-function StatusPill({ status }: { status: AffiliateStatus }) {
-  const styles: Record<AffiliateStatus, React.CSSProperties> = {
-    active: {
+function LifecyclePill({ lifecycle }: { lifecycle: AffiliateLifecycle }) {
+  const styles: Record<
+    AffiliateLifecycle,
+    { background: string; color: string; label: string }
+  > = {
+    created: {
+      background: "rgba(26, 29, 38, 0.06)",
+      color: "var(--ink-dim)",
+      label: "Created",
+    },
+    invited: {
+      background: "rgba(74, 122, 247, 0.12)",
+      color: "var(--blue-deep)",
+      label: "Invited",
+    },
+    active_logged_in: {
       background: "rgba(16, 185, 129, 0.12)",
       color: "#047857",
+      label: "Active",
     },
     paused: {
       background: "rgba(245, 158, 11, 0.15)",
       color: "#a16207",
+      label: "Paused",
     },
     removed: {
       background: "rgba(26, 29, 38, 0.07)",
       color: "var(--ink-faint)",
+      label: "Removed",
     },
   };
+  const s = styles[lifecycle];
   return (
     <span
       style={{
-        ...styles[status],
+        background: s.background,
+        color: s.color,
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
@@ -287,7 +304,7 @@ function StatusPill({ status }: { status: AffiliateStatus }) {
           background: "currentColor",
         }}
       />
-      {status}
+      {s.label}
     </span>
   );
 }

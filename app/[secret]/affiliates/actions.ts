@@ -11,6 +11,10 @@ import {
 } from "@/lib/admin/auth";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { AffiliateWelcome } from "@/emails/affiliate-welcome";
+import {
+  buildMagicLinkUrl,
+  generateMagicLink,
+} from "@/lib/affiliate-auth";
 import type { AffiliateStatus } from "@/lib/admin/affiliate-queries";
 
 /**
@@ -209,6 +213,24 @@ export async function resendInviteAction(
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://callday.io";
   const affiliateLink = `${baseUrl}/a/${affiliate.slug}`;
 
+  // First-Login-Token (24h-TTL) erzeugen damit der Affiliate direkt aus
+  // der Welcome-Mail ins Dashboard kommt ohne nochmal auf /affiliate/login
+  // einen neuen Link anfordern zu muessen.
+  const linkResult = await generateMagicLink({
+    affiliateId: affiliate.id,
+    purpose: "first_login",
+  });
+  if (!linkResult.ok) {
+    if (linkResult.error === "rate_limited") {
+      return {
+        ok: false,
+        error: "Too many sign-in links generated recently. Try again in an hour.",
+      };
+    }
+    return { ok: false, error: "Failed to generate sign-in link." };
+  }
+  const dashboardSignInUrl = buildMagicLinkUrl(linkResult.token);
+
   const resend = new Resend(resendKey);
   let resendEmailId: string | null = null;
   let status: "sent" | "failed" = "sent";
@@ -223,6 +245,7 @@ export async function resendInviteAction(
       react: AffiliateWelcome({
         name: affiliate.name,
         affiliateLink,
+        dashboardSignInUrl,
       }),
     });
     if (result.error) {

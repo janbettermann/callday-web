@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useTransition } from "react";
 
+import type { AffiliateRow } from "@/lib/admin/affiliate-queries";
 import type {
-  AffiliateRow,
+  AffiliateLifecycle,
   AffiliateStatus,
-} from "@/lib/admin/affiliate-queries";
+} from "@/lib/admin/affiliate-lifecycle";
+import { deriveLifecycle } from "@/lib/admin/affiliate-lifecycle";
 
 import {
   changeAffiliateStatusAction,
@@ -165,10 +167,12 @@ function DrawerBody({
                 marginTop: 2,
                 fontSize: 13,
                 color: "var(--ink-dim)",
+                marginBottom: 8,
               }}
             >
               {affiliate.name}
             </div>
+            <LifecyclePill lifecycle={deriveLifecycle(affiliate)} />
           </div>
           <button
             type="button"
@@ -589,6 +593,68 @@ function StatusButton({
     >
       {label}
     </button>
+  );
+}
+
+function LifecyclePill({ lifecycle }: { lifecycle: AffiliateLifecycle }) {
+  const styles: Record<
+    AffiliateLifecycle,
+    { background: string; color: string; label: string }
+  > = {
+    created: {
+      background: "rgba(26, 29, 38, 0.06)",
+      color: "var(--ink-dim)",
+      label: "Created",
+    },
+    invited: {
+      background: "rgba(74, 122, 247, 0.12)",
+      color: "var(--blue-deep)",
+      label: "Invited",
+    },
+    active_logged_in: {
+      background: "rgba(16, 185, 129, 0.12)",
+      color: "#047857",
+      label: "Active",
+    },
+    paused: {
+      background: "rgba(245, 158, 11, 0.15)",
+      color: "#a16207",
+      label: "Paused",
+    },
+    removed: {
+      background: "rgba(26, 29, 38, 0.07)",
+      color: "var(--ink-faint)",
+      label: "Removed",
+    },
+  };
+  const s = styles[lifecycle];
+  return (
+    <span
+      style={{
+        background: s.background,
+        color: s.color,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "3px 9px",
+        borderRadius: 100,
+        fontSize: 10,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.6px",
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 5,
+          height: 5,
+          borderRadius: 3,
+          background: "currentColor",
+        }}
+      />
+      {s.label}
+    </span>
   );
 }
 
