@@ -3,15 +3,12 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { CalldayLogo } from "../components/CalldayLogo";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
-import { getServerSupabase } from "@/lib/supabase-server";
 import {
   createPortalSessionAction,
   deleteAccountAction,
   signOutAction,
 } from "./actions";
 import { ResendTestFlightButton } from "./ResendTestFlightButton";
-import { PostHogSignupCompletion } from "./PostHogSignupCompletion";
-import { PostHogIdentifier } from "./PostHogIdentifier";
 
 export const metadata: Metadata = {
   title: "Your account · Callday",
@@ -123,20 +120,6 @@ export default async function AccountPage({
     referred_by_affiliate_id: null,
   };
 
-  // Affiliate-Slug fuer Posthog signup_completed-Event. Nur relevant
-  // wenn der Welcome-Banner zeigt (= frischer Sign-Up ueber /a/[slug]).
-  // RLS auf affiliates ist Admin-only → service-role-Lookup.
-  let affiliateSlug: string | null = null;
-  if (isAffiliateWelcome && profile.referred_by_affiliate_id) {
-    const admin = getServerSupabase();
-    const { data: aff } = await admin
-      .from("affiliates")
-      .select("slug")
-      .eq("id", profile.referred_by_affiliate_id)
-      .maybeSingle();
-    affiliateSlug = aff?.slug ?? null;
-  }
-
   const firstName =
     profile.name?.trim().split(/\s+/)[0] ||
     profile.email?.split("@")[0] ||
@@ -173,10 +156,6 @@ export default async function AccountPage({
       </nav>
 
       <main className="account-page">
-        <PostHogIdentifier userId={user.id} email={profile.email} />
-        {isAffiliateWelcome && (
-          <PostHogSignupCompletion slug={affiliateSlug} />
-        )}
         <div className="account-inner">
           <h1 className="account-headline">Hi {firstName}.</h1>
           <p className="account-sub">Manage your subscription and account.</p>

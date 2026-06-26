@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { PostHogProvider } from "./components/PostHogProvider";
+import { Analytics } from "@vercel/analytics/next";
 
 // Marketing display + headings.
 const geist = Geist({
@@ -93,7 +93,8 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body>
-        <PostHogProvider>{children}</PostHogProvider>
+        {children}
+        <Analytics />
       </body>
     </html>
   );

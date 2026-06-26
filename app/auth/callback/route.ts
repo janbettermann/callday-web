@@ -111,41 +111,18 @@ export async function GET(request: NextRequest) {
   const affiliateSlug = decodeAffiliateSlug(
     request.cookies.get("affiliate_slug")?.value,
   );
-  const affiliateProvider = decodeAffiliateProvider(
-    request.cookies.get("affiliate_signup_provider")?.value,
-  );
-  let attributionFresh = false;
   if (affiliateSlug) {
     try {
-      attributionFresh = await attachAffiliateAttribution(
-        supabase,
-        affiliateSlug,
-      );
+      await attachAffiliateAttribution(supabase, affiliateSlug);
     } catch (err) {
       console.error("[/auth/callback] affiliate attribution failed", err);
     }
   }
 
   // Erfolgreich — login_next + affiliate-Cookies löschen, dann Redirect.
-  // Wenn das ein frischer OAuth-Affiliate-Sign-Up war, haengen wir
-  // signup_completed_provider an die Redirect-URL. /account liest das
-  // und feuert das posthog affiliate_signup_completed-Event (siehe
-  // PostHogSignupCompletion).
-  let finalNext = next;
-  if (affiliateProvider && attributionFresh) {
-    const sep = next.includes("?") ? "&" : "?";
-    finalNext = `${next}${sep}signup_completed_provider=${affiliateProvider}`;
-  }
-  const response = NextResponse.redirect(`${origin}${finalNext}`);
+  const response = NextResponse.redirect(`${origin}${next}`);
   clearAuthStateCookies(response);
   return response;
-}
-
-function decodeAffiliateProvider(
-  raw: string | undefined,
-): "apple" | "google" | null {
-  if (raw === "apple" || raw === "google") return raw;
-  return null;
 }
 
 function decodeAffiliateSlug(raw: string | undefined): string | null {
@@ -199,8 +176,8 @@ async function attachAffiliateAttribution(
 
   // Frischer Sign-Up? Profil in den letzten 5 Min angelegt → ja.
   // Schuetzt Mail-Spam wenn ein existierender User nochmal ueber den
-  // Affiliate-Link kommt, und ist gleichzeitig das Signal fuer
-  // posthog affiliate_signup_completed (caller gibt es als Return weiter).
+  // Affiliate-Link kommt (sonst kriegt er bei jedem Re-Login eine
+  // TestFlight-Mail).
   const { data: profile } = await admin
     .from("profiles")
     .select("email, name, created_at")

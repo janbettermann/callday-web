@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { usePostHog } from "posthog-js/react";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
 
 const SIGNUP_VALIDATION_MESSAGE =
@@ -62,14 +61,8 @@ const CODE_LENGTH = 8;
 type Mode = "signup" | "otp-code";
 type Status = "idle" | "submitting" | "error";
 
-interface Affiliate {
-  slug: string;
-  name: string;
-}
-
 interface Props {
   slug: string;
-  affiliate: Affiliate | null;
 }
 
 // 5 Minuten = OAuth-Round-Trip-Realismus. Vorher waren das 10 Min,
@@ -91,9 +84,8 @@ function setLoginNextCookie(next: string) {
   document.cookie = `login_next=${value}; path=/; max-age=${AFFILIATE_COOKIE_MAX_AGE_S}; samesite=lax`;
 }
 
-export function AffiliateSignupForm({ slug, affiliate }: Props) {
+export function AffiliateSignupForm({ slug }: Props) {
   const router = useRouter();
-  const posthog = usePostHog();
 
   const [mode, setMode] = useState<Mode>("signup");
   const [email, setEmail] = useState("");
@@ -103,35 +95,8 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
-  const landingFiredRef = useRef(false);
-  const startedFiredRef = useRef(false);
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
-
-  // affiliate_landing_view (genau einmal pro Mount). slug ist die canonical
-  // Property — auch bei unknown/paused-Slugs feuern wir, damit Admin-Dashboard
-  // den Drop "Landing aber kein Affiliate aktiv" sieht.
-  useEffect(() => {
-    if (landingFiredRef.current) return;
-    landingFiredRef.current = true;
-    posthog?.capture("affiliate_landing_view", {
-      slug,
-      affiliate_resolved: affiliate !== null,
-    });
-  }, [posthog, slug, affiliate]);
-
-  function fireStarted() {
-    if (startedFiredRef.current) return;
-    startedFiredRef.current = true;
-    posthog?.capture("affiliate_signup_started", { slug });
-  }
-
-  function fireCompleted(authProvider: "email" | "apple" | "google") {
-    posthog?.capture("affiliate_signup_completed", {
-      slug,
-      auth_provider: authProvider,
-    });
-  }
 
   function resetMessages() {
     setErrorMessage(null);
@@ -141,22 +106,9 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
   async function handleOAuth(provider: "apple" | "google") {
     if (status === "submitting") return;
     resetMessages();
-    fireStarted();
     setStatus("submitting");
 
-    // affiliate_signup_completed feuert NICHT hier — User navigiert weg via
-    // signInWithOAuth, kommt nach PKCE-Exchange auf /account?welcome=affiliate
-    // mit Query-Param signup_completed=<provider>. /account triggert von dort
-    // den completed-Event. Damit zaehlt nur ECHTER OAuth-Erfolg, nicht
-    // bloss "OAuth-Button geklickt".
-
     setAffiliateSlugCookie(slug);
-    // Provider durch /auth/callback durchreichen damit /account weiss welcher
-    // Provider abgeschlossen hat — wir nutzen denselben Cookie-Mechanismus
-    // wie fuer den Slug.
-    if (typeof document !== "undefined") {
-      document.cookie = `affiliate_signup_provider=${provider}; path=/; max-age=${AFFILIATE_COOKIE_MAX_AGE_S}; samesite=lax`;
-    }
     setLoginNextCookie("/account?welcome=affiliate");
 
     const supabase = createSupabaseBrowser();
@@ -225,7 +177,6 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
       return;
     }
 
-    fireStarted();
     setStatus("submitting");
 
     const supabase = createSupabaseBrowser();
@@ -260,12 +211,6 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
       setErrorMessage(error.message);
       return;
     }
-
-    // signUp erfolgreich — Email/PW-completed feuern. Bei aktivierter
-    // Email-Confirmation laeuft als naechstes der OTP-Flow, aber der
-    // Account existiert dann schon in auth.users — das ist hier der
-    // konversions-relevante Moment.
-    fireCompleted("email");
 
     // Email-Confirmation aktiv → session ist null, User muss OTP-Code aus
     // der Mail eintippen. Kein Magic-Link, reiner Code. TestFlight-Mail

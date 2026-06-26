@@ -23,9 +23,12 @@ import { AffiliateSignupForm } from "./AffiliateSignupForm";
  *     denselben Form-Hub, ohne dass Joe's Name irgendwo ablenkt.
  *   - **Anchor-Scroll** (`#beta`) statt Page-Switch. Hero-CTA und Nav-CTA
  *     zeigen zur Form-Section auf derselben Page.
- *   - **Slug-Resolve** server-side per service-role nur fuer Analytics
- *     (Posthog landing_view bekommt affiliate_resolved-Flag). Resultat
- *     wird an die Client-Form gereicht aber nicht visuell gerendert.
+ *   - **Slug-Resolve** server-side per service-role als defensive
+ *     Validation — wenn der Slug nicht in affiliates existiert oder
+ *     paused ist, faellt der Sign-Up trotzdem nicht aus (silent
+ *     fallback zu organic), aber der Server hat den Lookup geloggt.
+ *     Landing-View-Tracking laeuft jetzt ueber Vercel Web Analytics
+ *     anhand des Pfads (/a/[slug]) — keine Client-Side-Capture mehr.
  *
  * NoIndex: die Affiliate-URLs sollen nicht im Google-Index auftauchen.
  */
@@ -304,7 +307,7 @@ export default async function AffiliateLanding({
             We send your TestFlight invite the moment you confirm.
           </p>
           <div style={{ display: "flex", justifyContent: "center" }}>
-            <AffiliateSignupForm slug={slug} affiliate={affiliate} />
+            <AffiliateSignupForm slug={slug} />
           </div>
         </div>
       </section>
