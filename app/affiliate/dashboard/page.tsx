@@ -73,6 +73,11 @@ export default async function AffiliateDashboardPage() {
   // Activated bewusst NICHT angezeigt — liegt nicht im Einflussbereich des
   // Affiliates (Produkt-Aktivierung), waere demotivierend ("5 sign-ups,
   // 0 activated"). Admin-Dashboard zeigt es weiterhin.
+  //
+  // Recent-Views-Limit ist 200 (statt 50) damit beim Visitor-Dedupe genug
+  // History vorhanden ist um den ersten Visit pro Hash zu finden. Bei
+  // ~100 Views/Monat reicht 200 fuer ~2 Monate. Falls Volume hoch geht:
+  // SQL-side DISTINCT ON via RPC-Funktion.
   const [uniqueRes, recentViewsRes, profilesRes] = await Promise.all([
     sb
       .from("affiliate_page_views")
@@ -80,10 +85,10 @@ export default async function AffiliateDashboardPage() {
       .eq("affiliate_id", affiliateId),
     sb
       .from("affiliate_page_views")
-      .select("created_at, referrer_host")
+      .select("created_at, referrer_host, visitor_hash")
       .eq("affiliate_id", affiliateId)
-      .order("created_at", { ascending: false })
-      .limit(50),
+      .order("created_at", { ascending: true })
+      .limit(200),
     sb
       .from("profiles")
       .select("id, created_at")
@@ -109,13 +114,30 @@ export default async function AffiliateDashboardPage() {
       ? "—"
       : `${Math.round((signupCount / uniqueVisitors) * 100)}%`;
 
-  // Activity-Feed: View + Signup Events, chronologisch sortiert (neueste
-  // zuerst), limited auf 50.
-  const viewEvents: ActivityEvent[] = (
-    (recentViewsRes.data ?? []) as Array<{
-      created_at: string;
-      referrer_host: string | null;
-    }>
+  // Visitor-Dedupe: pro visitor_hash NUR den ersten Eintrag behalten.
+  // Query lief ASC, also ist der erste Vorkommen automatisch der aelteste.
+  // visitor_hash rotiert taeglich (daily-salt) → derselbe Mensch am
+  // naechsten Tag = neuer Hash = neuer Visitor-Eintrag (= "X war an
+  // 3 verschiedenen Tagen hier"). Innerhalb eines Tages: nur erster Visit.
+  const firstVisitByHash = new Map<
+    string,
+    { created_at: string; referrer_host: string | null }
+  >();
+  for (const v of (recentViewsRes.data ?? []) as Array<{
+    created_at: string;
+    referrer_host: string | null;
+    visitor_hash: string;
+  }>) {
+    if (!firstVisitByHash.has(v.visitor_hash)) {
+      firstVisitByHash.set(v.visitor_hash, {
+        created_at: v.created_at,
+        referrer_host: v.referrer_host,
+      });
+    }
+  }
+
+  const visitorEvents: ActivityEvent[] = Array.from(
+    firstVisitByHash.values(),
   ).map((v) => ({
     type: "view",
     created_at: v.created_at,
@@ -126,7 +148,7 @@ export default async function AffiliateDashboardPage() {
     created_at: p.created_at,
   }));
 
-  const activity: ActivityEvent[] = [...viewEvents, ...signupEvents]
+  const activity: ActivityEvent[] = [...visitorEvents, ...signupEvents]
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
     .slice(0, 50);
 
@@ -495,7 +517,7 @@ function StatCard({
 }
 
 function labelForEvent(e: ActivityEvent): string {
-  return e.type === "signup" ? "Sign-up" : "View";
+  return e.type === "signup" ? "Sign-up" : "Visitor";
 }
 
 function EventDot({ type }: { type: ActivityEvent["type"] }) {
