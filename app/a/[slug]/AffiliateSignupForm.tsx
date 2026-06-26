@@ -8,6 +8,7 @@ import { createSupabaseBrowser } from "@/lib/supabase-browser";
 
 const SIGNUP_VALIDATION_MESSAGE =
   "Add email and password — or use Apple or Google above.";
+const OTP_VALIDATION_MESSAGE = `Enter the ${8}-digit code from your email.`;
 
 /**
  * Affiliate-Sign-Up-Form fuer /a/[slug].
@@ -232,8 +233,15 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
 
   async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (status === "submitting" || code.length !== CODE_LENGTH) return;
+    if (status === "submitting") return;
     resetMessages();
+
+    // Client-Validation statt disabled-Button (selbe Logik wie SignupSubmit).
+    if (code.length !== CODE_LENGTH) {
+      setErrorMessage(OTP_VALIDATION_MESSAGE);
+      return;
+    }
+
     setStatus("submitting");
 
     const supabase = createSupabaseBrowser();
@@ -270,7 +278,7 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
           )}
         </p>
 
-        <form className="beta-form" onSubmit={handleVerifyCode}>
+        <form className="beta-form" onSubmit={handleVerifyCode} noValidate>
           <label className="beta-field">
             <span className="beta-field-label">Sign-up code</span>
             <input
@@ -279,7 +287,6 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
               autoFocus
               inputMode="numeric"
               autoComplete="one-time-code"
-              maxLength={CODE_LENGTH}
               value={code}
               onChange={(e) =>
                 setCode(e.target.value.replace(/\D/g, "").slice(0, CODE_LENGTH))
@@ -297,11 +304,17 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
             />
           </label>
 
+          {/* maxLength bewusst NICHT auf dem Input — wenn der User einen
+              formatierten Code paste'd (z.B. "1234 5678" mit Space), wuerde
+              maxLength=8 die Eingabe VOR onChange truncaten und das Regex
+              koennte die 8 Digits nicht mehr extrahieren. Stattdessen
+              uebernimmt der replace+slice im onChange die Begrenzung. */}
+
           <button
             type="submit"
             className="beta-submit"
             aria-busy={status === "submitting"}
-            disabled={code.length !== CODE_LENGTH || status === "submitting"}
+            disabled={status === "submitting"}
           >
             {status === "submitting" ? "Verifying..." : "Confirm account"}
           </button>
