@@ -36,6 +36,7 @@ export interface AffiliateRow {
   first_login_at: string | null;
   last_login_at: string | null;
   created_at: string;
+  view_count: number;
   signup_count: number;
   activated_count: number;
 }
@@ -78,13 +79,17 @@ export async function fetchAffiliates(): Promise<AffiliateRow[]> {
   const affiliates = (data ?? []) as RawAffiliate[];
   if (affiliates.length === 0) return [];
 
-  // Sign-up-Counts pro Affiliate-ID parallel laden.
+  // View-, Sign-up- und Activated-Counts pro Affiliate-ID parallel laden.
   const ids = affiliates.map((a) => a.id);
-  const signupCounts = await fetchSignupCounts(ids);
-  const activatedCounts = await fetchActivatedCounts(ids);
+  const [viewCounts, signupCounts, activatedCounts] = await Promise.all([
+    fetchViewCounts(ids),
+    fetchSignupCounts(ids),
+    fetchActivatedCounts(ids),
+  ]);
 
   return affiliates.map((a) => ({
     ...a,
+    view_count: viewCounts.get(a.id) ?? 0,
     signup_count: signupCounts.get(a.id) ?? 0,
     activated_count: activatedCounts.get(a.id) ?? 0,
   }));
@@ -106,16 +111,45 @@ export async function fetchAffiliateById(
   if (!data) return null;
 
   const raw = data as RawAffiliate;
-  const [signupCounts, activatedCounts] = await Promise.all([
+  const [viewCounts, signupCounts, activatedCounts] = await Promise.all([
+    fetchViewCounts([id]),
     fetchSignupCounts([id]),
     fetchActivatedCounts([id]),
   ]);
 
   return {
     ...raw,
+    view_count: viewCounts.get(id) ?? 0,
     signup_count: signupCounts.get(id) ?? 0,
     activated_count: activatedCounts.get(id) ?? 0,
   };
+}
+
+/**
+ * Map<affiliate_id, total page-view count> ueber affiliate_page_views.
+ * Bot-Filter laeuft schon beim INSERT (lib/affiliate-page-views.ts), wir
+ * zaehlen hier alle Rows. Unbekannte/paused slugs haben affiliate_id=null
+ * und tauchen hier sowieso nicht auf (.in filter).
+ */
+async function fetchViewCounts(
+  affiliateIds: string[],
+): Promise<Map<string, number>> {
+  if (affiliateIds.length === 0) return new Map();
+  const sb = getServerSupabase();
+  const { data, error } = await sb
+    .from("affiliate_page_views")
+    .select("affiliate_id")
+    .in("affiliate_id", affiliateIds);
+
+  if (error) throw error;
+
+  const counts = new Map<string, number>();
+  for (const row of data ?? []) {
+    const id = (row as { affiliate_id: string | null }).affiliate_id;
+    if (!id) continue;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return counts;
 }
 
 /**

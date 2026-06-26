@@ -420,7 +420,13 @@ function DrawerBody({
 }
 
 function StatsRow({ affiliate }: { affiliate: AffiliateRow }) {
-  const cr =
+  const signupRate =
+    affiliate.view_count === 0
+      ? "—"
+      : `${Math.round(
+          (affiliate.signup_count / affiliate.view_count) * 100,
+        )}%`;
+  const activationRate =
     affiliate.signup_count === 0
       ? "—"
       : `${Math.round(
@@ -430,13 +436,15 @@ function StatsRow({ affiliate }: { affiliate: AffiliateRow }) {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
+        gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
         gap: 10,
       }}
     >
+      <Stat label="Views" value={affiliate.view_count} />
       <Stat label="Sign-ups" value={affiliate.signup_count} />
       <Stat label="Activated" value={affiliate.activated_count} />
-      <Stat label="CR" value={cr} />
+      <Stat label="Sign-up rate" value={signupRate} />
+      <Stat label="Activation" value={activationRate} />
     </div>
   );
 }

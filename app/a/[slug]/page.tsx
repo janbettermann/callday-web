@@ -5,6 +5,7 @@ import { FaqAccordion } from "../../components/FaqAccordion";
 import { FlowTabs } from "../../components/FlowTabs";
 import { SiteNav } from "../../components/SiteNav";
 import { getServerSupabase } from "@/lib/supabase-server";
+import { trackPageView } from "@/lib/affiliate-page-views";
 import { AffiliateSignupForm } from "./AffiliateSignupForm";
 
 /**
@@ -23,12 +24,15 @@ import { AffiliateSignupForm } from "./AffiliateSignupForm";
  *     denselben Form-Hub, ohne dass Joe's Name irgendwo ablenkt.
  *   - **Anchor-Scroll** (`#beta`) statt Page-Switch. Hero-CTA und Nav-CTA
  *     zeigen zur Form-Section auf derselben Page.
- *   - **Slug-Resolve** server-side per service-role als defensive
- *     Validation — wenn der Slug nicht in affiliates existiert oder
- *     paused ist, faellt der Sign-Up trotzdem nicht aus (silent
- *     fallback zu organic), aber der Server hat den Lookup geloggt.
- *     Landing-View-Tracking laeuft jetzt ueber Vercel Web Analytics
- *     anhand des Pfads (/a/[slug]) — keine Client-Side-Capture mehr.
+ *   - **Slug-Resolve** server-side per service-role: liefert die
+ *     affiliate_id fuer Click-Tracking (auch bei paused/unknown
+ *     Slugs wird der Page-View getrackt, dann mit affiliate_id=null —
+ *     Sign-Up faellt silent zurueck auf organic).
+ *   - **Click-Tracking** via trackPageView (lib/affiliate-page-views.ts).
+ *     Eigenes Layer in Supabase statt 3rd-Party — Dashboard-Joins mit
+ *     profiles + lead_lists werden trivial. Bot-Filter via UA-Regex,
+ *     visitor_hash = sha256(IP+UA+daily-salt) fuer Unique-Counts ohne
+ *     PII. Soft-failure: INSERT-Fehler blockt Render NICHT.
  *
  * NoIndex: die Affiliate-URLs sollen nicht im Google-Index auftauchen.
  */
@@ -36,6 +40,7 @@ import { AffiliateSignupForm } from "./AffiliateSignupForm";
 export const dynamic = "force-dynamic";
 
 interface Affiliate {
+  id: string;
   slug: string;
   name: string;
 }
@@ -47,7 +52,7 @@ async function resolveAffiliate(slugRaw: string): Promise<Affiliate | null> {
   const supabase = getServerSupabase();
   const { data, error } = await supabase
     .from("affiliates")
-    .select("slug, name")
+    .select("id, slug, name")
     .eq("slug", slug)
     .eq("status", "active")
     .maybeSingle();
@@ -82,6 +87,8 @@ export default async function AffiliateLanding({
   const { slug: slugRaw } = await params;
   const slug = slugRaw.trim().toLowerCase();
   const affiliate = await resolveAffiliate(slug);
+
+  await trackPageView({ slug, affiliateId: affiliate?.id ?? null });
 
   return (
     <>

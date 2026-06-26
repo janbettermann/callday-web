@@ -34,9 +34,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-interface RecentSignup {
+interface ActivityEvent {
+  type: "view" | "signup" | "activated";
   created_at: string;
-  has_list: boolean;
+  referrer_host?: string | null;
 }
 
 export default async function AffiliateDashboardPage() {
@@ -67,44 +68,106 @@ export default async function AffiliateDashboardPage() {
     founder_tier: boolean;
   };
 
-  // Signups + Activated + Recent-Activity laden.
-  // Wir holen profiles + lead_lists in zwei Pässen statt Postgrest-Join
-  // weil die Beziehung nicht im Schema-Cache stehen muss.
-  const { data: profiles } = await sb
-    .from("profiles")
-    .select("id, created_at")
-    .eq("referred_by_affiliate_id", affiliateId)
-    .order("created_at", { ascending: false })
-    .limit(50);
+  // Drei Datenquellen parallel: Page-Views (Click-Tracking-Tabelle),
+  // Signups (profiles.referred_by_affiliate_id), Activated (lead_lists join).
+  // Werden anschliessend zu einem kombinierten Activity-Feed gemerged.
+  const [viewsCountRes, uniqueRes, recentViewsRes, profilesRes] =
+    await Promise.all([
+      sb
+        .from("affiliate_page_views")
+        .select("*", { count: "exact", head: true })
+        .eq("affiliate_id", affiliateId),
+      sb
+        .from("affiliate_page_views")
+        .select("visitor_hash")
+        .eq("affiliate_id", affiliateId),
+      sb
+        .from("affiliate_page_views")
+        .select("created_at, referrer_host")
+        .eq("affiliate_id", affiliateId)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      sb
+        .from("profiles")
+        .select("id, created_at")
+        .eq("referred_by_affiliate_id", affiliateId)
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]);
 
-  const profileRows = (profiles ?? []) as Array<{
+  const totalViews = viewsCountRes.count ?? 0;
+  const uniqueVisitors = new Set(
+    ((uniqueRes.data ?? []) as Array<{ visitor_hash: string }>).map(
+      (r) => r.visitor_hash,
+    ),
+  ).size;
+
+  const profileRows = (profilesRes.data ?? []) as Array<{
     id: string;
     created_at: string;
   }>;
   const profileIds = profileRows.map((p) => p.id);
 
-  let activatedSet = new Set<string>();
+  // Activated = User hat mindestens eine eigene Liste. firstListByUser
+  // gibt uns auch den Activated-Timestamp fuer den Feed.
+  const firstListByUser = new Map<string, string>();
   if (profileIds.length > 0) {
     const { data: lists } = await sb
       .from("lead_lists")
-      .select("user_id")
-      .in("user_id", profileIds);
-    activatedSet = new Set(
-      (lists ?? []).map((l) => (l as { user_id: string }).user_id),
-    );
+      .select("user_id, created_at")
+      .in("user_id", profileIds)
+      .order("created_at", { ascending: true });
+    for (const l of (lists ?? []) as Array<{
+      user_id: string;
+      created_at: string;
+    }>) {
+      if (!firstListByUser.has(l.user_id)) {
+        firstListByUser.set(l.user_id, l.created_at);
+      }
+    }
   }
 
   const signupCount = profileRows.length;
-  const activatedCount = activatedSet.size;
-  const conversionRate =
+  const activatedCount = firstListByUser.size;
+  const signupConversion =
+    totalViews === 0
+      ? "—"
+      : `${Math.round((signupCount / totalViews) * 100)}%`;
+  const activationRate =
     signupCount === 0
       ? "—"
       : `${Math.round((activatedCount / signupCount) * 100)}%`;
 
-  const recent: RecentSignup[] = profileRows.slice(0, 10).map((p) => ({
-    created_at: p.created_at,
-    has_list: activatedSet.has(p.id),
+  // Kombinierter Activity-Feed: Views + Signups + Activations
+  // chronologisch sortiert (neueste zuerst), limited auf 50.
+  const viewEvents: ActivityEvent[] = (
+    (recentViewsRes.data ?? []) as Array<{
+      created_at: string;
+      referrer_host: string | null;
+    }>
+  ).map((v) => ({
+    type: "view",
+    created_at: v.created_at,
+    referrer_host: v.referrer_host,
   }));
+  const signupEvents: ActivityEvent[] = profileRows.map((p) => ({
+    type: "signup",
+    created_at: p.created_at,
+  }));
+  const activatedEvents: ActivityEvent[] = Array.from(
+    firstListByUser.values(),
+  ).map((createdAt) => ({
+    type: "activated",
+    created_at: createdAt,
+  }));
+
+  const activity: ActivityEvent[] = [
+    ...viewEvents,
+    ...signupEvents,
+    ...activatedEvents,
+  ]
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, 50);
 
   const baseUrl =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://callday.io";
@@ -254,18 +317,37 @@ export default async function AffiliateDashboardPage() {
         <section
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
             gap: 12,
             marginBottom: 24,
           }}
         >
-          <StatCard label="Sign-ups" value={signupCount} hint="Created an account" />
+          <StatCard label="Views" value={totalViews} hint="Total link opens" />
+          <StatCard
+            label="Visitors"
+            value={uniqueVisitors}
+            hint="Unique per day"
+          />
+          <StatCard
+            label="Sign-ups"
+            value={signupCount}
+            hint="Created an account"
+          />
           <StatCard
             label="Activated"
             value={activatedCount}
-            hint="Uploaded their first list"
+            hint="Uploaded first list"
           />
-          <StatCard label="Conversion" value={conversionRate} hint="Activated / Sign-ups" />
+          <StatCard
+            label="Sign-up rate"
+            value={signupConversion}
+            hint="Sign-ups / Views"
+          />
+          <StatCard
+            label="Activation"
+            value={activationRate}
+            hint="Activated / Sign-ups"
+          />
         </section>
 
         {/* === Recent activity === */}
@@ -292,7 +374,7 @@ export default async function AffiliateDashboardPage() {
             Recent activity
           </div>
 
-          {recent.length === 0 ? (
+          {activity.length === 0 ? (
             <p
               style={{
                 margin: 0,
@@ -300,7 +382,7 @@ export default async function AffiliateDashboardPage() {
                 fontSize: 14,
               }}
             >
-              No sign-ups yet. Share your link to get started.
+              No activity yet. Share your link to get started.
             </p>
           ) : (
             <ul
@@ -313,7 +395,7 @@ export default async function AffiliateDashboardPage() {
                 gap: 8,
               }}
             >
-              {recent.map((r, i) => (
+              {activity.map((e, i) => (
                 <li
                   key={i}
                   style={{
@@ -322,24 +404,46 @@ export default async function AffiliateDashboardPage() {
                     alignItems: "center",
                     padding: "10px 0",
                     borderTop: i === 0 ? "none" : "0.5px solid var(--line)",
+                    gap: 12,
                   }}
                 >
                   <span
                     style={{
                       fontSize: 14,
                       color: "var(--ink-dim)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      minWidth: 0,
                     }}
                   >
-                    {r.has_list ? "Activated" : "New sign-up"}
+                    <EventDot type={e.type} />
+                    <span style={{ whiteSpace: "nowrap" }}>
+                      {labelForEvent(e)}
+                    </span>
+                    {e.type === "view" && e.referrer_host ? (
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: "var(--ink-faint)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        · {e.referrer_host}
+                      </span>
+                    ) : null}
                   </span>
                   <span
                     style={{
                       fontSize: 13,
                       color: "var(--ink-faint)",
                       fontVariantNumeric: "tabular-nums",
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    {fmtRelative(r.created_at)}
+                    {fmtRelative(e.created_at)}
                   </span>
                 </li>
               ))}
@@ -437,6 +541,34 @@ function StatCard({
         {hint}
       </div>
     </div>
+  );
+}
+
+function labelForEvent(e: ActivityEvent): string {
+  if (e.type === "view") return "View";
+  if (e.type === "signup") return "Sign-up";
+  return "Activated";
+}
+
+function EventDot({ type }: { type: ActivityEvent["type"] }) {
+  const color =
+    type === "activated"
+      ? "var(--green-deep, #16a34a)"
+      : type === "signup"
+        ? "var(--blue-deep, #2563e8)"
+        : "var(--ink-faint, #94a3b8)";
+  return (
+    <span
+      aria-hidden
+      style={{
+        display: "inline-block",
+        width: 6,
+        height: 6,
+        borderRadius: 999,
+        background: color,
+        flexShrink: 0,
+      }}
+    />
   );
 }
 

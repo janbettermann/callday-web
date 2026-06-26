@@ -69,6 +69,7 @@ export function AffiliateTable({ rows, search: initialSearch }: Props) {
               <tr>
                 <Th>Slug · Name</Th>
                 <Th>Email</Th>
+                <Th align="right">Views</Th>
                 <Th align="right">Sign-ups</Th>
                 <Th align="right">Activated</Th>
                 <Th>Status</Th>
@@ -124,6 +125,9 @@ export function AffiliateTable({ rows, search: initialSearch }: Props) {
                     <span style={{ color: "var(--ink-dim)", fontSize: 14 }}>
                       {row.email}
                     </span>
+                  </Td>
+                  <Td align="right">
+                    <NumCell value={row.view_count} muted />
                   </Td>
                   <Td align="right">
                     <NumCell value={row.signup_count} />
