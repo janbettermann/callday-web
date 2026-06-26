@@ -1,4 +1,13 @@
 import type { InactiveUserRow } from "@/lib/admin/queries";
+import {
+  AdminEmptyState,
+  AdminMailLink,
+  AdminNumeric,
+  AdminTable,
+  AdminTd,
+  AdminTh,
+  AdminTRow,
+} from "./admin-ui";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -14,73 +23,89 @@ function fmtDays(iso: string | null): string {
 }
 
 function ReasonPill({ reason }: { reason: InactiveUserRow["reason"] }) {
-  const styles =
-    reason === "never_called"
-      ? "bg-[#dc2626]/[0.08] text-[#dc2626]"
-      : "bg-[#f59e0b]/12 text-[#b97e10]";
-  const label = reason === "never_called" ? "Never called" : "Stalled";
+  const isNever = reason === "never_called";
   return (
     <span
-      className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${styles}`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "4px 10px",
+        borderRadius: 100,
+        fontSize: 10,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.6px",
+        background: isNever
+          ? "rgba(220,38,38,0.08)"
+          : "rgba(245,158,11,0.15)",
+        color: isNever ? "#b91c1c" : "var(--sun-deep)",
+      }}
     >
-      {label}
+      <span
+        aria-hidden="true"
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 3,
+          background: "currentColor",
+        }}
+      />
+      {isNever ? "Never called" : "Stalled"}
     </span>
   );
 }
 
 export function InactiveUsersTable({ rows }: { rows: InactiveUserRow[] }) {
   if (rows.length === 0) {
-    return (
-      <div className="rounded-xl border border-dashed border-[#1a1d26]/12 bg-white p-8 text-center text-sm text-[#1a1d26]/55">
-        Everyone is active. Nice.
-      </div>
-    );
+    return <AdminEmptyState>Everyone is active. Nice.</AdminEmptyState>;
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#1a1d26]/[0.06] bg-white shadow-sm">
-      <table className="w-full text-sm">
-        <thead className="bg-[#faf9f5] text-left text-[11px] uppercase tracking-wider text-[#1a1d26]/45">
-          <tr>
-            <th className="px-4 py-3">User</th>
-            <th className="px-4 py-3">Reason</th>
-            <th className="px-4 py-3 text-right">Calls</th>
-            <th className="px-4 py-3">Last call</th>
-            <th className="px-4 py-3 text-right">Joined</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-[#1a1d26]/[0.06]">
-          {rows.map((r) => (
-            <tr key={r.user_id} className="hover:bg-[#1a1d26]/[0.02]">
-              <td className="px-4 py-3">
-                {r.email ? (
-                  <a
-                    className="text-[#3564e0] hover:underline"
-                    href={`mailto:${r.email}?subject=Hey from Callday`}
-                  >
-                    {r.email}
-                  </a>
-                ) : (
-                  <span className="text-[#1a1d26]/35">no email</span>
-                )}
-                {r.name ? (
-                  <div className="text-[11px] text-[#1a1d26]/45">{r.name}</div>
-                ) : null}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap">
-                <ReasonPill reason={r.reason} />
-              </td>
-              <td className="px-4 py-3 text-right tabular-nums">{r.calls}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-[#1a1d26]/65">
-                {fmtDays(r.last_called_at)}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap text-right text-[#1a1d26]/55">
-                {fmtDate(r.created_at)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <AdminTable>
+      <thead>
+        <tr>
+          <AdminTh>User</AdminTh>
+          <AdminTh>Reason</AdminTh>
+          <AdminTh align="right">Calls</AdminTh>
+          <AdminTh>Last call</AdminTh>
+          <AdminTh align="right">Joined</AdminTh>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <AdminTRow key={r.user_id}>
+            <AdminTd>
+              {r.email ? (
+                <AdminMailLink email={r.email} subject="Hey from Callday" />
+              ) : (
+                <span style={{ color: "var(--ink-mute)" }}>no email</span>
+              )}
+              {r.name ? (
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "var(--ink-faint)",
+                    marginTop: 2,
+                  }}
+                >
+                  {r.name}
+                </div>
+              ) : null}
+            </AdminTd>
+            <AdminTd nowrap>
+              <ReasonPill reason={r.reason} />
+            </AdminTd>
+            <AdminTd align="right">
+              <AdminNumeric value={r.calls} />
+            </AdminTd>
+            <AdminTd nowrap>{fmtDays(r.last_called_at)}</AdminTd>
+            <AdminTd align="right" nowrap muted>
+              {fmtDate(r.created_at)}
+            </AdminTd>
+          </AdminTRow>
+        ))}
+      </tbody>
+    </AdminTable>
   );
 }

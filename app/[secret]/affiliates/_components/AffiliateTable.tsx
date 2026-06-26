@@ -78,24 +78,16 @@ export function AffiliateTable({ rows, search: initialSearch }: Props) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((row, index) => (
+              {filtered.map((row) => (
                 <tr
                   key={row.id}
                   onClick={() => setSelected(row)}
+                  className="admin-row"
                   style={{
                     cursor: "pointer",
-                    borderTop:
-                      index === 0
-                        ? "0.5px solid var(--line)"
-                        : "0.5px solid var(--line)",
+                    borderTop: "0.5px solid var(--line)",
                     transition: "background 0.12s",
                   }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "rgba(26,29,38,0.02)")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
                 >
                   <Td>
                     <div

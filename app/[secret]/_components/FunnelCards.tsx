@@ -22,7 +22,13 @@ function pct(curr: number, prev: number): string | null {
 
 export function FunnelCards({ data }: { data: FunnelMetrics }) {
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+        gap: 12,
+      }}
+    >
       {STEPS.map((step, i) => {
         const value = data[step.key];
         const prev = i > 0 ? data[STEPS[i - 1].key] : null;
@@ -30,22 +36,64 @@ export function FunnelCards({ data }: { data: FunnelMetrics }) {
         return (
           <div
             key={step.key}
-            className="rounded-xl border border-[#1a1d26]/[0.06] bg-white p-4 shadow-sm"
+            style={{
+              background: "#ffffff",
+              border: "0.5px solid var(--line)",
+              borderRadius: 16,
+              padding: "16px 18px",
+              boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
+            }}
           >
-            <div className="text-xs font-medium uppercase tracking-wider text-[#1a1d26]/45">
+            <div
+              style={{
+                fontFamily: "var(--font-mono), monospace",
+                fontSize: 10,
+                textTransform: "uppercase",
+                letterSpacing: "1.2px",
+                color: "var(--ink-faint)",
+                fontWeight: 600,
+              }}
+            >
               {step.label}
             </div>
-            <div className="mt-2 flex items-baseline gap-2 tabular-nums">
-              <span className="text-2xl font-semibold tracking-tight">
+            <div
+              style={{
+                marginTop: 8,
+                display: "flex",
+                alignItems: "baseline",
+                gap: 8,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 28,
+                  fontWeight: 700,
+                  letterSpacing: "-0.6px",
+                  color: "var(--ink)",
+                }}
+              >
                 {value}
               </span>
               {conv ? (
-                <span className="text-xs font-medium text-[#10b981]">
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "var(--green)",
+                  }}
+                >
                   {conv}
                 </span>
               ) : null}
             </div>
-            <div className="mt-1 text-[11px] text-[#1a1d26]/50">
+            <div
+              style={{
+                marginTop: 4,
+                fontSize: 11,
+                color: "var(--ink-faint)",
+              }}
+            >
               {step.sub}
             </div>
           </div>

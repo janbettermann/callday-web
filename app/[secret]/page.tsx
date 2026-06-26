@@ -132,84 +132,176 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
   ].filter(Boolean) as [string, string][];
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
-      <header className="mb-8 flex items-center justify-between">
-        <div>
-          <div className="font-mono text-[11px] uppercase tracking-[1.5px] text-[#1a1d26]/40">
-            Internal · {new Date().toUTCString()}
-          </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-            Callday dashboard
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/${secret}/affiliates`}
-            className="rounded-lg border border-[#1a1d26]/[0.12] bg-white px-3 py-1.5 text-sm text-[#1a1d26]/70 transition hover:bg-[#1a1d26]/5"
-          >
-            Affiliates →
-          </Link>
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="rounded-lg border border-[#1a1d26]/[0.12] bg-white px-3 py-1.5 text-sm text-[#1a1d26]/70 transition hover:bg-[#1a1d26]/5"
+    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
+      <div className="container" style={{ paddingTop: 48, paddingBottom: 80 }}>
+        <header
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 24,
+            marginBottom: 40,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontFamily: "var(--font-mono), monospace",
+                fontSize: 11,
+                textTransform: "uppercase",
+                letterSpacing: "1.5px",
+                color: "var(--ink-faint)",
+              }}
             >
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
-
-      <ViewTabs current={view} basePath={`/${secret}`} />
-
-      {errors.length > 0 ? (
-        <div className="mb-8 rounded-xl border border-[#dc2626]/30 bg-[#dc2626]/[0.04] p-4">
-          <div className="mb-2 text-xs font-medium uppercase tracking-wider text-[#dc2626]">
-            Some sections failed to load
+              Internal · {new Date().toUTCString()}
+            </div>
+            <h1
+              style={{
+                fontSize: 42,
+                fontWeight: 700,
+                letterSpacing: "-1.2px",
+                lineHeight: 1.05,
+                margin: "10px 0 0",
+                color: "var(--ink)",
+              }}
+            >
+              Callday{" "}
+              <span className="italic" style={{ color: "var(--blue-deep)" }}>
+                internals.
+              </span>
+            </h1>
           </div>
-          <ul className="space-y-1 font-mono text-xs text-[#1a1d26]/80">
-            {errors.map(([label, msg]) => (
-              <li key={label}>
-                <span className="font-semibold">{label}</span>: {msg}
-              </li>
-            ))}
-          </ul>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Link
+              href={`/${secret}/affiliates`}
+              style={{
+                background: "#ffffff",
+                border: "0.5px solid var(--line)",
+                color: "var(--ink-dim)",
+                fontSize: 13,
+                fontWeight: 500,
+                padding: "8px 14px",
+                borderRadius: 10,
+                textDecoration: "none",
+                boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
+              }}
+            >
+              Affiliates →
+            </Link>
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                style={{
+                  background: "#ffffff",
+                  border: "0.5px solid var(--line)",
+                  color: "var(--ink-dim)",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  cursor: "pointer",
+                  boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
+                }}
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
+        </header>
+
+        <div style={{ marginBottom: 32 }}>
+          <ViewTabs current={view} basePath={`/${secret}`} />
         </div>
-      ) : null}
 
-      <Section title="Activation funnel" subtitle="Where users drop off">
-        <FunnelCards data={funnel.data} />
-      </Section>
+        {errors.length > 0 ? (
+          <div
+            style={{
+              marginBottom: 32,
+              border: "0.5px solid rgba(220,38,38,0.3)",
+              background: "rgba(220,38,38,0.04)",
+              borderRadius: 16,
+              padding: 18,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "var(--font-mono), monospace",
+                fontSize: 11,
+                textTransform: "uppercase",
+                letterSpacing: "1.5px",
+                color: "#b91c1c",
+                marginBottom: 6,
+                fontWeight: 600,
+              }}
+            >
+              Some sections failed to load
+            </div>
+            <ul
+              style={{
+                margin: 0,
+                padding: 0,
+                listStyle: "none",
+                fontFamily: "var(--font-mono), monospace",
+                fontSize: 12,
+                color: "var(--ink-dim)",
+              }}
+            >
+              {errors.map(([label, msg]) => (
+                <li key={label} style={{ padding: "2px 0" }}>
+                  <span style={{ color: "var(--ink)", fontWeight: 600 }}>
+                    {label}
+                  </span>
+                  : {msg}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
-      <Section
-        title="Daily active callers"
-        subtitle="Distinct users with at least one call, last 30 days"
-      >
-        <DailyCallersChart data={callers.data} />
-      </Section>
+        <Section title="Activation funnel" subtitle="Where users drop off">
+          <FunnelCards data={funnel.data} />
+        </Section>
 
-      <Section
-        title="Latest feedback"
-        subtitle="Click email to reply"
-      >
-        <FeedbackTable rows={feedback.data} />
-      </Section>
+        <Section
+          title="Daily active callers"
+          subtitle="Distinct users with at least one call, last 30 days"
+        >
+          <DailyCallersChart data={callers.data} />
+        </Section>
 
-      <Section title="Top users" subtitle="By call count, last 90 days">
-        <UserTable rows={topUsers.data} />
-      </Section>
+        <Section title="Latest feedback" subtitle="Click email to reply">
+          <FeedbackTable rows={feedback.data} />
+        </Section>
 
-      <Section
-        title="Inactive users"
-        subtitle="Signed up but quiet — never called or no call in 7+ days"
-      >
-        <InactiveUsersTable rows={inactive.data} />
-      </Section>
+        <Section title="Top users" subtitle="By call count, last 90 days">
+          <UserTable rows={topUsers.data} />
+        </Section>
 
-      <footer className="mt-16 flex justify-between border-t border-[#1a1d26]/[0.06] pt-6 font-mono text-[11px] uppercase tracking-[1.5px] text-[#1a1d26]/40">
-        <span>refresh page for latest</span>
-        <span>callday · internal</span>
-      </footer>
+        <Section
+          title="Inactive users"
+          subtitle="Signed up but quiet — never called or no call in 7+ days"
+        >
+          <InactiveUsersTable rows={inactive.data} />
+        </Section>
+
+        <footer
+          style={{
+            marginTop: 80,
+            paddingTop: 24,
+            borderTop: "0.5px solid var(--line)",
+            display: "flex",
+            justifyContent: "space-between",
+            fontFamily: "var(--font-mono), monospace",
+            fontSize: 11,
+            textTransform: "uppercase",
+            letterSpacing: "1.5px",
+            color: "var(--ink-faint)",
+          }}
+        >
+          <span>Refresh for latest</span>
+          <span>Callday · internal</span>
+        </footer>
+      </div>
     </div>
   );
 }
@@ -222,7 +314,16 @@ function ViewTabs({
   basePath: string;
 }) {
   return (
-    <div className="mb-10 inline-flex rounded-xl border border-[#1a1d26]/[0.08] bg-white p-1 shadow-sm">
+    <div
+      style={{
+        display: "inline-flex",
+        background: "#ffffff",
+        border: "0.5px solid var(--line)",
+        borderRadius: 14,
+        padding: 4,
+        boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
+      }}
+    >
       {VALID_VIEWS.map((v) => {
         const active = v === current;
         const href = v === "real" ? basePath : `${basePath}?view=${v}`;
@@ -230,10 +331,25 @@ function ViewTabs({
           <Link
             key={v}
             href={href}
-            className={
+            style={
               active
-                ? "rounded-lg bg-[#1a1d26] px-3.5 py-1.5 text-sm font-medium text-white"
-                : "rounded-lg px-3.5 py-1.5 text-sm font-medium text-[#1a1d26]/60 hover:text-[#1a1d26]"
+                ? {
+                    background: "var(--ink)",
+                    color: "#ffffff",
+                    borderRadius: 10,
+                    padding: "6px 14px",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    textDecoration: "none",
+                  }
+                : {
+                    color: "var(--ink-dim)",
+                    borderRadius: 10,
+                    padding: "6px 14px",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    textDecoration: "none",
+                  }
             }
           >
             {VIEW_LABELS[v]}
@@ -254,11 +370,31 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mb-12">
-      <div className="mb-4">
-        <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+    <section style={{ marginBottom: 48 }}>
+      <div style={{ marginBottom: 16 }}>
+        <div
+          style={{
+            fontFamily: "var(--font-mono), monospace",
+            fontSize: 11,
+            textTransform: "uppercase",
+            letterSpacing: "1.5px",
+            color: "var(--ink-faint)",
+            marginBottom: 6,
+          }}
+        >
+          {title}
+        </div>
         {subtitle ? (
-          <p className="mt-0.5 text-sm text-[#1a1d26]/55">{subtitle}</p>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 14,
+              color: "var(--ink-dim)",
+              lineHeight: 1.5,
+            }}
+          >
+            {subtitle}
+          </p>
         ) : null}
       </div>
       {children}
