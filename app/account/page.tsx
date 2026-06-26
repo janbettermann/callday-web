@@ -3,12 +3,14 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { CalldayLogo } from "../components/CalldayLogo";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
+import { getServerSupabase } from "@/lib/supabase-server";
 import {
   createPortalSessionAction,
   deleteAccountAction,
   signOutAction,
 } from "./actions";
 import { ResendTestFlightButton } from "./ResendTestFlightButton";
+import { PostHogSignupCompletion } from "./PostHogSignupCompletion";
 
 export const metadata: Metadata = {
   title: "Your account · Callday",
@@ -23,6 +25,7 @@ interface Profile {
   subscription_status: string | null;
   subscription_plan: "monthly" | "yearly" | null;
   subscription_renews_at: string | null;
+  referred_by_affiliate_id: string | null;
 }
 
 /**
@@ -104,7 +107,7 @@ export default async function AccountPage({
   const { data: profileRow } = await supabase
     .from("profiles")
     .select(
-      "email,name,stripe_customer_id,subscription_status,subscription_plan,subscription_renews_at",
+      "email,name,stripe_customer_id,subscription_status,subscription_plan,subscription_renews_at,referred_by_affiliate_id",
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -116,7 +119,22 @@ export default async function AccountPage({
     subscription_status: null,
     subscription_plan: null,
     subscription_renews_at: null,
+    referred_by_affiliate_id: null,
   };
+
+  // Affiliate-Slug fuer Posthog signup_completed-Event. Nur relevant
+  // wenn der Welcome-Banner zeigt (= frischer Sign-Up ueber /a/[slug]).
+  // RLS auf affiliates ist Admin-only → service-role-Lookup.
+  let affiliateSlug: string | null = null;
+  if (isAffiliateWelcome && profile.referred_by_affiliate_id) {
+    const admin = getServerSupabase();
+    const { data: aff } = await admin
+      .from("affiliates")
+      .select("slug")
+      .eq("id", profile.referred_by_affiliate_id)
+      .maybeSingle();
+    affiliateSlug = aff?.slug ?? null;
+  }
 
   const firstName =
     profile.name?.trim().split(/\s+/)[0] ||
@@ -154,6 +172,9 @@ export default async function AccountPage({
       </nav>
 
       <main className="account-page">
+        {isAffiliateWelcome && (
+          <PostHogSignupCompletion slug={affiliateSlug} />
+        )}
         <div className="account-inner">
           <h1 className="account-headline">Hi {firstName}.</h1>
           <p className="account-sub">Manage your subscription and account.</p>

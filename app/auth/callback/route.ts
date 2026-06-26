@@ -97,19 +97,44 @@ export async function GET(request: NextRequest) {
   const affiliateSlug = decodeAffiliateSlug(
     request.cookies.get("affiliate_slug")?.value,
   );
+  const affiliateProvider = decodeAffiliateProvider(
+    request.cookies.get("affiliate_signup_provider")?.value,
+  );
+  let attributionFresh = false;
   if (affiliateSlug) {
     try {
-      await attachAffiliateAttribution(supabase, affiliateSlug, origin);
+      attributionFresh = await attachAffiliateAttribution(
+        supabase,
+        affiliateSlug,
+        origin,
+      );
     } catch (err) {
       console.error("[/auth/callback] affiliate attribution failed", err);
     }
   }
 
-  // Erfolgreich — login_next- und affiliate_slug-Cookies löschen, dann Redirect
-  const response = NextResponse.redirect(`${origin}${next}`);
+  // Erfolgreich — login_next + affiliate-Cookies löschen, dann Redirect.
+  // Wenn das ein frischer OAuth-Affiliate-Sign-Up war, haengen wir
+  // signup_completed_provider an die Redirect-URL. /account liest das
+  // und feuert das posthog affiliate_signup_completed-Event (siehe
+  // PostHogSignupCompletion).
+  let finalNext = next;
+  if (affiliateProvider && attributionFresh) {
+    const sep = next.includes("?") ? "&" : "?";
+    finalNext = `${next}${sep}signup_completed_provider=${affiliateProvider}`;
+  }
+  const response = NextResponse.redirect(`${origin}${finalNext}`);
   response.cookies.delete("login_next");
   response.cookies.delete("affiliate_slug");
+  response.cookies.delete("affiliate_signup_provider");
   return response;
+}
+
+function decodeAffiliateProvider(
+  raw: string | undefined,
+): "apple" | "google" | null {
+  if (raw === "apple" || raw === "google") return raw;
+  return null;
 }
 
 function decodeAffiliateSlug(raw: string | undefined): string | null {
@@ -132,11 +157,11 @@ async function attachAffiliateAttribution(
   ssrClient: Awaited<ReturnType<typeof createSupabaseSSR>>,
   slug: string,
   origin: string,
-): Promise<void> {
+): Promise<boolean> {
   const {
     data: { user },
   } = await ssrClient.auth.getUser();
-  if (!user) return;
+  if (!user) return false;
 
   // Service-Role brauchen wir hier weil:
   //   1. RLS auf affiliates ist Admin-only
@@ -151,7 +176,7 @@ async function attachAffiliateAttribution(
     .eq("status", "active")
     .maybeSingle();
 
-  if (!affiliate) return; // Slug unknown / paused — silent skip
+  if (!affiliate) return false; // Slug unknown / paused — silent skip
 
   // Idempotenter UPDATE: setzen nur wenn noch null. Verhindert dass ein
   // existierender Affiliate-A-User der spaeter via /a/affiliate-b einloggt
@@ -162,19 +187,20 @@ async function attachAffiliateAttribution(
     .eq("id", user.id)
     .is("referred_by_affiliate_id", null);
 
-  // Post-Signup-Mail nur wenn das Profil frisch ist (Account in den
-  // letzten 5 Min angelegt). Schuetzt vor Mail-Spam wenn ein
-  // existierender User zufaellig nochmal ueber den Affiliate-Link kommt.
+  // Frischer Sign-Up? Profil in den letzten 5 Min angelegt → ja.
+  // Schuetzt Mail-Spam wenn ein existierender User nochmal ueber den
+  // Affiliate-Link kommt, und ist gleichzeitig das Signal fuer
+  // posthog affiliate_signup_completed (caller gibt es als Return weiter).
   const { data: profile } = await admin
     .from("profiles")
     .select("email, created_at")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!profile?.email || !profile.created_at) return;
+  if (!profile?.email || !profile.created_at) return false;
 
   const createdMs = new Date(profile.created_at).getTime();
-  if (Date.now() - createdMs > AFFILIATE_PROFILE_FRESHNESS_MS) return;
+  if (Date.now() - createdMs > AFFILIATE_PROFILE_FRESHNESS_MS) return false;
 
   // Mail aus diesem Server-Context POSTen waere ein Self-Roundtrip; statt-
   // dessen rufen wir die Mail-Logik direkt parallel auf. Wir verwenden
@@ -195,4 +221,6 @@ async function attachAffiliateAttribution(
   } catch (err) {
     console.error("[/auth/callback] post-signup mail fetch failed", err);
   }
+
+  return true;
 }
