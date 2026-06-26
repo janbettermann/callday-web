@@ -11,6 +11,26 @@ const SIGNUP_VALIDATION_MESSAGE =
 const OTP_VALIDATION_MESSAGE = `Enter the ${8}-digit code from your email.`;
 
 /**
+ * Detection fuer "User already registered"-Errors aus supabase.auth.signUp.
+ * Typischer Fall: User hat hier vorher Sign-Up gemacht, Tab geschlossen
+ * bevor er den Code eingegeben hat, kommt jetzt zurueck und probiert
+ * nochmal. Ohne Recovery-Pfad waere er stuck. Wir erkennen den Error
+ * und schicken automatisch einen frischen Code, springen in OTP-Mode.
+ */
+function isUserAlreadyRegistered(error: {
+  message?: string;
+  code?: string;
+}): boolean {
+  if (error.code === "user_already_exists") return true;
+  const m = (error.message ?? "").toLowerCase();
+  return (
+    m.includes("already registered") ||
+    m.includes("already exists") ||
+    m.includes("user already")
+  );
+}
+
+/**
  * Affiliate-Sign-Up-Form fuer /a/[slug].
  *
  * Default-Mode ist SIGNUP (im Unterschied zu /login das auf SIGNIN
@@ -200,6 +220,26 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
     });
 
     if (error) {
+      // Recovery-Pfad: User hat sich schon registriert (Tab geschlossen vor
+      // Code-Eingabe?) → automatisch frischen Code triggern + OTP-Step
+      // anzeigen. Sonst stand der User vor einer "User already registered"-
+      // Sackgasse ohne Hint wie weiter.
+      if (isUserAlreadyRegistered(error)) {
+        const otpResult = await supabase.auth.signInWithOtp({
+          email: cleanEmail,
+        });
+        if (otpResult.error) {
+          setStatus("error");
+          setErrorMessage(otpResult.error.message);
+          return;
+        }
+        setStatus("idle");
+        setMode("otp-code");
+        setInfoMessage(
+          `Welcome back. We sent a fresh ${CODE_LENGTH}-digit code to ${cleanEmail}. Enter it to finish setting up your account.`,
+        );
+        return;
+      }
       setStatus("error");
       setErrorMessage(error.message);
       return;

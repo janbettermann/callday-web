@@ -75,6 +75,23 @@ function isLikelyProviderConflict(message: string): boolean {
   );
 }
 
+/**
+ * Detection fuer "Email not confirmed"-Errors. Tritt auf wenn ein User
+ * sich registriert hat aber den Confirmation-Code nie eingegeben hat
+ * und jetzt versucht sich einzuloggen. Ohne Recovery-Pfad waere er
+ * stuck — wir triggern dann automatisch einen frischen Code und springen
+ * in den OTP-Step.
+ *
+ * Supabase liefert `error.code === "email_not_confirmed"` in neueren
+ * Versionen + die Message "Email not confirmed". Beides matchen damit
+ * wir robust gegen Versions-Drift sind.
+ */
+function isEmailNotConfirmed(error: { message?: string; code?: string }): boolean {
+  if (error.code === "email_not_confirmed") return true;
+  const m = (error.message ?? "").toLowerCase();
+  return m.includes("email not confirmed") || m.includes("not confirmed");
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -146,6 +163,26 @@ function LoginForm() {
         password,
       });
       if (error) {
+        // Recovery-Pfad: User hat sich registriert aber Confirmation-Code
+        // nie eingegeben (z.B. Tab geschlossen nach Sign-Up). Statt
+        // "Email not confirmed" als Sackgasse zu zeigen, schicken wir
+        // automatisch einen frischen Code und springen in den OTP-Step.
+        if (isEmailNotConfirmed(error)) {
+          const otpResult = await supabase.auth.signInWithOtp({
+            email: cleanEmail,
+          });
+          if (otpResult.error) {
+            setStatus("error");
+            setErrorMessage(otpResult.error.message);
+            return;
+          }
+          setStatus("idle");
+          setMode("otp-code");
+          setInfoMessage(
+            `Your email isn't confirmed yet. We sent a fresh ${CODE_LENGTH}-digit code to ${cleanEmail}. Enter it below to finish setting up your account.`,
+          );
+          return;
+        }
         setStatus("error");
         setErrorMessage(error.message);
         return;
