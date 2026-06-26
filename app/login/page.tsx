@@ -1,10 +1,27 @@
 "use client";
 
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalldayLogo } from "../components/CalldayLogo";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
+
+/**
+ * Cleart auf Mount stale Affiliate-State-Cookies. User der explizit auf
+ * /login landet hat keine Affiliate-Intention mehr — sonst koennte ein
+ * vor 4 Min gesetzter affiliate_slug-Cookie (z.B. nach OAuth-Cancel auf
+ * /a/joe) den naechsten regulaeren Sign-In an Joe falsch attribuieren.
+ * Siehe Audit-Finding #1.
+ */
+function useAffiliateCookieCleanup() {
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.cookie =
+      "affiliate_slug=; path=/; max-age=0; samesite=lax";
+    document.cookie =
+      "affiliate_signup_provider=; path=/; max-age=0; samesite=lax";
+  }, []);
+}
 
 /**
  * /login — Sign-In + Sign-Up Page mit drei Auth-Methoden:
@@ -69,6 +86,8 @@ function LoginForm() {
   // Sign-In-Mode landen ("ich hab doch noch keinen Account").
   const modeParam = searchParams.get("mode");
   const initialMode: Mode = modeParam === "signup" ? "signup" : "signin";
+
+  useAffiliateCookieCleanup();
 
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState(presetEmail);

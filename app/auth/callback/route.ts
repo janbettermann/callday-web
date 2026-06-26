@@ -33,6 +33,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
+import { sendTestflightInvite } from "@/lib/affiliate-invite";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,18 @@ function safeNextPath(raw: string | null | undefined): string {
   }
   if (!value.startsWith("/") || value.startsWith("//")) return "/";
   return value;
+}
+
+/**
+ * Loescht alle State-Cookies die /a/[slug] und /login vor OAuth setzen.
+ * MUSS auf JEDEM Exit-Pfad von /auth/callback gerufen werden, sonst
+ * leakt z.B. `affiliate_slug` ueber Cancel-Flows in einen nachfolgenden
+ * /login-Sign-In und attribuiert organische User an einen Affiliate.
+ */
+function clearAuthStateCookies(response: NextResponse): void {
+  response.cookies.delete("login_next");
+  response.cookies.delete("affiliate_slug");
+  response.cookies.delete("affiliate_signup_provider");
 }
 
 export async function GET(request: NextRequest) {
@@ -67,14 +80,16 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.redirect(
       `${origin}/login?error=${encodeURIComponent(message)}`,
     );
-    response.cookies.delete("login_next");
+    clearAuthStateCookies(response);
     return response;
   }
 
   if (!code) {
-    return NextResponse.redirect(
+    const response = NextResponse.redirect(
       `${origin}/login?error=${encodeURIComponent("missing auth code")}`,
     );
+    clearAuthStateCookies(response);
+    return response;
   }
 
   const supabase = await createSupabaseSSR();
@@ -84,8 +99,7 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.redirect(
       `${origin}/login?error=${encodeURIComponent(error.message)}`,
     );
-    response.cookies.delete("login_next");
-    response.cookies.delete("affiliate_slug");
+    clearAuthStateCookies(response);
     return response;
   }
 
@@ -106,7 +120,6 @@ export async function GET(request: NextRequest) {
       attributionFresh = await attachAffiliateAttribution(
         supabase,
         affiliateSlug,
-        origin,
       );
     } catch (err) {
       console.error("[/auth/callback] affiliate attribution failed", err);
@@ -124,9 +137,7 @@ export async function GET(request: NextRequest) {
     finalNext = `${next}${sep}signup_completed_provider=${affiliateProvider}`;
   }
   const response = NextResponse.redirect(`${origin}${finalNext}`);
-  response.cookies.delete("login_next");
-  response.cookies.delete("affiliate_slug");
-  response.cookies.delete("affiliate_signup_provider");
+  clearAuthStateCookies(response);
   return response;
 }
 
@@ -156,7 +167,6 @@ function decodeAffiliateSlug(raw: string | undefined): string | null {
 async function attachAffiliateAttribution(
   ssrClient: Awaited<ReturnType<typeof createSupabaseSSR>>,
   slug: string,
-  origin: string,
 ): Promise<boolean> {
   const {
     data: { user },
@@ -193,7 +203,7 @@ async function attachAffiliateAttribution(
   // posthog affiliate_signup_completed (caller gibt es als Return weiter).
   const { data: profile } = await admin
     .from("profiles")
-    .select("email, created_at")
+    .select("email, name, created_at")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -202,25 +212,17 @@ async function attachAffiliateAttribution(
   const createdMs = new Date(profile.created_at).getTime();
   if (Date.now() - createdMs > AFFILIATE_PROFILE_FRESHNESS_MS) return false;
 
-  // Mail aus diesem Server-Context POSTen waere ein Self-Roundtrip; statt-
-  // dessen rufen wir die Mail-Logik direkt parallel auf. Wir verwenden
-  // dynamic import um Circular-Risk zu vermeiden falls die Route in
-  // Zukunft selbst /auth/callback referenziert.
-  try {
-    const response = await fetch(`${origin}/api/affiliate/post-signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: profile.email, slug }),
-    });
-    if (!response.ok) {
-      console.error(
-        "[/auth/callback] post-signup mail returned",
-        response.status,
-      );
-    }
-  } catch (err) {
-    console.error("[/auth/callback] post-signup mail fetch failed", err);
-  }
+  // Direkter Funktions-Call statt Self-HTTP-Roundtrip — siehe
+  // lib/affiliate-invite.ts. sendTestflightInvite returnt strukturiert
+  // statt zu throwen, daher kein try/catch noetig.
+  const displayName =
+    (profile.name && profile.name.trim()) ||
+    (user.user_metadata?.full_name as string | undefined) ||
+    "there";
+  await sendTestflightInvite({
+    toEmail: profile.email,
+    displayName,
+  });
 
   return true;
 }

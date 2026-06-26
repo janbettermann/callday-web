@@ -17,7 +17,7 @@ import { createSupabaseBrowser } from "@/lib/supabase-browser";
  *   - Email/PW: user_metadata.referred_by_affiliate_slug → handle_new_user
  *     Trigger resolvet zu profiles.referred_by_affiliate_id in derselben
  *     INSERT-Transaktion.
- *   - Apple/Google OAuth: kurzlebiger `affiliate_slug`-Cookie (10 min,
+ *   - Apple/Google OAuth: kurzlebiger `affiliate_slug`-Cookie (5 min,
  *     samesite=lax) — Supabase strippt Query-Params von redirectTo, daher
  *     identisches Pattern wie das existierende `login_next`-Cookie in
  *     /login. /auth/callback liest den Cookie und UPDATEd profiles nach
@@ -48,18 +48,23 @@ interface Props {
   affiliate: Affiliate | null;
 }
 
+// 5 Minuten = OAuth-Round-Trip-Realismus. Vorher waren das 10 Min,
+// was die Window auf Stale-Cookie-Leaks (User cancelt OAuth, geht spaeter
+// auf /login) breiter machte als noetig. /login + /auth/callback loeschen
+// die Cookies jetzt zusaetzlich aktiv, dieser Wert ist die letzte
+// Verteidigung.
+const AFFILIATE_COOKIE_MAX_AGE_S = 300;
+
 function setAffiliateSlugCookie(slug: string) {
   if (typeof document === "undefined") return;
   const value = encodeURIComponent(slug);
-  // 10 Minuten reichen fuer einen OAuth-Round-Trip locker — analog zum
-  // login_next-Cookie. Kein langlebiges Tracking-Cookie.
-  document.cookie = `affiliate_slug=${value}; path=/; max-age=600; samesite=lax`;
+  document.cookie = `affiliate_slug=${value}; path=/; max-age=${AFFILIATE_COOKIE_MAX_AGE_S}; samesite=lax`;
 }
 
 function setLoginNextCookie(next: string) {
   if (typeof document === "undefined") return;
   const value = encodeURIComponent(next);
-  document.cookie = `login_next=${value}; path=/; max-age=600; samesite=lax`;
+  document.cookie = `login_next=${value}; path=/; max-age=${AFFILIATE_COOKIE_MAX_AGE_S}; samesite=lax`;
 }
 
 export function AffiliateSignupForm({ slug, affiliate }: Props) {
@@ -124,7 +129,7 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
     // Provider abgeschlossen hat — wir nutzen denselben Cookie-Mechanismus
     // wie fuer den Slug.
     if (typeof document !== "undefined") {
-      document.cookie = `affiliate_signup_provider=${provider}; path=/; max-age=600; samesite=lax`;
+      document.cookie = `affiliate_signup_provider=${provider}; path=/; max-age=${AFFILIATE_COOKIE_MAX_AGE_S}; samesite=lax`;
     }
     setLoginNextCookie("/account?welcome=affiliate");
 
@@ -142,15 +147,12 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
     // signInWithOAuth navigiert weg — kein router.push noetig.
   }
 
-  async function sendPostSignupMail(toEmail: string) {
-    // Fire-and-forget, Failures sind nicht kritisch fuer den Sign-Up-Flow.
-    // Account-Page hat eh einen Resend-Button als Recovery-Pfad.
+  async function sendPostSignupMail() {
+    // Fire-and-forget — Failures sind nicht kritisch fuer den Sign-Up-Flow.
+    // Account-Page hat einen Resend-Button als Recovery-Pfad. Server
+    // liest die Ziel-Email aus der SSR-Session (kein Body noetig).
     try {
-      await fetch("/api/affiliate/post-signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: toEmail, slug }),
-      });
+      await fetch("/api/affiliate/post-signup", { method: "POST" });
     } catch (err) {
       console.error("[/a/[slug]] post-signup mail failed", err);
     }
@@ -204,7 +206,7 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
 
     // Auto-confirmed (z.B. dev-Env oder Confirmation off) → TestFlight-Mail
     // jetzt senden, dann zu /account.
-    void sendPostSignupMail(cleanEmail);
+    void sendPostSignupMail();
     router.push("/account?welcome=affiliate");
   }
 
@@ -229,7 +231,7 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
 
     // Email ist jetzt verifiziert — TestFlight-Mail rausschicken.
     // Fire-and-forget; Account-Page hat Resend-Button als Recovery.
-    void sendPostSignupMail(cleanEmail);
+    void sendPostSignupMail();
 
     router.push("/account?welcome=affiliate");
   }

@@ -6,18 +6,15 @@ import { useState } from "react";
  * Resend-Button auf /account fuer die TestFlight-Invite-Mail.
  *
  * Recovery-Pfad fuer User die die Mail nicht bekommen / verlegt haben.
- * POST geht an /api/affiliate/post-signup — der Endpoint validiert dass
- * der Account juenger als 1h ist (Anti-Spam).
+ * POST geht an /api/affiliate/post-signup — der Endpoint liest die
+ * Ziel-Email aus der SSR-Session (post Audit-Fix #5/#6), Caller muss
+ * KEINE Email uebergeben und es gibt kein Account-Age-Gate mehr.
  *
  * Idempotent — Resend-Plan-Limits liegen weit ueber dem was ein
  * einzelner User durch manuelle Clicks erreichen kann.
  */
 
-interface Props {
-  email: string;
-}
-
-export function ResendTestFlightButton({ email }: Props) {
+export function ResendTestFlightButton() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
     "idle",
   );
@@ -31,8 +28,6 @@ export function ResendTestFlightButton({ email }: Props) {
     try {
       const response = await fetch("/api/affiliate/post-signup", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, slug: "" }),
       });
 
       if (!response.ok) {

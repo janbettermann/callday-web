@@ -11,6 +11,7 @@ import {
 } from "./actions";
 import { ResendTestFlightButton } from "./ResendTestFlightButton";
 import { PostHogSignupCompletion } from "./PostHogSignupCompletion";
+import { PostHogIdentifier } from "./PostHogIdentifier";
 
 export const metadata: Metadata = {
   title: "Your account · Callday",
@@ -172,6 +173,7 @@ export default async function AccountPage({
       </nav>
 
       <main className="account-page">
+        <PostHogIdentifier userId={user.id} email={profile.email} />
         {isAffiliateWelcome && (
           <PostHogSignupCompletion slug={affiliateSlug} />
         )}
@@ -203,7 +205,7 @@ export default async function AccountPage({
               <p className="account-hint">
                 Didn&apos;t get the email?{" "}
                 {profile.email ? (
-                  <ResendTestFlightButton email={profile.email} />
+                  <ResendTestFlightButton />
                 ) : (
                   "Email missing on your profile — contact hello@callday.io."
                 )}
@@ -291,22 +293,12 @@ export default async function AccountPage({
             {!hasActiveSubscription && !isPaused && !isCanceled && (
               <>
                 <div className="account-status account-status-none">
-                  No active subscription
+                  Beta access
                 </div>
                 <p className="account-body">
-                  Subscribe to Callday Pro to unlock unlimited lead lists,
-                  built-in calendar, and automatic meeting confirmations.
-                  Cancel or pause anytime.
-                </p>
-                <Link
-                  href="/checkout"
-                  className="account-btn account-btn-primary"
-                >
-                  Subscribe to Callday Pro
-                </Link>
-                <p className="account-hint">
-                  Have a founder code? Use the link from your Callday
-                  email — it applies your discount automatically.
+                  You&apos;re in the closed beta. Pricing and subscriptions
+                  go live at public launch — we&apos;ll email you when
+                  it&apos;s time. Until then, enjoy unlimited use.
                 </p>
               </>
             )}
@@ -383,7 +375,7 @@ export default async function AccountPage({
             {profile.email && !isAffiliateWelcome && (
               <p className="account-hint">
                 Need the install email again?{" "}
-                <ResendTestFlightButton email={profile.email} />
+                <ResendTestFlightButton />
               </p>
             )}
           </section>
