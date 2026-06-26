@@ -188,13 +188,11 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
     // konversions-relevante Moment.
     fireCompleted("email");
 
-    // TestFlight-Mail asap rausschicken — auch wenn Email noch nicht
-    // bestaetigt ist. Der User hat bei der Beta-Application-Form-Variante
-    // auch nicht erst bestaetigt bevor die Einladung kam.
-    void sendPostSignupMail(cleanEmail);
-
     // Email-Confirmation aktiv → session ist null, User muss OTP-Code aus
-    // der Mail eintippen. Kein Magic-Link, reiner Code.
+    // der Mail eintippen. Kein Magic-Link, reiner Code. TestFlight-Mail
+    // wird ERST nach erfolgreichem verifyOtp rausgeschickt — sonst landen
+    // zwei Mails parallel im Postfach (Verification + TestFlight) was
+    // verwirrend ist + Typo-Emails kriegen unnoetig TestFlight-Links.
     if (!data.session) {
       setStatus("idle");
       setMode("otp-code");
@@ -204,7 +202,9 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
       return;
     }
 
-    // Auto-confirmed (z.B. dev-Env oder Confirmation off) → ab zu /account
+    // Auto-confirmed (z.B. dev-Env oder Confirmation off) → TestFlight-Mail
+    // jetzt senden, dann zu /account.
+    void sendPostSignupMail(cleanEmail);
     router.push("/account?welcome=affiliate");
   }
 
@@ -215,8 +215,9 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
     setStatus("submitting");
 
     const supabase = createSupabaseBrowser();
+    const cleanEmail = email.trim();
     const { error } = await supabase.auth.verifyOtp({
-      email: email.trim(),
+      email: cleanEmail,
       token: code.trim(),
       type: "email",
     });
@@ -225,6 +226,11 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
       setErrorMessage(error.message);
       return;
     }
+
+    // Email ist jetzt verifiziert — TestFlight-Mail rausschicken.
+    // Fire-and-forget; Account-Page hat Resend-Button als Recovery.
+    void sendPostSignupMail(cleanEmail);
+
     router.push("/account?welcome=affiliate");
   }
 
