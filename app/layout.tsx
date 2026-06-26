@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { PostHogProvider } from "./components/PostHogProvider";
 
 // Marketing display + headings.
 const geist = Geist({
@@ -91,7 +92,9 @@ export default function RootLayout({
       className={`${geist.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased`}
       suppressHydrationWarning
     >
-      <body>{children}</body>
+      <body>
+        <PostHogProvider>{children}</PostHogProvider>
+      </body>
     </html>
   );
 }

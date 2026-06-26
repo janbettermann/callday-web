@@ -175,6 +175,7 @@ export function BetaApplicationForm() {
       <button
         type="submit"
         className="beta-submit"
+        aria-busy={status === "submitting"}
         disabled={status === "submitting"}
       >
         {status === "submitting" ? "Sending..." : "Send my invite"}
