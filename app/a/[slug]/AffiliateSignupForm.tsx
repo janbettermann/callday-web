@@ -1,0 +1,395 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createSupabaseBrowser } from "@/lib/supabase-browser";
+
+/**
+ * Affiliate-Sign-Up-Form fuer /a/[slug].
+ *
+ * Default-Mode ist SIGNUP (im Unterschied zu /login das auf SIGNIN
+ * defaultet). Affiliate-Pill ueber dem Form macht die Empfehlung
+ * sichtbar (sofern slug aktiv aufgeloest wurde).
+ *
+ * Slug-Transport durch den Sign-Up-Flow:
+ *   - Email/PW: user_metadata.referred_by_affiliate_slug → handle_new_user
+ *     Trigger resolvet zu profiles.referred_by_affiliate_id in derselben
+ *     INSERT-Transaktion.
+ *   - Apple/Google OAuth: kurzlebiger `affiliate_slug`-Cookie (10 min,
+ *     samesite=lax) — Supabase strippt Query-Params von redirectTo, daher
+ *     identisches Pattern wie das existierende `login_next`-Cookie in
+ *     /login. /auth/callback liest den Cookie und UPDATEd profiles nach
+ *     dem PKCE-Exchange. Das ist OAuth-State-Plumbing, kein
+ *     Marketing-Tracking-Cookie (siehe Plan-Decision in
+ *     project_beta_affiliate_program).
+ *
+ * Edge-Case: Slug unknown / Affiliate paused → kommt als affiliate=null
+ * rein. Pill wird nicht angezeigt, FK bleibt null (silent fallback zu
+ * organic). Sign-Up funktioniert trotzdem.
+ *
+ * Nach erfolgreichem Sign-Up landet der User auf /account?welcome=affiliate
+ * — siehe TestFlight-Recovery-Section in /account.
+ */
+
+const CODE_LENGTH = 8;
+
+type Mode = "signup" | "otp-code";
+type Status = "idle" | "submitting" | "error";
+
+interface Affiliate {
+  slug: string;
+  name: string;
+}
+
+interface Props {
+  slug: string;
+  affiliate: Affiliate | null;
+}
+
+function setAffiliateSlugCookie(slug: string) {
+  if (typeof document === "undefined") return;
+  const value = encodeURIComponent(slug);
+  // 10 Minuten reichen fuer einen OAuth-Round-Trip locker — analog zum
+  // login_next-Cookie. Kein langlebiges Tracking-Cookie.
+  document.cookie = `affiliate_slug=${value}; path=/; max-age=600; samesite=lax`;
+}
+
+function setLoginNextCookie(next: string) {
+  if (typeof document === "undefined") return;
+  const value = encodeURIComponent(next);
+  document.cookie = `login_next=${value}; path=/; max-age=600; samesite=lax`;
+}
+
+export function AffiliateSignupForm({ slug, affiliate }: Props) {
+  const router = useRouter();
+
+  const [mode, setMode] = useState<Mode>("signup");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [status, setStatus] = useState<Status>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+
+  function resetMessages() {
+    setErrorMessage(null);
+    setInfoMessage(null);
+  }
+
+  async function handleOAuth(provider: "apple" | "google") {
+    if (status === "submitting") return;
+    resetMessages();
+    setStatus("submitting");
+
+    setAffiliateSlugCookie(slug);
+    setLoginNextCookie("/account?welcome=affiliate");
+
+    const supabase = createSupabaseBrowser();
+    const origin = window.location.origin;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${origin}/auth/callback` },
+    });
+
+    if (error) {
+      setStatus("error");
+      setErrorMessage(error.message);
+    }
+    // signInWithOAuth navigiert weg — kein router.push noetig.
+  }
+
+  async function sendPostSignupMail(toEmail: string) {
+    // Fire-and-forget, Failures sind nicht kritisch fuer den Sign-Up-Flow.
+    // Account-Page hat eh einen Resend-Button als Recovery-Pfad.
+    try {
+      await fetch("/api/affiliate/post-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: toEmail, slug }),
+      });
+    } catch (err) {
+      console.error("[/a/[slug]] post-signup mail failed", err);
+    }
+  }
+
+  async function handleSignupSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (status === "submitting" || !email || !password) return;
+    resetMessages();
+    setStatus("submitting");
+
+    const supabase = createSupabaseBrowser();
+    const cleanEmail = email.trim();
+
+    const { data, error } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password,
+      options: {
+        // handle_new_user Trigger liest das hier und schreibt es als
+        // profiles.referred_by_affiliate_id (atomisch im selben INSERT).
+        data: { referred_by_affiliate_slug: slug },
+      },
+    });
+
+    if (error) {
+      setStatus("error");
+      setErrorMessage(error.message);
+      return;
+    }
+
+    // TestFlight-Mail asap rausschicken — auch wenn Email noch nicht
+    // bestaetigt ist. Der User hat bei der Beta-Application-Form-Variante
+    // auch nicht erst bestaetigt bevor die Einladung kam.
+    void sendPostSignupMail(cleanEmail);
+
+    // Email-Confirmation aktiv → session ist null, User muss OTP-Code aus
+    // der Mail eintippen. Kein Magic-Link, reiner Code.
+    if (!data.session) {
+      setStatus("idle");
+      setMode("otp-code");
+      setInfoMessage(
+        `We sent an ${CODE_LENGTH}-digit code to ${cleanEmail}. Enter it to confirm your account.`,
+      );
+      return;
+    }
+
+    // Auto-confirmed (z.B. dev-Env oder Confirmation off) → ab zu /account
+    router.push("/account?welcome=affiliate");
+  }
+
+  async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (status === "submitting" || code.length !== CODE_LENGTH) return;
+    resetMessages();
+    setStatus("submitting");
+
+    const supabase = createSupabaseBrowser();
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: code.trim(),
+      type: "email",
+    });
+    if (error) {
+      setStatus("error");
+      setErrorMessage(error.message);
+      return;
+    }
+    router.push("/account?welcome=affiliate");
+  }
+
+  // === Render: OTP-Code-Step (nach Email/PW Sign-Up) ===
+  if (mode === "otp-code") {
+    return (
+      <div className="login-card">
+        <h1 className="login-headline">Check your inbox.</h1>
+        <p className="login-sub">
+          {infoMessage ?? (
+            <>
+              We sent an {CODE_LENGTH}-digit code to <strong>{email}</strong>.
+              Enter it below to confirm your account.
+            </>
+          )}
+        </p>
+
+        <form className="beta-form" onSubmit={handleVerifyCode}>
+          <label className="beta-field">
+            <span className="beta-field-label">Sign-up code</span>
+            <input
+              type="text"
+              required
+              autoFocus
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={CODE_LENGTH}
+              value={code}
+              onChange={(e) =>
+                setCode(e.target.value.replace(/\D/g, "").slice(0, CODE_LENGTH))
+              }
+              placeholder="12345678"
+              disabled={status === "submitting"}
+              style={{
+                letterSpacing: "0.4em",
+                textAlign: "center",
+                fontSize: "22px",
+                fontFamily:
+                  "ui-monospace, 'SF Mono', Monaco, Consolas, monospace",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            />
+          </label>
+
+          <button
+            type="submit"
+            className="beta-submit"
+            disabled={code.length !== CODE_LENGTH || status === "submitting"}
+          >
+            {status === "submitting" ? "Verifying..." : "Confirm account"}
+          </button>
+
+          {errorMessage && (
+            <p className="beta-submit-error" role="alert">
+              {errorMessage}
+            </p>
+          )}
+        </form>
+      </div>
+    );
+  }
+
+  // === Render: Sign-Up ===
+  return (
+    <div className="login-card">
+      {affiliate && (
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 14px",
+            borderRadius: 100,
+            background: "rgba(37,99,232,0.08)",
+            border: "1px solid rgba(37,99,232,0.25)",
+            color: "#2563E8",
+            fontSize: 13,
+            fontWeight: 600,
+            letterSpacing: "-0.1px",
+            marginBottom: 18,
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              background: "#2563E8",
+            }}
+          />
+          {affiliate.name} recommended Callday
+        </div>
+      )}
+
+      <h1 className="login-headline">Join the Callday beta</h1>
+      <p className="login-sub">
+        Stop researching. Start calling. Pick a method to create your account —
+        TestFlight invite goes out instantly.
+      </p>
+
+      <div className="login-oauth-stack">
+        <button
+          type="button"
+          className="login-oauth-btn login-oauth-btn-apple"
+          onClick={() => handleOAuth("apple")}
+          disabled={status === "submitting"}
+        >
+          <AppleIcon />
+          <span>Continue with Apple</span>
+        </button>
+        <button
+          type="button"
+          className="login-oauth-btn login-oauth-btn-google"
+          onClick={() => handleOAuth("google")}
+          disabled={status === "submitting"}
+        >
+          <GoogleIcon />
+          <span>Continue with Google</span>
+        </button>
+      </div>
+
+      <div className="login-divider">
+        <span>or</span>
+      </div>
+
+      <form className="beta-form" onSubmit={handleSignupSubmit}>
+        <label className="beta-field">
+          <span className="beta-field-label">Email</span>
+          <input
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your@email.com"
+            disabled={status === "submitting"}
+          />
+        </label>
+
+        <label className="beta-field">
+          <span className="beta-field-label">Password</span>
+          <input
+            type="password"
+            required
+            autoComplete="new-password"
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="At least 8 characters"
+            disabled={status === "submitting"}
+          />
+        </label>
+
+        <button
+          type="submit"
+          className="beta-submit"
+          disabled={!email || !password || status === "submitting"}
+        >
+          {status === "submitting" ? "Creating account..." : "Create account"}
+        </button>
+
+        {errorMessage && (
+          <p className="beta-submit-error" role="alert">
+            {errorMessage}
+          </p>
+        )}
+      </form>
+
+      <div className="login-switch-mode">
+        Already have an account?{" "}
+        <Link
+          href={`/login?next=${encodeURIComponent("/account")}`}
+          className="login-text-link login-text-link-strong"
+        >
+          Sign in
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function AppleIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+    </svg>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      />
+    </svg>
+  );
+}
