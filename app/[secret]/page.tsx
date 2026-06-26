@@ -22,6 +22,7 @@ import { DailyCallersChart } from "./_components/DailyCallersChart";
 import { FeedbackTable } from "./_components/FeedbackTable";
 import { UserTable } from "./_components/UserTable";
 import { InactiveUsersTable } from "./_components/InactiveUsersTable";
+import { AdminNav } from "./_components/admin-ui";
 import { logoutAction } from "./actions";
 
 // Root-Layout setzt `dynamic = "force-dynamic"` (Next-16-Prerender-Bug-
@@ -144,24 +145,13 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
           }}
         >
           <div>
-            <div
-              style={{
-                fontFamily: "var(--font-mono), monospace",
-                fontSize: 11,
-                textTransform: "uppercase",
-                letterSpacing: "1.5px",
-                color: "var(--ink-faint)",
-              }}
-            >
-              Internal · {new Date().toUTCString()}
-            </div>
             <h1
               style={{
                 fontSize: 42,
                 fontWeight: 700,
                 letterSpacing: "-1.2px",
                 lineHeight: 1.05,
-                margin: "10px 0 0",
+                margin: 0,
                 color: "var(--ink)",
               }}
             >
@@ -171,23 +161,8 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
               </span>
             </h1>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <Link
-              href={`/${secret}/affiliates`}
-              style={{
-                background: "#ffffff",
-                border: "0.5px solid var(--line)",
-                color: "var(--ink-dim)",
-                fontSize: 13,
-                fontWeight: 500,
-                padding: "8px 14px",
-                borderRadius: 10,
-                textDecoration: "none",
-                boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-              }}
-            >
-              Affiliates →
-            </Link>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <AdminNav current="dashboard" basePath={`/${secret}`} />
             <form action={logoutAction}>
               <button
                 type="submit"

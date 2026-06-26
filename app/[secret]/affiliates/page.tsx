@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
@@ -14,6 +13,7 @@ import type {
 } from "@/lib/admin/affiliate-queries";
 
 import { LoginForm } from "../_components/LoginForm";
+import { AdminNav } from "../_components/admin-ui";
 import { logoutAction } from "../actions";
 import { CreateAffiliateForm } from "./_components/CreateAffiliateForm";
 import { AffiliateTable } from "./_components/AffiliateTable";
@@ -118,26 +118,13 @@ export default async function AffiliatesAdminPage({
           }}
         >
           <div>
-            <Link
-              href={`/${secret}`}
-              style={{
-                fontFamily: "var(--font-mono), monospace",
-                fontSize: 11,
-                letterSpacing: "1.5px",
-                textTransform: "uppercase",
-                color: "var(--ink-faint)",
-                textDecoration: "none",
-              }}
-            >
-              ← Internal dashboard
-            </Link>
             <h1
               style={{
                 fontSize: 42,
                 fontWeight: 700,
                 letterSpacing: "-1.2px",
                 lineHeight: 1.05,
-                margin: "10px 0 0",
+                margin: 0,
                 color: "var(--ink)",
               }}
             >
@@ -160,24 +147,27 @@ export default async function AffiliatesAdminPage({
             </p>
           </div>
 
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              style={{
-                background: "#ffffff",
-                border: "0.5px solid var(--line)",
-                color: "var(--ink-dim)",
-                fontSize: 13,
-                fontWeight: 500,
-                padding: "8px 14px",
-                borderRadius: 10,
-                cursor: "pointer",
-                boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-              }}
-            >
-              Sign out
-            </button>
-          </form>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <AdminNav current="affiliates" basePath={`/${secret}`} />
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                style={{
+                  background: "#ffffff",
+                  border: "0.5px solid var(--line)",
+                  color: "var(--ink-dim)",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  cursor: "pointer",
+                  boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
+                }}
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </header>
 
         {/* === TOP-LEVEL STATS === */}

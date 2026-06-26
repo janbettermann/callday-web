@@ -12,6 +12,7 @@
  */
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 export const monoLabelStyle: React.CSSProperties = {
   fontFamily: "var(--font-mono), monospace",
@@ -162,6 +163,70 @@ export function AdminEmptyState({ children }: { children: ReactNode }) {
 
 export function AdminMonoMeta({ children }: { children: ReactNode }) {
   return <div style={{ ...monoLabelStyle, fontSize: 11, letterSpacing: "1.5px" }}>{children}</div>;
+}
+
+/**
+ * Globale Admin-Nav als Pill-Group. Wird oben rechts vor dem Sign-out-
+ * Button gerendert. Beide Items immer sichtbar, current ist visuell
+ * aktiv (dark fill) — analog der ViewTabs (Real / Internal / All) und
+ * der StatusFilter-Pills auf /affiliates.
+ */
+export function AdminNav({
+  current,
+  basePath,
+}: {
+  current: "dashboard" | "affiliates";
+  basePath: string;
+}) {
+  const items: Array<{ key: "dashboard" | "affiliates"; label: string; href: string }> = [
+    { key: "dashboard", label: "Dashboard", href: basePath },
+    { key: "affiliates", label: "Affiliates", href: `${basePath}/affiliates` },
+  ];
+
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        background: "#ffffff",
+        border: "0.5px solid var(--line)",
+        borderRadius: 12,
+        padding: 3,
+        boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
+      }}
+    >
+      {items.map((item) => {
+        const active = item.key === current;
+        return (
+          <Link
+            key={item.key}
+            href={item.href}
+            style={
+              active
+                ? {
+                    background: "var(--ink)",
+                    color: "#ffffff",
+                    borderRadius: 9,
+                    padding: "6px 14px",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    textDecoration: "none",
+                  }
+                : {
+                    color: "var(--ink-dim)",
+                    borderRadius: 9,
+                    padding: "6px 14px",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    textDecoration: "none",
+                  }
+            }
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </div>
+  );
 }
 
 export function AdminNumeric({
