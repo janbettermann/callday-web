@@ -1,34 +1,33 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
 import { CalldayLogo } from "../../components/CalldayLogo";
+import { FaqAccordion } from "../../components/FaqAccordion";
+import { FlowTabs } from "../../components/FlowTabs";
+import { SiteNav } from "../../components/SiteNav";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { AffiliateSignupForm } from "./AffiliateSignupForm";
 
 /**
- * /a/[slug] — Founding-Affiliate-Sign-Up-Landing.
+ * /a/[slug] — Founding-Affiliate-Landing.
  *
- * Eintrittspunkt fuer die Founding-Affiliates-Links (Vertragsklausel:
- * Permanent-Link, bleibt stabil auch beim spaeteren Tracking-Tool-Wechsel
- * — siehe Memory: project_beta_affiliate_program).
+ * Strukturell IDENTISCH zur organic Landing (app/page.tsx) — Hero,
+ * Flow-Animations, Stats, Differentiators, FAQ, Footer. Einziger
+ * Unterschied: im #beta-CTA-Block sitzt der AffiliateSignupForm
+ * statt der BetaApplicationForm.
  *
- * Verantwortung dieser Seite:
- *   1. Slug aus der URL aufloesen (service-role-Query gegen affiliates).
- *      Unknown / paused / removed → still rendert Form OHNE Pill, Sign-Up
- *      funktioniert weiter, FK bleibt null (silent fallback zu organic).
- *   2. Affiliate-Pill ("{Name} recommended Callday") rendern wenn aktiv.
- *   3. Sign-Up-Form mit Apple + Google + Email/PW rendern, slug wird durch
- *      den Sign-Up-Flow durchgereicht (Email/PW als user_metadata
- *      `referred_by_affiliate_slug`, OAuth als kurzlebiger
- *      `affiliate_slug`-Cookie der von /auth/callback gelesen wird —
- *      Supabase strippt Query-Params von redirectTo).
+ * Bewusste Entscheidungen (2026-06-26):
+ *   - **Keine Affiliate-Pill.** Affiliate erscheint NIRGENDWO auf der
+ *     Seite. Attribution laeuft komplett im Backend (Trigger fuer
+ *     Email/PW, /auth/callback fuer OAuth). Macht das Erlebnis fuer
+ *     den Klicker identisch zu organic — er bekommt denselben Pitch,
+ *     denselben Form-Hub, ohne dass Joe's Name irgendwo ablenkt.
+ *   - **Anchor-Scroll** (`#beta`) statt Page-Switch. Hero-CTA und Nav-CTA
+ *     zeigen zur Form-Section auf derselben Page.
+ *   - **Slug-Resolve** server-side per service-role nur fuer Analytics
+ *     (Posthog landing_view bekommt affiliate_resolved-Flag). Resultat
+ *     wird an die Client-Form gereicht aber nicht visuell gerendert.
  *
- * **Kein Cookie fuer Marketing-Attribution** (Plan-Decision 2026-06-26).
- * Der OAuth-State-Cookie ist nur kurzlebiges Plumbing analog zum
- * existierenden `login_next`-Cookie, nicht das 30-Tage-Tracking-Cookie
- * das die Plan-Memory verworfen hat.
- *
- * Noindex: die Affiliate-URLs sollen nicht im Google-Index auftauchen.
+ * NoIndex: die Affiliate-URLs sollen nicht im Google-Index auftauchen.
  */
 
 export const dynamic = "force-dynamic";
@@ -62,20 +61,17 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
-  const affiliate = await resolveAffiliate(slug);
-  const title = affiliate
-    ? `${affiliate.name} recommended Callday — Join the beta`
-    : "Join the Callday beta";
+  // Metadaten bleiben generisch — Affiliate-Name nirgendwo sichtbar.
+  await params;
   return {
-    title,
+    title: "Callday. Make today a Callday.",
     description:
-      "Stop researching. Start calling. Get TestFlight access to the Callday beta.",
+      "The cold calling app for solo founders and freelancers. Less avoiding. More dialing.",
     robots: { index: false, follow: false },
   };
 }
 
-export default async function AffiliatePage({
+export default async function AffiliateLanding({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -86,25 +82,244 @@ export default async function AffiliatePage({
 
   return (
     <>
-      <div className="bg-orb bg-orb-1" />
       <div className="bg-orb bg-orb-2" />
-      <div className="bg-orb bg-orb-3" />
 
-      <nav className="site-nav" data-scrolled="true">
-        <div className="container nav-inner">
-          <Link href="/" className="logo" style={{ textDecoration: "none" }}>
-            <CalldayLogo size={32} />
-            Callday
-          </Link>
+      {/* === NAV === */}
+      <SiteNav />
+
+      {/* === HERO === */}
+      <section className="hero">
+        <div className="container hero-inner">
+          <div className="pill reveal">
+            <span className="pill-dot" />
+            Make today a Callday.
+          </div>
+
+          <h1 className="reveal delay-1">
+            Less avoiding.
+            <br />
+            More <span className="accent">dialing</span>.
+          </h1>
+
+          <p className="hero-sub reveal delay-2">
+            Cold callers don&apos;t lose to bad scripts. They lose to
+            procrastination. Callday keeps you on the phone, one tap at a time.
+          </p>
+
+          <div className="hero-cta-wrap reveal delay-3">
+            <a href="#beta" className="hero-cta">
+              Get early access
+              <svg
+                width={14}
+                height={14}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1={5} y1={12} x2={19} y2={12} />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </a>
+            <p className="hero-cta-meta">
+              Start calling today. Free iOS beta.
+            </p>
+          </div>
         </div>
-      </nav>
+      </section>
 
-      <main className="confirm-page">
-        <Suspense fallback={null}>
-          <AffiliateSignupForm slug={slug} affiliate={affiliate} />
-        </Suspense>
-      </main>
+      {/* === THE FLOW === */}
+      <section className="flow">
+        <div className="container">
+          <header className="flow-section-head">
+            <h2>
+              Take the <span className="italic">friction</span>
+              <br /> out of cold calling.
+            </h2>
+          </header>
+          <FlowTabs />
+        </div>
+      </section>
 
+      {/* === STATS === */}
+      <section className="social-proof">
+        <div className="container">
+          <div className="stats-block">
+            <div className="stats-row">
+              <div className="stat-cell">
+                <div className="stat-num">
+                  1<span className="unit">tap</span>
+                </div>
+                <div className="stat-label">to your next call</div>
+              </div>
+              <div className="stat-divider" />
+              <div className="stat-cell">
+                <div className="stat-num">
+                  2<span className="unit">taps</span>
+                </div>
+                <div className="stat-label">
+                  booked meeting → calendar + email sent
+                </div>
+              </div>
+              <div className="stat-divider" />
+              <div className="stat-cell">
+                <div className="stat-num">
+                  0<span className="unit">tabs</span>
+                </div>
+                <div className="stat-label">
+                  no spreadsheet, no detours, no distractions
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* === DIFFERENTIATORS === */}
+      <section className="features">
+        <div className="container">
+          <h2>
+            Built to fight the <span className="italic">flinch</span>.
+          </h2>
+          <p className="section-sub">
+            Every detail closes a gap where focus usually dies.
+          </p>
+
+          <div className="feature-grid">
+            <div className="feature-card">
+              <div className="feature-icon">
+                <svg
+                  width={22}
+                  height={22}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#3564e0"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x={3} y={6} width={18} height={13} rx={2} />
+                  <path d="M3 10h18" />
+                </svg>
+              </div>
+              <h3>One card at a time.</h3>
+              <p>
+                No menus. No clutter. One card, one decision: call or skip. Each
+                tap pulls you deeper into the rhythm, never out of it.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">
+                <svg
+                  width={22}
+                  height={22}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#3564e0"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                </svg>
+              </div>
+              <h3>Rewards the dial, not the close.</h3>
+              <p>
+                Every call counts, not just the yeses. Voicemails count.
+                &ldquo;Not interested&rdquo; counts. Your brain learns to crave
+                the dial, not the outcome.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">
+                <svg
+                  width={22}
+                  height={22}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#3564e0"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x={3} y={4} width={18} height={18} rx={2} ry={2} />
+                  <line x1={16} y1={2} x2={16} y2={6} />
+                  <line x1={8} y1={2} x2={8} y2={6} />
+                  <line x1={3} y1={10} x2={21} y2={10} />
+                  <polyline points="9 16 11 18 15 14" />
+                </svg>
+              </div>
+              <h3>Booked. Synced. Sent.</h3>
+              <p>
+                One tap to log a meeting. Calendar event, confirmation email,
+                Zoom link, all sent before you reach the next lead. No app
+                switching. No detour.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">
+                <svg
+                  width={22}
+                  height={22}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#3564e0"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              </div>
+              <h3>No CRM. No spreadsheet.</h3>
+              <p>
+                Every call, note, and outcome stays in the app. No pipeline
+                to maintain. No spreadsheet to update. The system is the
+                calling.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* === BIG CTA — Affiliate-Sign-Up.
+          Selber Header wie organic Landing, aber statt der BetaApplicationForm
+          steht hier der AffiliateSignupForm. Form-Visuals (Card-Hintergrund,
+          Border, OAuth-Buttons) sind self-contained in AffiliateSignupForm. === */}
+      <section className="big-cta" id="beta">
+        <div className="container big-cta-inner">
+          <h2>
+            Get <span className="italic">early access.</span>
+          </h2>
+          <p
+            className="form-card-subtitle"
+            style={{ textAlign: "center", maxWidth: 520, margin: "0 auto 28px" }}
+          >
+            We send your TestFlight invite the moment you confirm.
+          </p>
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <AffiliateSignupForm slug={slug} affiliate={affiliate} />
+          </div>
+        </div>
+      </section>
+
+      {/* === FAQ === */}
+      <section className="faq" aria-label="Common questions">
+        <div className="container faq-inner">
+          <h2 className="faq-heading">
+            Common <span className="italic">questions.</span>
+          </h2>
+          <FaqAccordion />
+        </div>
+      </section>
+
+      {/* === FOOTER === */}
       <footer className="site-footer">
         <div className="container footer-inner">
           <div className="logo">

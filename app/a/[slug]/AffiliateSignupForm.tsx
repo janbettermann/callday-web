@@ -296,44 +296,13 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
   }
 
   // === Render: Sign-Up ===
+  // Pill + Headline + Sub bewusst weggelassen — die Page-Hero ueber dem
+  // Form liefert den Pitch (siehe app/a/[slug]/page.tsx, identisch zur
+  // organic Landing). Form bleibt als reine Action-Section.
+  // Affiliate-Attribution laeuft komplett im Backend (Trigger / Callback)
+  // — Affiliate erscheint nirgendwo auf der Seite (Jan-Decision).
   return (
     <div className="login-card">
-      {affiliate && (
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "8px 14px",
-            borderRadius: 100,
-            background: "rgba(37,99,232,0.08)",
-            border: "1px solid rgba(37,99,232,0.25)",
-            color: "#2563E8",
-            fontSize: 13,
-            fontWeight: 600,
-            letterSpacing: "-0.1px",
-            marginBottom: 18,
-          }}
-        >
-          <span
-            aria-hidden="true"
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: 3,
-              background: "#2563E8",
-            }}
-          />
-          {affiliate.name} recommended Callday
-        </div>
-      )}
-
-      <h1 className="login-headline">Join the Callday beta</h1>
-      <p className="login-sub">
-        Stop researching. Start calling. Pick a method to create your account —
-        TestFlight invite goes out instantly.
-      </p>
-
       <div className="login-oauth-stack">
         <button
           type="button"
