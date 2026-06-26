@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
 
+const SIGNUP_VALIDATION_MESSAGE =
+  "Add email and password — or use Apple or Google above.";
+
 /**
  * Affiliate-Sign-Up-Form fuer /a/[slug].
  *
@@ -81,6 +84,8 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
 
   const landingFiredRef = useRef(false);
   const startedFiredRef = useRef(false);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
 
   // affiliate_landing_view (genau einmal pro Mount). slug ist die canonical
   // Property — auch bei unknown/paused-Slugs feuern wir, damit Admin-Dashboard
@@ -160,8 +165,23 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
 
   async function handleSignupSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (status === "submitting" || !email || !password) return;
+    if (status === "submitting") return;
     resetMessages();
+
+    // Client-Validation statt disabled-Button: User klickt → wir geben
+    // konkretes Feedback ("Email + Password noetig — oder Apple/Google").
+    // Vorher war der Button bei leeren Feldern disabled, was den
+    // wait-Cursor triggerte und das OAuth-Alternativ-Path nicht erklaerte.
+    if (!email.trim() || !password) {
+      setErrorMessage(SIGNUP_VALIDATION_MESSAGE);
+      if (!email.trim()) {
+        emailInputRef.current?.focus();
+      } else {
+        passwordInputRef.current?.focus();
+      }
+      return;
+    }
+
     fireStarted();
     setStatus("submitting");
 
@@ -329,10 +349,11 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
         <span>or</span>
       </div>
 
-      <form className="beta-form" onSubmit={handleSignupSubmit}>
+      <form className="beta-form" onSubmit={handleSignupSubmit} noValidate>
         <label className="beta-field">
           <span className="beta-field-label">Email</span>
           <input
+            ref={emailInputRef}
             type="email"
             required
             autoComplete="email"
@@ -346,6 +367,7 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
         <label className="beta-field">
           <span className="beta-field-label">Password</span>
           <input
+            ref={passwordInputRef}
             type="password"
             required
             autoComplete="new-password"
@@ -361,7 +383,7 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
           type="submit"
           className="beta-submit"
           aria-busy={status === "submitting"}
-          disabled={!email || !password || status === "submitting"}
+          disabled={status === "submitting"}
         >
           {status === "submitting" ? "Creating account..." : "Create account"}
         </button>
