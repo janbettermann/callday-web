@@ -164,22 +164,17 @@ function LoginForm() {
       });
       if (error) {
         // Recovery-Pfad: User hat sich registriert aber Confirmation-Code
-        // nie eingegeben (z.B. Tab geschlossen nach Sign-Up). Statt
-        // "Email not confirmed" als Sackgasse zu zeigen, schicken wir
-        // automatisch einen frischen Code und springen in den OTP-Step.
+        // nie eingegeben. Wir springen direkt in den OTP-Step OHNE neuen
+        // Code zu triggern — sonst rennen wir in Supabase's Rate-Limit
+        // ("can only request this after N seconds") wenn der Original-
+        // Code gerade erst rausging. Der User kann den alten Code
+        // probieren; falls abgelaufen, gibt's den Resend-Button im
+        // OTP-Step der dann nicht mehr rate-limited ist.
         if (isEmailNotConfirmed(error)) {
-          const otpResult = await supabase.auth.signInWithOtp({
-            email: cleanEmail,
-          });
-          if (otpResult.error) {
-            setStatus("error");
-            setErrorMessage(otpResult.error.message);
-            return;
-          }
           setStatus("idle");
           setMode("otp-code");
           setInfoMessage(
-            `Your email isn't confirmed yet. We sent a fresh ${CODE_LENGTH}-digit code to ${cleanEmail}. Enter it below to finish setting up your account.`,
+            `Your email isn't confirmed yet. Enter the ${CODE_LENGTH}-digit code we sent to ${cleanEmail} — or request a new one if it expired.`,
           );
           return;
         }
@@ -217,6 +212,30 @@ function LoginForm() {
     router.push(next);
   }
 
+  /**
+   * Resend-Action im OTP-Step. Triggert neuen Code via signInWithOtp.
+   * Bei Rate-Limit (Supabase: "For security purposes, you can only
+   * request this after N seconds.") zeigen wir die Message und lassen
+   * den User den ALTEN Code aus seinem Postfach versuchen.
+   */
+  async function handleResendOtp() {
+    if (status === "submitting" || !email) return;
+    resetMessages();
+    setStatus("submitting");
+
+    const supabase = createSupabaseBrowser();
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+    });
+    setStatus("idle");
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+    setInfoMessage(`A new ${CODE_LENGTH}-digit code is on its way to ${email.trim()}.`);
+    setCode("");
+  }
+
   async function handleSendOtp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (status === "submitting" || !email) return;
@@ -239,8 +258,12 @@ function LoginForm() {
 
   async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (status === "submitting" || code.length !== CODE_LENGTH) return;
+    if (status === "submitting") return;
     resetMessages();
+    if (code.length !== CODE_LENGTH) {
+      setErrorMessage(`Enter the ${CODE_LENGTH}-digit code from your email.`);
+      return;
+    }
     setStatus("submitting");
 
     const supabase = createSupabaseBrowser();
@@ -281,7 +304,7 @@ function LoginForm() {
           )}
         </p>
 
-        <form className="beta-form" onSubmit={handleVerifyCode}>
+        <form className="beta-form" onSubmit={handleVerifyCode} noValidate>
           <label className="beta-field">
             <span className="beta-field-label">Sign-in code</span>
             <input
@@ -290,7 +313,6 @@ function LoginForm() {
               autoFocus
               inputMode="numeric"
               autoComplete="one-time-code"
-              maxLength={CODE_LENGTH}
               value={code}
               onChange={(e) =>
                 setCode(e.target.value.replace(/\D/g, "").slice(0, CODE_LENGTH))
@@ -312,7 +334,7 @@ function LoginForm() {
             type="submit"
             className="beta-submit"
             aria-busy={status === "submitting"}
-            disabled={code.length !== CODE_LENGTH || status === "submitting"}
+            disabled={status === "submitting"}
           >
             {status === "submitting" ? "Verifying..." : "Sign in"}
           </button>
@@ -323,6 +345,16 @@ function LoginForm() {
             </p>
           )}
         </form>
+
+        <button
+          type="button"
+          onClick={handleResendOtp}
+          disabled={status === "submitting" || !email}
+          className="login-text-link"
+          style={{ display: "block", margin: "16px auto 0" }}
+        >
+          Didn&apos;t get the code? Send a new one
+        </button>
 
         <button
           type="button"

@@ -173,6 +173,28 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
     // signInWithOAuth navigiert weg — kein router.push noetig.
   }
 
+  /**
+   * Resend-Action im OTP-Step (siehe Render unten). Triggert frischen
+   * Code via signInWithOtp. Bei Rate-Limit zeigen wir Supabase's Message
+   * direkt — User kann es nach der angegebenen Wartezeit erneut versuchen.
+   */
+  async function handleResendOtp() {
+    if (status === "submitting" || !email) return;
+    resetMessages();
+    setStatus("submitting");
+    const supabase = createSupabaseBrowser();
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+    });
+    setStatus("idle");
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+    setInfoMessage(`A new ${CODE_LENGTH}-digit code is on its way to ${email.trim()}.`);
+    setCode("");
+  }
+
   async function sendPostSignupMail() {
     // Fire-and-forget — Failures sind nicht kritisch fuer den Sign-Up-Flow.
     // Account-Page hat einen Resend-Button als Recovery-Pfad. Server
@@ -220,23 +242,17 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
     });
 
     if (error) {
-      // Recovery-Pfad: User hat sich schon registriert (Tab geschlossen vor
-      // Code-Eingabe?) → automatisch frischen Code triggern + OTP-Step
-      // anzeigen. Sonst stand der User vor einer "User already registered"-
-      // Sackgasse ohne Hint wie weiter.
+      // Recovery-Pfad: User hat sich schon registriert (Tab vorher
+      // geschlossen) → direkt in den OTP-Step OHNE neuen Code zu
+      // triggern. Sonst kollidieren wir mit dem Supabase-Rate-Limit
+      // ("can only request this after N seconds") wenn der Original-
+      // Code grade erst rausging. User kann den alten Code probieren;
+      // falls abgelaufen → Resend-Button im OTP-Step.
       if (isUserAlreadyRegistered(error)) {
-        const otpResult = await supabase.auth.signInWithOtp({
-          email: cleanEmail,
-        });
-        if (otpResult.error) {
-          setStatus("error");
-          setErrorMessage(otpResult.error.message);
-          return;
-        }
         setStatus("idle");
         setMode("otp-code");
         setInfoMessage(
-          `Welcome back. We sent a fresh ${CODE_LENGTH}-digit code to ${cleanEmail}. Enter it to finish setting up your account.`,
+          `Welcome back. Enter the ${CODE_LENGTH}-digit code we sent to ${cleanEmail} — or request a new one if it expired.`,
         );
         return;
       }
@@ -365,6 +381,16 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
             </p>
           )}
         </form>
+
+        <button
+          type="button"
+          onClick={handleResendOtp}
+          disabled={status === "submitting" || !email}
+          className="login-text-link"
+          style={{ display: "block", margin: "16px auto 0" }}
+        >
+          Didn&apos;t get the code? Send a new one
+        </button>
       </div>
     );
   }
