@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 };
 
 interface ActivityEvent {
-  type: "view" | "signup" | "activated";
+  type: "view" | "signup";
   created_at: string;
   referrer_host?: string | null;
 }
@@ -68,34 +68,30 @@ export default async function AffiliateDashboardPage() {
     founder_tier: boolean;
   };
 
-  // Drei Datenquellen parallel: Page-Views (Click-Tracking-Tabelle),
-  // Signups (profiles.referred_by_affiliate_id), Activated (lead_lists join).
-  // Werden anschliessend zu einem kombinierten Activity-Feed gemerged.
-  const [viewsCountRes, uniqueRes, recentViewsRes, profilesRes] =
-    await Promise.all([
-      sb
-        .from("affiliate_page_views")
-        .select("*", { count: "exact", head: true })
-        .eq("affiliate_id", affiliateId),
-      sb
-        .from("affiliate_page_views")
-        .select("visitor_hash")
-        .eq("affiliate_id", affiliateId),
-      sb
-        .from("affiliate_page_views")
-        .select("created_at, referrer_host")
-        .eq("affiliate_id", affiliateId)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      sb
-        .from("profiles")
-        .select("id, created_at")
-        .eq("referred_by_affiliate_id", affiliateId)
-        .order("created_at", { ascending: false })
-        .limit(50),
-    ]);
+  // Zwei Datenquellen parallel: Page-Views (Click-Tracking-Tabelle, unique
+  // via visitor_hash distinct) + Signups (profiles.referred_by_affiliate_id).
+  // Activated bewusst NICHT angezeigt — liegt nicht im Einflussbereich des
+  // Affiliates (Produkt-Aktivierung), waere demotivierend ("5 sign-ups,
+  // 0 activated"). Admin-Dashboard zeigt es weiterhin.
+  const [uniqueRes, recentViewsRes, profilesRes] = await Promise.all([
+    sb
+      .from("affiliate_page_views")
+      .select("visitor_hash")
+      .eq("affiliate_id", affiliateId),
+    sb
+      .from("affiliate_page_views")
+      .select("created_at, referrer_host")
+      .eq("affiliate_id", affiliateId)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    sb
+      .from("profiles")
+      .select("id, created_at")
+      .eq("referred_by_affiliate_id", affiliateId)
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
 
-  const totalViews = viewsCountRes.count ?? 0;
   const uniqueVisitors = new Set(
     ((uniqueRes.data ?? []) as Array<{ visitor_hash: string }>).map(
       (r) => r.visitor_hash,
@@ -106,40 +102,15 @@ export default async function AffiliateDashboardPage() {
     id: string;
     created_at: string;
   }>;
-  const profileIds = profileRows.map((p) => p.id);
-
-  // Activated = User hat mindestens eine eigene Liste. firstListByUser
-  // gibt uns auch den Activated-Timestamp fuer den Feed.
-  const firstListByUser = new Map<string, string>();
-  if (profileIds.length > 0) {
-    const { data: lists } = await sb
-      .from("lead_lists")
-      .select("user_id, created_at")
-      .in("user_id", profileIds)
-      .order("created_at", { ascending: true });
-    for (const l of (lists ?? []) as Array<{
-      user_id: string;
-      created_at: string;
-    }>) {
-      if (!firstListByUser.has(l.user_id)) {
-        firstListByUser.set(l.user_id, l.created_at);
-      }
-    }
-  }
 
   const signupCount = profileRows.length;
-  const activatedCount = firstListByUser.size;
-  const signupConversion =
-    totalViews === 0
+  const signupRate =
+    uniqueVisitors === 0
       ? "—"
-      : `${Math.round((signupCount / totalViews) * 100)}%`;
-  const activationRate =
-    signupCount === 0
-      ? "—"
-      : `${Math.round((activatedCount / signupCount) * 100)}%`;
+      : `${Math.round((signupCount / uniqueVisitors) * 100)}%`;
 
-  // Kombinierter Activity-Feed: Views + Signups + Activations
-  // chronologisch sortiert (neueste zuerst), limited auf 50.
+  // Activity-Feed: View + Signup Events, chronologisch sortiert (neueste
+  // zuerst), limited auf 50.
   const viewEvents: ActivityEvent[] = (
     (recentViewsRes.data ?? []) as Array<{
       created_at: string;
@@ -154,18 +125,8 @@ export default async function AffiliateDashboardPage() {
     type: "signup",
     created_at: p.created_at,
   }));
-  const activatedEvents: ActivityEvent[] = Array.from(
-    firstListByUser.values(),
-  ).map((createdAt) => ({
-    type: "activated",
-    created_at: createdAt,
-  }));
 
-  const activity: ActivityEvent[] = [
-    ...viewEvents,
-    ...signupEvents,
-    ...activatedEvents,
-  ]
+  const activity: ActivityEvent[] = [...viewEvents, ...signupEvents]
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
     .slice(0, 50);
 
@@ -317,16 +278,15 @@ export default async function AffiliateDashboardPage() {
         <section
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
             gap: 12,
             marginBottom: 24,
           }}
         >
-          <StatCard label="Views" value={totalViews} hint="Total link opens" />
           <StatCard
             label="Visitors"
             value={uniqueVisitors}
-            hint="Unique per day"
+            hint="People who opened your link"
           />
           <StatCard
             label="Sign-ups"
@@ -334,19 +294,9 @@ export default async function AffiliateDashboardPage() {
             hint="Created an account"
           />
           <StatCard
-            label="Activated"
-            value={activatedCount}
-            hint="Uploaded first list"
-          />
-          <StatCard
             label="Sign-up rate"
-            value={signupConversion}
-            hint="Sign-ups / Views"
-          />
-          <StatCard
-            label="Activation"
-            value={activationRate}
-            hint="Activated / Sign-ups"
+            value={signupRate}
+            hint="Sign-ups / Visitors"
           />
         </section>
 
@@ -545,18 +495,14 @@ function StatCard({
 }
 
 function labelForEvent(e: ActivityEvent): string {
-  if (e.type === "view") return "View";
-  if (e.type === "signup") return "Sign-up";
-  return "Activated";
+  return e.type === "signup" ? "Sign-up" : "View";
 }
 
 function EventDot({ type }: { type: ActivityEvent["type"] }) {
   const color =
-    type === "activated"
-      ? "var(--green-deep, #16a34a)"
-      : type === "signup"
-        ? "var(--blue-deep, #2563e8)"
-        : "var(--ink-faint, #94a3b8)";
+    type === "signup"
+      ? "var(--blue-deep, #2563e8)"
+      : "var(--ink-faint, #94a3b8)";
   return (
     <span
       aria-hidden
