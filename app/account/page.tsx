@@ -8,6 +8,7 @@ import {
   deleteAccountAction,
   signOutAction,
 } from "./actions";
+import { ResendTestFlightButton } from "./ResendTestFlightButton";
 
 export const metadata: Metadata = {
   title: "Your account · Callday",
@@ -81,7 +82,14 @@ function linkedProviders(
  * Auth-Gate: nicht-eingeloggte User werden zu /login?next=/account
  * geschickt. Per @supabase/ssr-Middleware werden Cookies vorher refreshed.
  */
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string }>;
+}) {
+  const { welcome } = await searchParams;
+  const isAffiliateWelcome = welcome === "affiliate";
+
   const supabase = await createSupabaseSSR();
   const {
     data: { user },
@@ -90,6 +98,8 @@ export default async function AccountPage() {
   if (!user) {
     redirect("/login?next=/account");
   }
+
+  const testflightLink = process.env.TESTFLIGHT_PUBLIC_LINK;
 
   const { data: profileRow } = await supabase
     .from("profiles")
@@ -147,6 +157,38 @@ export default async function AccountPage() {
         <div className="account-inner">
           <h1 className="account-headline">Hi {firstName}.</h1>
           <p className="account-sub">Manage your subscription and account.</p>
+
+          {/* Affiliate-Welcome-Banner (zeigt nur direkt nach Sign-Up via /a/[slug]) */}
+          {isAffiliateWelcome && testflightLink && (
+            <section
+              className="account-card"
+              style={{
+                borderColor: "rgba(37,99,232,0.3)",
+                background:
+                  "linear-gradient(180deg, rgba(37,99,232,0.06) 0%, rgba(255,255,255,1) 100%)",
+              }}
+            >
+              <h2 className="account-card-title">You&apos;re in.</h2>
+              <p className="account-body">
+                One step left: install Callday from TestFlight, then sign in
+                with the same email on your iPhone.
+              </p>
+              <a
+                href={testflightLink}
+                className="account-btn account-btn-primary"
+              >
+                Open TestFlight
+              </a>
+              <p className="account-hint">
+                Didn&apos;t get the email?{" "}
+                {profile.email ? (
+                  <ResendTestFlightButton email={profile.email} />
+                ) : (
+                  "Email missing on your profile — contact hello@callday.io."
+                )}
+              </p>
+            </section>
+          )}
 
           {/* Subscription Section */}
           <section className="account-card">
@@ -299,15 +341,30 @@ export default async function AccountPage() {
             <h2 className="account-card-title">Callday on iPhone</h2>
             <p className="account-body">
               Open Callday on your iPhone and sign in with the same email.
-              Your subscription is already active.
+              {hasActiveSubscription && " Your subscription is already active."}
             </p>
-            {/* TODO: replace with real App Store URL once approved */}
-            <a
-              href="https://apps.apple.com/"
-              className="account-btn account-btn-secondary"
-            >
-              Open App Store
-            </a>
+            {testflightLink ? (
+              <a
+                href={testflightLink}
+                className="account-btn account-btn-secondary"
+              >
+                Open TestFlight
+              </a>
+            ) : (
+              /* Fallback wenn ENV-Var fehlt — sollte nie produktiv passieren */
+              <a
+                href="https://apps.apple.com/"
+                className="account-btn account-btn-secondary"
+              >
+                Open App Store
+              </a>
+            )}
+            {profile.email && !isAffiliateWelcome && (
+              <p className="account-hint">
+                Need the install email again?{" "}
+                <ResendTestFlightButton email={profile.email} />
+              </p>
+            )}
           </section>
 
           <form action={signOutAction}>
