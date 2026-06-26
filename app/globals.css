@@ -1532,9 +1532,14 @@ h2 .italic {
 .beta-submit:active:not(:disabled) {
   transform: translateY(0);
 }
-/* Submit-Status während des POST. Visuell volle CTA-Stärke beibehalten —
-   die "Sending..."-Beschriftung trägt das Feedback. */
+/* Disabled-Default: "kannst nicht klicken" (Validation, fehlende Eingabe). */
 .beta-submit:disabled {
+  cursor: not-allowed;
+}
+/* Submit-Status während des POST. Visuell volle CTA-Stärke beibehalten —
+   die "Sending..."-Beschriftung trägt das Feedback. aria-busy=true wird
+   im Form auf dem Submit-Button gesetzt waehrend status="submitting". */
+.beta-submit[aria-busy="true"] {
   cursor: wait;
 }
 .beta-submit-error {

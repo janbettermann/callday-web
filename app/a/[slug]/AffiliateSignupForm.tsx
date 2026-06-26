@@ -280,6 +280,7 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
           <button
             type="submit"
             className="beta-submit"
+            aria-busy={status === "submitting"}
             disabled={code.length !== CODE_LENGTH || status === "submitting"}
           >
             {status === "submitting" ? "Verifying..." : "Confirm account"}
@@ -359,6 +360,7 @@ export function AffiliateSignupForm({ slug, affiliate }: Props) {
         <button
           type="submit"
           className="beta-submit"
+          aria-busy={status === "submitting"}
           disabled={!email || !password || status === "submitting"}
         >
           {status === "submitting" ? "Creating account..." : "Create account"}

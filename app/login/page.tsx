@@ -274,6 +274,7 @@ function LoginForm() {
           <button
             type="submit"
             className="beta-submit"
+            aria-busy={status === "submitting"}
             disabled={code.length !== CODE_LENGTH || status === "submitting"}
           >
             {status === "submitting" ? "Verifying..." : "Sign in"}
@@ -323,6 +324,7 @@ function LoginForm() {
           <button
             type="submit"
             className="beta-submit"
+            aria-busy={status === "submitting"}
             disabled={!email || status === "submitting"}
           >
             {status === "submitting" ? "Sending..." : "Send code"}
@@ -416,6 +418,7 @@ function LoginForm() {
         <button
           type="submit"
           className="beta-submit"
+          aria-busy={status === "submitting"}
           disabled={!email || !password || status === "submitting"}
         >
           {status === "submitting"
