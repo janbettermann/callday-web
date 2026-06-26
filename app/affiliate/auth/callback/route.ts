@@ -10,8 +10,11 @@
  *   - missing token → "Sign-in link is incomplete."
  *   - unknown_token → "Sign-in link is invalid."
  *   - expired      → "Sign-in link expired. Request a new one."
- *   - already_used → "Sign-in link was already used."
  *   - removed      → "Your access was removed. Contact hello@callday.io."
+ *
+ * Tokens sind multi-use innerhalb der TTL — Single-Use-Gate war anfaellig
+ * fuer Mail-Provider-Scanner (Gmail Anti-Phishing, Outlook Defender) die
+ * den Link vor dem User-Klick prefetchen und den Token verbrennen.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -28,7 +31,6 @@ export const runtime = "nodejs";
 const ERROR_MESSAGES: Record<string, string> = {
   unknown_token: "Sign-in link is invalid.",
   expired: "Sign-in link expired. Request a new one below.",
-  already_used: "Sign-in link was already used. Request a new one below.",
   removed:
     "Your access has been removed. Contact hello@callday.io if this is a mistake.",
   db_error: "Something went wrong. Try again in a moment.",

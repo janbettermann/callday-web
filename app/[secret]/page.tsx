@@ -135,33 +135,17 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
       <div className="container" style={{ paddingTop: 48, paddingBottom: 80 }}>
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: 24,
-            marginBottom: 40,
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                fontSize: 42,
-                fontWeight: 700,
-                letterSpacing: "-1.2px",
-                lineHeight: 1.05,
-                margin: 0,
-                color: "var(--ink)",
-              }}
-            >
-              Callday{" "}
-              <span className="italic" style={{ color: "var(--blue-deep)" }}>
-                internals.
-              </span>
-            </h1>
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <header style={{ marginBottom: 40 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 8,
+              alignItems: "center",
+              flexWrap: "wrap",
+              marginBottom: 28,
+            }}
+          >
             <AdminNav current="dashboard" basePath={`/${secret}`} />
             <form action={logoutAction}>
               <button
@@ -182,6 +166,21 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
               </button>
             </form>
           </div>
+          <h1
+            style={{
+              fontSize: 42,
+              fontWeight: 700,
+              letterSpacing: "-1.2px",
+              lineHeight: 1.05,
+              margin: 0,
+              color: "var(--ink)",
+            }}
+          >
+            Callday{" "}
+            <span className="italic" style={{ color: "var(--blue-deep)" }}>
+              internals.
+            </span>
+          </h1>
         </header>
 
         <div style={{ marginBottom: 32 }}>

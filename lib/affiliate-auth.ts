@@ -8,8 +8,14 @@
  *   2. Server-Action gen Token, insert in affiliate_magic_links,
  *      verschickt Magic-Link per Resend
  *   3. Click auf Link → /affiliate/auth/callback?token=…
- *   4. consumeMagicLink prueft Token, markiert used_at, returnt
- *      affiliate_id
+ *   4. consumeMagicLink prueft Token (gueltig bis expires_at),
+ *      aktualisiert used_at (= letzter-Use-Timestamp), returnt
+ *      affiliate_id. Tokens sind multi-use innerhalb der TTL —
+ *      Single-Use wurde aufgeweicht weil Mail-Provider-Scanner
+ *      (Gmail Anti-Phishing, Outlook Defender) den GET vorab fetchen
+ *      und den Token verbrauchen, bevor der User klickt. Reuse-
+ *      Risiko ist niedrig: Dashboard zeigt keine PII, Session-Cookie
+ *      ist eh 30 Tage, TTL der Tokens ist 15 Min / 24h.
  *   5. signAffiliateSession setzt HMAC-signed Cookie mit
  *      affiliate_id + expiry
  *   6. Spaetere Requests prueffen Cookie via verifyAffiliateSession
@@ -87,8 +93,10 @@ export type MagicLinkPurpose = "first_login" | "regular";
  * speichert ihn in affiliate_magic_links. Returnt den Token (vom Caller
  * an die Magic-Link-Mail anzuhaengen).
  *
- * Rate-Limit: max 5 unbenutzte Tokens pro Affiliate pro 1h-Fenster.
- * Verhindert Resend-Spam. Verbrauchte Tokens zaehlen nicht mit.
+ * Rate-Limit: max 5 Token-Issues pro Affiliate pro 1h-Fenster.
+ * Verhindert Resend-Spam. Multi-Use-Tokens zaehlen weiterhin mit,
+ * solange sie im Fenster ausgegeben wurden — der Limit ist auf
+ * Issue-Rate, nicht auf Verbrauch.
  */
 export async function generateMagicLink(input: {
   affiliateId: string;
@@ -99,14 +107,15 @@ export async function generateMagicLink(input: {
 > {
   const sb = getServerSupabase();
 
-  // Rate-Limit-Check: count(*) unbenutzter Tokens in der letzten Stunde.
+  // Rate-Limit-Check: count(*) aller Tokens die im letzten 1h-Fenster
+  // ausgegeben wurden (egal ob schon used_at gesetzt — wir limiten die
+  // Issue-Rate, nicht den Verbrauch).
   const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
   const { count, error: countErr } = await sb
     .from("affiliate_magic_links")
     .select("token", { count: "exact", head: true })
     .eq("affiliate_id", input.affiliateId)
-    .gte("created_at", windowStart)
-    .is("used_at", null);
+    .gte("created_at", windowStart);
 
   if (countErr) {
     console.error("[affiliate-auth] rate-limit count failed", countErr);
@@ -139,18 +148,18 @@ export async function generateMagicLink(input: {
 }
 
 /**
- * Verifyt einen Magic-Link-Token und markiert ihn used_at = now() in
- * einer einzigen Transaktion. Returnt affiliate_id bei Erfolg.
+ * Verifyt einen Magic-Link-Token. Multi-Use innerhalb der TTL — wir
+ * setzen used_at als letzten-Verwendungs-Timestamp, blockieren aber
+ * nicht weitere Klicks. Returnt affiliate_id bei Erfolg.
  *
  * Failure-Modes:
  *   - unknown_token: Token existiert nicht
- *   - expired: Token war abgelaufen
- *   - already_used: used_at war schon gesetzt
+ *   - expired: Token-TTL abgelaufen
  *   - removed: zugehoeriger Affiliate ist status='removed'
  */
 export async function consumeMagicLink(token: string): Promise<
   | { ok: true; affiliateId: string }
-  | { ok: false; error: "unknown_token" | "expired" | "already_used" | "removed" | "db_error" }
+  | { ok: false; error: "unknown_token" | "expired" | "removed" | "db_error" }
 > {
   if (!token || token.length !== 64 || !/^[a-f0-9]+$/.test(token)) {
     return { ok: false, error: "unknown_token" };
@@ -161,7 +170,7 @@ export async function consumeMagicLink(token: string): Promise<
   const { data: row, error } = await sb
     .from("affiliate_magic_links")
     .select(
-      "token, affiliate_id, expires_at, used_at, affiliates!inner(status)",
+      "token, affiliate_id, expires_at, affiliates!inner(status)",
     )
     .eq("token", token)
     .maybeSingle();
@@ -176,11 +185,9 @@ export async function consumeMagicLink(token: string): Promise<
     token: string;
     affiliate_id: string;
     expires_at: string;
-    used_at: string | null;
     affiliates: { status: string };
   };
 
-  if (r.used_at) return { ok: false, error: "already_used" };
   if (new Date(r.expires_at).getTime() < Date.now()) {
     return { ok: false, error: "expired" };
   }
@@ -188,24 +195,16 @@ export async function consumeMagicLink(token: string): Promise<
     return { ok: false, error: "removed" };
   }
 
-  // Atomisch markieren — wir setzen used_at nur wenn es noch null ist,
-  // damit zwei gleichzeitige Clicks nur einer durchgeht.
-  const { data: updated, error: updateErr } = await sb
+  // used_at als letzte-Verwendung-Timestamp setzen (kein single-use-
+  // Gate mehr, siehe Header-Doc). Update-Failure ist nicht fatal — wir
+  // loggen, lassen aber den Login durchgehen.
+  const { error: updateErr } = await sb
     .from("affiliate_magic_links")
     .update({ used_at: new Date().toISOString() })
-    .eq("token", token)
-    .is("used_at", null)
-    .select("token")
-    .maybeSingle();
+    .eq("token", token);
 
   if (updateErr) {
-    console.error("[affiliate-auth] consume update failed", updateErr);
-    return { ok: false, error: "db_error" };
-  }
-  if (!updated) {
-    // Race-condition: jemand hat den Token zwischen Read und Update
-    // verbraucht.
-    return { ok: false, error: "already_used" };
+    console.error("[affiliate-auth] used_at update failed", updateErr);
   }
 
   // last_login_at + (wenn noch null) first_login_at setzen.

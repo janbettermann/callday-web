@@ -108,46 +108,17 @@ export default async function AffiliatesAdminPage({
         style={{ paddingTop: 48, paddingBottom: 80 }}
       >
         {/* === HEADER === */}
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: 24,
-            marginBottom: 48,
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                fontSize: 42,
-                fontWeight: 700,
-                letterSpacing: "-1.2px",
-                lineHeight: 1.05,
-                margin: 0,
-                color: "var(--ink)",
-              }}
-            >
-              Founding{" "}
-              <span className="italic" style={{ color: "var(--blue-deep)" }}>
-                affiliates.
-              </span>
-            </h1>
-            <p
-              style={{
-                marginTop: 10,
-                color: "var(--ink-dim)",
-                fontSize: 15,
-                lineHeight: 1.5,
-                maxWidth: 540,
-              }}
-            >
-              Onboard the cohort, manage status, send welcome mails. Slugs
-              are permanent — bake them into contracts.
-            </p>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <header style={{ marginBottom: 48 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 8,
+              alignItems: "center",
+              flexWrap: "wrap",
+              marginBottom: 28,
+            }}
+          >
             <AdminNav current="affiliates" basePath={`/${secret}`} />
             <form action={logoutAction}>
               <button
@@ -168,6 +139,33 @@ export default async function AffiliatesAdminPage({
               </button>
             </form>
           </div>
+          <h1
+            style={{
+              fontSize: 42,
+              fontWeight: 700,
+              letterSpacing: "-1.2px",
+              lineHeight: 1.05,
+              margin: 0,
+              color: "var(--ink)",
+            }}
+          >
+            Founding{" "}
+            <span className="italic" style={{ color: "var(--blue-deep)" }}>
+              affiliates.
+            </span>
+          </h1>
+          <p
+            style={{
+              marginTop: 10,
+              color: "var(--ink-dim)",
+              fontSize: 15,
+              lineHeight: 1.5,
+              maxWidth: 540,
+            }}
+          >
+            Onboard the cohort, manage status, send welcome mails. Slugs
+            are permanent — bake them into contracts.
+          </p>
         </header>
 
         {/* === TOP-LEVEL STATS === */}
