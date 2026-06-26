@@ -142,14 +142,22 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
             Callday dashboard
           </h1>
         </div>
-        <form action={logoutAction}>
-          <button
-            type="submit"
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/${secret}/affiliates`}
             className="rounded-lg border border-[#1a1d26]/[0.12] bg-white px-3 py-1.5 text-sm text-[#1a1d26]/70 transition hover:bg-[#1a1d26]/5"
           >
-            Sign out
-          </button>
-        </form>
+            Affiliates →
+          </Link>
+          <form action={logoutAction}>
+            <button
+              type="submit"
+              className="rounded-lg border border-[#1a1d26]/[0.12] bg-white px-3 py-1.5 text-sm text-[#1a1d26]/70 transition hover:bg-[#1a1d26]/5"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
       </header>
 
       <ViewTabs current={view} basePath={`/${secret}`} />
