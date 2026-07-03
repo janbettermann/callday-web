@@ -30,6 +30,13 @@
   --bg-page: #ffffff;
   --bg-elevated: #ffffff;
 
+  /* Hintergrundfarbe der MP4-Flow-Animationen (Jitter-Export, in allen
+     Assets identisch, per Pixel-Sample verifiziert 2026-07-03). Container
+     hinter den Videos MUESSEN diese Farbe tragen, sonst blitzt beim
+     Step-Wechsel waehrend des Video-Loads die Containerfarbe durch.
+     Bei neuen Jitter-Exports mit anderem BG: hier nachziehen. */
+  --flow-anim-bg: #e7edf5;
+
   --blue: #4a7af7;
   --blue-deep: #3564e0;
   --blue-soft: #dbe5fc;
@@ -2125,7 +2132,12 @@ h2 .italic {
   max-width: 520px;
   aspect-ratio: 4 / 5;
   margin: 0 auto;
-  background: #faf6ed;
+  /* Matcht den Video-BG (--flow-anim-bg) statt cream: deckt sowohl den
+     Video-Load-Moment als auch die 0.2s-Luecke des sequenziellen
+     Crossfades ab, in der kein .flow-anim sichtbar ist. Alle 3 Steps
+     tragen inzwischen MP4s — der cream Text-Placeholder-Fall existiert
+     auf Desktop nicht mehr. */
+  background: var(--flow-anim-bg);
   border-radius: 24px;
   overflow: hidden;
 }
@@ -2265,6 +2277,9 @@ h2 .italic {
     min-height: 0;
     padding: 0;
     gap: 0;
+    /* Matcht den Video-BG — verhindert den Cream-Flash waehrend das
+       frisch gemountete <video> noch laedt (siehe --flow-anim-bg). */
+    background: var(--flow-anim-bg);
   }
   .flow-card-badge {
     position: absolute;
