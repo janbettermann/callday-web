@@ -17,22 +17,31 @@ type Step = {
    * werden ohne den ganzen Block umzubauen.
    */
   hasAnimation?: boolean;
+  /**
+   * Optionaler Link unter der Copy (Desktop: unter dem Tab, Mobile: unter
+   * dem Karten-Text). Auf Desktop lebt er ausserhalb des Tab-<button>s —
+   * ein <a> im <button> waere invalides HTML.
+   */
+  link?: { label: string; href: string };
 };
 
 const STEPS: Step[] = [
   {
     num: "01",
-    title: "Drop in your list",
-    copy: "CSV or Excel in. Ready in under a minute — no setup, no system to build.",
+    title: "Start with any list",
+    copy: "Drop in any CSV or Excel. Ready in under a minute — no setup, no system to build.",
     badge: "Animation 01",
     label: "Drag & drop import",
     desc: "An Excel file drops into the import zone and becomes a lead list that joins your stack of audiences.",
     hasAnimation: true,
+    // Ziel-Page (/first-list: Guide + Prompt-Generator) existiert noch
+    // nicht — href bleibt bewusst tot, bis die Page steht.
+    link: { label: "Where to get a list", href: "#" },
   },
   {
     num: "02",
     title: "Get into the rhythm",
-    copy: "One lead per card. Tap to call, tap to log — the next lead's already there.",
+    copy: "One lead per card. Tap to call, tap to log, and the next lead's already there.",
     badge: "Animation 02",
     label: "The calling loop",
     desc: "One lead card: tap to call, tap the outcome, the next card slides in. A counter ticks up on every dial.",
@@ -60,22 +69,23 @@ const ROTATE_MS = 10000;
  *
  *   Desktop (>960 px) — `.flow-layout`:
  *     2-column grid. Left column is `.flow-tablist` (3 packed tabs).
- *     Right column is `.flow-stage` (3 dashed-stripe anim placeholders,
- *     absolutely stacked, only the active one opacity:1). Auto-rotates
- *     every 6 s; first user click stops the rotation for the session.
+ *     Right column is `.flow-stage` (3 anim slots, absolutely stacked,
+ *     only the active one opacity:1). Auto-rotates every ROTATE_MS;
+ *     first user click stops the rotation for the session.
  *
  *   Mobile (≤960 px) — `.flow-mobile`:
- *     A single carousel of 3 white cards, each with a cream media area
- *     (badge + placeholder) on top and a text area (title + copy +
- *     pagination dots bottom-left + brand-blue Next button bottom-right)
- *     below. Cards stack in one grid cell; only the active one is
- *     opacity:1. The Next arrow wraps around (3 → 1) — a single-forward
- *     story-carousel pattern, no Back button needed for 3 cards. Auto-
- *     rotate runs every ROTATE_MS until the first user tap.
+ *     A vertical stack of 3 white cards, all visible at once — scroll
+ *     is the only navigation. Kein Karussell mehr (war vorher eins):
+ *     Auto-Advance riss den Leser mitten im Satz zur naechsten Karte,
+ *     und die Card+Dots-Optik weckte eine Swipe-Erwartung, die nie
+ *     implementiert war — beides Verstoesse gegen das Produktprinzip
+ *     "nichts bewegt sich ohne bewussten Tap". Jede Karte spielt ihre
+ *     Animation, solange sie ueberwiegend im Viewport steht
+ *     (eigener IntersectionObserver pro Karte, siehe MobileFlowCard).
  *
  * CSS toggles the two wrappers via `display: none` so only one is
  * laid out at a time. `prefers-reduced-motion: reduce` is respected:
- * no auto-rotate, no crossfade transition.
+ * no auto-rotate, no crossfade, videos stay paused on frame 0.
  */
 export function FlowTabs() {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -83,7 +93,6 @@ export function FlowTabs() {
   const [isInView, setIsInView] = useState(false);
   const reduceMotion = useRef(false);
   const desktopRef = useRef<HTMLDivElement>(null);
-  const mobileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     reduceMotion.current = window.matchMedia(
@@ -92,37 +101,30 @@ export function FlowTabs() {
   }, []);
 
   /**
-   * Spielt Lottie + Auto-Rotation nur ab waehrend der FlowTabs-Bereich
+   * Spielt Animation + Auto-Rotation nur ab waehrend der Desktop-Tree
    * im Viewport sichtbar ist. Verlaesst der User die Sektion, pausiert
-   * alles auf Frame 0; kommt er wieder rein, startet die Carousel-Story
-   * neu bei Step 01 (sofern der User nicht manuell geklickt hat — dann
+   * alles auf Frame 0; kommt er wieder rein, startet die Story neu bei
+   * Step 01 (sofern der User nicht manuell geklickt hat — dann
    * respektieren wir seine Auswahl auch nach Re-Entry).
    *
-   * Wir beobachten beide DOM-Trees (.flow-layout fuer Desktop, .flow-mobile
-   * fuer Mobile). Nur der per CSS sichtbare feuert — der display:none-Tree
-   * intersected nie. Threshold 0.5 = halbe Sektion im Viewport: empirischer
-   * Sweet-Spot, bei dem der Animationsbereich (rechte Spalte auf Desktop,
-   * oberer Card-Bereich auf Mobile) garantiert vollstaendig sichtbar ist
+   * Nur der Desktop-Tree wird beobachtet — auf Mobile ist er
+   * display:none und intersected nie, also bleibt die Rotation dort
+   * automatisch aus. Die Mobile-Karten steuern ihre Sichtbarkeit
+   * selbst (eigener Observer pro Karte in MobileFlowCard). Threshold
+   * 0.5 = halbe Sektion im Viewport: empirischer Sweet-Spot, bei dem
+   * die rechte Animations-Spalte garantiert vollstaendig sichtbar ist
    * bevor wir play druecken. IntersectionObserver feuert in beide
    * Richtungen wenn die Threshold gekreuzt wird, also auch beim
    * Verlassen — kein Disconnect.
    */
   useEffect(() => {
-    const els = [desktopRef.current, mobileRef.current].filter(
-      (el): el is HTMLDivElement => el !== null
-    );
-    if (els.length === 0) return;
+    const el = desktopRef.current;
+    if (!el) return;
     const obs = new IntersectionObserver(
-      (entries) => {
-        // Egal welcher Tree feuert: wenn irgendeiner sichtbar ist,
-        // gilt die Sektion als in-view. Beide gleichzeitig sichtbar
-        // gibt's nicht (display:none auf dem inaktiven).
-        const anyVisible = entries.some((e) => e.isIntersecting);
-        setIsInView(anyVisible);
-      },
+      ([entry]) => setIsInView(entry.isIntersecting),
       { threshold: 0.5 }
     );
-    els.forEach((el) => obs.observe(el));
+    obs.observe(el);
     return () => obs.disconnect();
   }, []);
 
@@ -142,29 +144,6 @@ export function FlowTabs() {
     setActiveIndex(i);
     setUserTookOver(true);
   };
-
-  // Single-forward navigation with wrap: tapping Next on the last card
-  // loops back to the first. Standard story-carousel pattern (iOS, IG,
-  // TikTok) and removes the need for a Back button on a 3-card set.
-  const handleNext = () => {
-    handleSelect((activeIndex + 1) % STEPS.length);
-  };
-
-  // Keyboard fallback for the mobile arrow buttons. We drive the arrows
-  // off `onPointerUp` (most reliable for cross-input — fires on mouse,
-  // touch, and pen) rather than `onClick`, which on iOS Safari is
-  // sometimes synthesized late or dropped entirely for small absolutely
-  // positioned buttons. `onPointerUp` skips the synthesis hop. Trade-off
-  // is that keyboard activation (Enter/Space on the focused button)
-  // wouldn't fire `pointerup`, so we re-add it explicitly here.
-  const handleKey =
-    (action: () => void) =>
-    (e: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        action();
-      }
-    };
 
   return (
     <>
@@ -196,6 +175,15 @@ export function FlowTabs() {
                   </span>
                   <span className="flow-tab-copy">{s.copy}</span>
                 </button>
+                {s.link && (
+                  <a
+                    className="flow-step-link flow-tab-link"
+                    href={s.link.href}
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    {s.link.label}
+                  </a>
+                )}
               </li>
             );
           })}
@@ -234,85 +222,68 @@ export function FlowTabs() {
       </div>
 
       {/* === MOBILE === */}
-      <div
-        className="flow-mobile"
-        ref={mobileRef}
-        role="region"
-        aria-label="Workflow steps"
-        aria-roledescription="carousel"
-      >
-        <div className="flow-cards">
-          {STEPS.map((s, i) => {
-            const active = i === activeIndex;
-            return (
-              <article
-                key={s.num}
-                className="flow-card"
-                data-active={active || undefined}
-                aria-hidden={!active}
-              >
-                <div
-                  className="flow-card-media"
-                  data-has-animation={s.hasAnimation || undefined}
-                >
-                  {s.hasAnimation ? (
-                    <FlowAnimation
-                    stepNum={s.num}
-                    isActive={active && isInView}
-                  />
-                  ) : (
-                    <>
-                      <span className="flow-card-badge">{s.badge}</span>
-                      <span className="flow-card-label">{s.label}</span>
-                      <span className="flow-card-desc">{s.desc}</span>
-                    </>
-                  )}
-                </div>
-                <div className="flow-card-text">
-                  <h3 className="flow-card-title">
-                    <span className="flow-card-step">{Number(s.num)}.</span>{" "}
-                    {s.title}
-                  </h3>
-                  <p className="flow-card-copy">{s.copy}</p>
-                  <div className="flow-card-dots" aria-hidden="true">
-                    {STEPS.map((_, j) => (
-                      <span
-                        key={j}
-                        className="flow-card-dot"
-                        data-active={j === activeIndex || undefined}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-
-        {/* Single Next arrow with wrap-around — lives OUTSIDE the card
-            stack so it never sits under an inactive-but-stacked card.
-            Pinned bottom-right of .flow-mobile. */}
-        <button
-          type="button"
-          className="flow-card-nav flow-card-nav-next"
-          onPointerUp={handleNext}
-          onKeyDown={handleKey(handleNext)}
-          aria-label="Next step"
-        >
-          <svg
-            width={18}
-            height={18}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        </button>
+      <div className="flow-mobile" aria-label="Workflow steps">
+        {STEPS.map((s) => (
+          <MobileFlowCard key={s.num} step={s} />
+        ))}
       </div>
     </>
+  );
+}
+
+/**
+ * Eine Karte im Mobile-Stack. Beobachtet ihre eigene Viewport-
+ * Sichtbarkeit und spielt die Animation nur, waehrend die Karte
+ * ueberwiegend sichtbar ist — beim Rausscrollen pausiert das Video
+ * auf Frame 0 (macht VideoStage), beim Reinscrollen startet die
+ * Story von vorn. Threshold 0.5: die Media-Area sitzt oben in der
+ * Karte und ist bei halber Kartensichtbarkeit bereits komplett im
+ * Viewport, egal aus welcher Scroll-Richtung.
+ */
+function MobileFlowCard({ step }: { step: Step }) {
+  const ref = useRef<HTMLElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { threshold: 0.5 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <article className="flow-card" ref={ref}>
+      <div
+        className="flow-card-media"
+        data-has-animation={step.hasAnimation || undefined}
+      >
+        {step.hasAnimation ? (
+          <FlowAnimation stepNum={step.num} isActive={inView} />
+        ) : (
+          <>
+            <span className="flow-card-badge">{step.badge}</span>
+            <span className="flow-card-label">{step.label}</span>
+            <span className="flow-card-desc">{step.desc}</span>
+          </>
+        )}
+      </div>
+      <div className="flow-card-text">
+        <h3 className="flow-card-title">{step.title}</h3>
+        <p className="flow-card-copy">{step.copy}</p>
+        {step.link && (
+          <a
+            className="flow-step-link"
+            href={step.link.href}
+            onClick={(e) => e.preventDefault()}
+          >
+            {step.link.label}
+          </a>
+        )}
+      </div>
+    </article>
   );
 }

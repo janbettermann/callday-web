@@ -30,6 +30,21 @@ const ITEMS: FaqItem[] = [
     ),
   },
   {
+    q: "Where do I get a lead list?",
+    a: (
+      <>
+        <p>
+          Any CSV or Excel file works. The three fastest ways: scrape
+          Google Maps (tools like Outscraper export ready-to-import
+          files), ask Claude to research and build a list for your
+          niche, or buy one from a data provider for a few cents per
+          lead.
+        </p>
+        <p>Drop it into Callday and you&apos;re dialing a minute later.</p>
+      </>
+    ),
+  },
+  {
     q: "How does TestFlight work?",
     a: (
       <p>

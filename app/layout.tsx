@@ -35,10 +35,10 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   // Colors the iOS Safari browser chrome (URL bar, status-bar zone on
   // non-notched devices) and the Android Chrome system status bar.
-  // Defaults to the hero's dark navy — SiteNav.tsx mutates this meta
-  // tag at runtime when the user scrolls past the hero so the chrome
-  // tint stays matched to the visible page state.
-  themeColor: "#0d0f14",
+  // Hell seit dem Light-Hero (2026-07-04) — SiteNav.tsx mutiert die
+  // Meta zur Laufzeit nur noch, wenn ein dunkler Hero (ohne
+  // .hero-light) im Viewport ist.
+  themeColor: "#faf9f5",
 };
 
 // Force-dynamic an der Root-Layout-Wurzel.

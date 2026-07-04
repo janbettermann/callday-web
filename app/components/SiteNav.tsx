@@ -33,6 +33,11 @@ export function SiteNav() {
       'meta[name="theme-color"]'
     );
 
+    // Bei einem Light-Hero (.hero-light) ist die Chrome-Tint immer
+    // hell — nur der dunkle Hero braucht den dark→light-Flip der
+    // theme-color beim Scrollen.
+    const heroIsLight = hero?.classList.contains("hero-light") ?? true;
+
     // Helper: flip data-scrolled on the nav AND theme-color on the
     // meta tag atomically, then update React state. Doing this from
     // inside the scroll event handler (instead of via a
@@ -49,7 +54,7 @@ export function SiteNav() {
       }
       themeMeta?.setAttribute(
         "content",
-        newScrolled ? "#faf9f5" : "#0d0f14"
+        newScrolled || heroIsLight ? "#faf9f5" : "#0d0f14"
       );
       setScrolled(newScrolled);
     };

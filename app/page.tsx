@@ -16,7 +16,7 @@ export default function Home() {
       {/* === HERO — compact, mobile-first, no device mockup ===
           The product visual now lives in the animated 3-step flow directly
           below, so the hero stays small and gets the visitor scrolling fast. */}
-      <section className="hero">
+      <section className="hero hero-light">
         <div className="container hero-inner">
           <div className="pill reveal">
             <span className="pill-dot" />
@@ -37,19 +37,6 @@ export default function Home() {
           <div className="hero-cta-wrap reveal delay-3">
             <a href="#beta" className="hero-cta">
               Get early access
-              <svg
-                width={14}
-                height={14}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1={5} y1={12} x2={19} y2={12} />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
             </a>
             <p className="hero-cta-meta">
               Start calling today. Free iOS beta.
@@ -64,7 +51,7 @@ export default function Home() {
         <div className="container">
           <header className="flow-section-head">
             <h2>
-              Take the <span className="italic">friction</span>
+              Take the <span className="accent">friction</span>
               <br /> out of cold calling.
             </h2>
           </header>
@@ -112,7 +99,7 @@ export default function Home() {
       <section className="features">
         <div className="container">
           <h2>
-            Built to fight the <span className="italic">flinch</span>.
+            Built to fight the <span className="accent">flinch</span>.
           </h2>
           <p className="section-sub">
             Every detail closes a gap where focus usually dies.
@@ -225,7 +212,7 @@ export default function Home() {
       <section className="big-cta" id="beta">
         <div className="container big-cta-inner">
           <h2>
-            Get <span className="italic">early access.</span>
+            Get <span className="accent">early access.</span>
           </h2>
 
           <div className="form-card">
@@ -242,7 +229,7 @@ export default function Home() {
       <section className="faq" aria-label="Common questions">
         <div className="container faq-inner">
           <h2 className="faq-heading">
-            Common <span className="italic">questions.</span>
+            Common <span className="accent">questions.</span>
           </h2>
           <FaqAccordion />
         </div>

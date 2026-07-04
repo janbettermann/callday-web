@@ -86,21 +86,21 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Always dark — the notch / status-bar zone needs a static color
-     that doesn't transition, since the on-scroll dark→cream toggle
-     was causing the safe-area zone to render as transparent for at
-     least one device (user-confirmed: diagnostic bands worked, body
-     bg toggle did not). */
-  background: #0d0f14;
+  /* STATISCHE Farbe fuer die Notch-/Status-Bar-Zone — niemals per
+     Scroll togglen: der on-scroll dark→cream Toggle liess die
+     Safe-Area-Zone auf mindestens einem Geraet transparent rendern
+     (user-confirmed: diagnostic bands worked, body bg toggle did
+     not). Seit dem Light-Hero (2026-07-04) ist der statische Wert
+     hell statt navy; der Fix-Mechanismus (statisch!) bleibt. */
+  background: #faf9f5;
 }
 
 body {
   font-family: var(--font-inter), sans-serif;
-  /* Always dark. Matches the html bg and the static theme-color so
-     the notch / status-bar zone is consistently dark regardless of
-     scroll position. Post-hero sections set their own cream bg
-     below so the page content beneath the hero is still readable. */
-  background: #0d0f14;
+  /* Statisch hell — matcht html bg und die theme-color-Meta, damit
+     die Notch-Zone konsistent ist, egal wo der User scrollt. Die
+     Sektionen setzen weiterhin ihre eigenen Backgrounds. */
+  background: #faf9f5;
   color: var(--ink);
   overflow-x: hidden;
   line-height: 1.5;
@@ -323,7 +323,6 @@ body::before {
   gap: 8px;
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(8px);
-  border: 0.5px solid rgba(74, 122, 247, 0.22);
   padding: 7px 14px 7px 12px;
   border-radius: 100px;
   font-size: 12px;
@@ -356,7 +355,7 @@ body::before {
 
 h1 {
   font-family: var(--font-geist-sans), sans-serif;
-  font-weight: 700;
+  font-weight: 600;
   font-size: clamp(48px, 6vw, 76px);
   line-height: 1;
   letter-spacing: -3px;
@@ -395,18 +394,10 @@ h1 .accent {
   font-family: inherit;
   text-decoration: none;
   letter-spacing: -0.1px;
-  box-shadow:
-    0 8px 24px rgba(74, 122, 247, 0.36),
-    0 2px 6px rgba(74, 122, 247, 0.18);
-  transition:
-    transform 0.15s,
-    box-shadow 0.2s;
+  transition: transform 0.15s;
 }
 .hero-cta:hover {
   transform: translateY(-1px);
-  box-shadow:
-    0 12px 32px rgba(74, 122, 247, 0.46),
-    0 2px 6px rgba(74, 122, 247, 0.22);
 }
 .hero-cta:active {
   transform: translateY(0);
@@ -431,7 +422,6 @@ h1 .accent {
 }
 .hero .pill {
   background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(122, 162, 255, 0.28);
   color: #c9d6ff;
   box-shadow: 0 2px 18px rgba(74, 122, 247, 0.16);
 }
@@ -452,6 +442,80 @@ h1 .accent {
   font-size: 13px;
   color: rgba(233, 236, 244, 0.5);
   letter-spacing: 0.1px;
+}
+
+/* === LIGHT-HERO VARIANTE (Experiment 2026-07-04) ===
+   Additiver Block: `.hero-light` auf der Hero-Section schaltet Hero +
+   Nav auf hell, ohne die Dark-Styles anzufassen — Klasse entfernen =
+   zurueck zu Dark. Faellt die Entscheidung fuer Light, diesen Block
+   mit den Dark-Overrides oben konsolidieren (dann sind die
+   .hero-Scoped-Dark-Regeln tot).
+   Die Nav haengt via body:has() mit dran: ohne .hero-light-Section
+   greift weiter das dunkle Initial-Styling. html/body/theme-color sind
+   inzwischen ebenfalls statisch hell (siehe Kommentar am body) — bei
+   einem Dark-Revert muessen die drei mit zurueckgestellt werden. */
+.hero.hero-light {
+  background:
+    radial-gradient(
+      120% 92% at 50% -18%,
+      rgba(74, 122, 247, 0.18) 0%,
+      rgba(74, 122, 247, 0.05) 38%,
+      transparent 64%
+    ),
+    radial-gradient(
+      92% 70% at 50% 120%,
+      rgba(251, 191, 36, 0.1) 0%,
+      transparent 55%
+    ),
+    linear-gradient(180deg, #eef2fb 0%, #f7f7f3 60%, #faf9f5 100%);
+  /* Dezenter Abschluss zur Flow-Section — im Light-Verlauf gibt es
+     keinen Farbbruch mehr, der die Sektionen trennt. */
+  border-bottom: 0.5px solid var(--line);
+}
+.hero.hero-light::after {
+  background: radial-gradient(
+    58% 42% at 50% 6%,
+    rgba(122, 162, 255, 0.1),
+    transparent 70%
+  );
+}
+.hero.hero-light .pill {
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--blue-deep);
+  box-shadow: 0 2px 12px rgba(74, 122, 247, 0.08);
+}
+.hero.hero-light h1 {
+  color: var(--ink);
+}
+.hero.hero-light h1 .accent {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hero.hero-light .hero-sub {
+  color: var(--ink-dim);
+}
+.hero.hero-light .hero-cta-meta {
+  color: var(--ink-faint);
+}
+/* Nav im Top-Zustand hell, sobald die Seite einen Light-Hero hat —
+   identische Werte wie der data-scrolled-Zustand, damit es beim
+   Scrollen keinen sichtbaren Umschlag mehr gibt. */
+body:has(.hero-light) .site-nav {
+  background: #faf9f5;
+  border-bottom-color: var(--line);
+}
+body:has(.hero-light) .site-nav .logo {
+  color: var(--ink);
+}
+body:has(.hero-light) .site-nav .nav-cta {
+  background: #ffffff;
+  color: var(--ink);
+  border: 0.5px solid var(--line-strong);
+}
+body:has(.hero-light) .site-nav .nav-cta:hover {
+  background: rgba(255, 255, 255, 0.85);
 }
 
 /* === STATS BLOCK === */
@@ -985,17 +1049,19 @@ h1 .accent {
   position: relative;
   border-radius: 24px;
   padding: 56px 48px;
+  /* Helle Karte im Stil der .flow-layout-Card — seit dem Light-Hero
+     (2026-07-04) gibt es keinen dunklen Hero mehr, dessen Navy dieser
+     Block als Bookend spiegeln koennte. Der blaue Radial oben bleibt
+     als dezentes Echo des Hero-Spotlights. */
   background:
     radial-gradient(
       100% 100% at 50% 0%,
-      rgba(74, 122, 247, 0.16) 0%,
+      rgba(74, 122, 247, 0.08) 0%,
       transparent 60%
     ),
-    linear-gradient(180deg, #0d0f14 0%, #111319 100%);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow:
-    0 18px 48px rgba(8, 10, 20, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
 }
 .stats-row {
   display: flex;
@@ -1010,21 +1076,21 @@ h1 .accent {
 }
 .stat-divider {
   width: 0.5px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(26, 29, 38, 0.1);
   align-self: stretch;
 }
 .stat-num {
   font-family: var(--font-geist-sans), sans-serif;
   font-size: 56px;
   font-weight: 700;
-  color: #f7f8fb;
+  color: var(--ink);
   letter-spacing: -2.5px;
   line-height: 1;
   margin-bottom: 18px;
 }
 .stat-num .unit {
   font-size: 56px;
-  background: linear-gradient(135deg, #8fb0ff 0%, #5b8af5 100%);
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1034,7 +1100,7 @@ h1 .accent {
 }
 .stat-label {
   font-size: 15px;
-  color: rgba(233, 236, 244, 0.6);
+  color: var(--ink-dim);
   line-height: 1.5;
   max-width: 240px;
   margin: 0 auto;
@@ -1063,14 +1129,12 @@ h2 {
   max-width: 720px;
   color: var(--ink);
 }
-h2 .italic {
+h2 .accent {
   background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 600;
-  /* room for the italic slant so background-clip doesn't cut the last glyph */
-  padding-right: 0.08em;
 }
 .section-sub {
   font-size: 18px;
@@ -1082,6 +1146,14 @@ h2 .italic {
 .section-sub strong {
   color: var(--ink);
   font-weight: 600;
+}
+/* Features-Head zentriert wie alle anderen Section-Heads; die
+   max-width-Blöcke (h2 720px, sub 580px) brauchen dafür auto-Margins. */
+.features h2,
+.features .section-sub {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
 }
 
 .feature-grid {
@@ -1883,7 +1955,7 @@ h2 .italic {
   gap: 8px;
   margin: 0 0 28px;
   font-size: 13px;
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
 }
 .lang-toggle-item {
   display: inline-flex;
@@ -1938,7 +2010,7 @@ h2 .italic {
 
 @media (max-width: 600px) {
   .container {
-    padding: 0 30px;
+    padding: 0 20px;
   }
   .features,
   .how-section,
@@ -2016,23 +2088,24 @@ h2 .italic {
      Auto-rotates every 6 s; first user click stops the rotation.
 
    Mobile (≤960 px) — `.flow-mobile` only:
-     A single carousel — `.flow-cards` is a grid-stack of 3
-     `.flow-card`s (white card with cream `.flow-card-media` on top +
-     white `.flow-card-text` below). All cards share one grid cell;
-     only the active one is opacity:1. Arrow buttons inside the media
-     area switch the active card; they clamp at the edges. Auto-rotate
-     still wraps until the first user tap. */
+     A vertical stack of 3 `.flow-card`s (white card with
+     `.flow-card-media` on top + white `.flow-card-text` below), all
+     visible at once — scroll is the only navigation. Jede Karte spielt
+     ihre Animation nur waehrend sie ueberwiegend im Viewport steht
+     (IntersectionObserver pro Karte, siehe MobileFlowCard in
+     FlowTabs.tsx). */
 
 .flow {
   padding: 72px 0 100px;
   position: relative;
 }
 
-/* Section heading sits in its own row above the card, aligned to the
-   container's left edge. */
+/* Section heading sits in its own row above the card, centered like
+   the other section heads (hero, big-cta, faq). */
 .flow-section-head {
   max-width: 720px;
-  margin: 0 0 56px;
+  margin: 0 auto 56px;
+  text-align: center;
 }
 .flow-section-head h2 {
   margin: 0 0 16px;
@@ -2122,6 +2195,23 @@ h2 .italic {
   padding-left: 62px;
   margin: 0;
 }
+/* Optionaler Step-Link (z.B. "Best ways to get a list" unter Step 01).
+   Blau wie die Accent-Woerter, dezent, Hover-Unterstreichung. */
+.flow-step-link {
+  display: inline-block;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--blue-deep);
+  text-decoration: none;
+}
+.flow-step-link:hover {
+  text-decoration: underline;
+}
+/* Desktop: Link lebt ausserhalb des Tab-Buttons — auf den Copy-Text
+   einruecken (3px Tab-Border + 20px Button-Padding + 62px Copy-Einzug). */
+.flow-tab-link {
+  margin: 6px 20px 0 85px;
+}
 
 /* --- Right column: cream sub-card holding the animation placeholders.
    Sits inside the outer white card; later this is where the iPhone
@@ -2201,38 +2291,26 @@ h2 .italic {
   line-height: 1.45;
 }
 
-/* === Mobile carousel — separate DOM tree, hidden on desktop. === */
+/* === Mobile stack — separate DOM tree, hidden on desktop. === */
 .flow-mobile {
   display: none;
 }
 
 @media (max-width: 960px) {
-  /* Swap which tree is laid out — desktop grid out, mobile carousel in. */
+  /* Swap which tree is laid out — desktop grid out, mobile stack in. */
   .flow-layout {
     display: none;
   }
   .flow-mobile {
-    display: block;
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
     width: 100%;
     max-width: 440px;
     margin: 40px auto 0;
   }
 
-  /* Grid-stack: all 3 cards share one cell; tallest sets the height.
-     Only the active one is z-index:2 — sie liegt mit solidem weissem
-     Background ueber den anderen und deckt sie komplett ab, sodass
-     beim Step-Wechsel kein Doppel-Bild von Titel/Lottie sichtbar wird.
-     Since every card has the same structure (media + text) heights
-     match — no jump on switch. */
-  .flow-cards {
-    position: relative;
-    display: grid;
-    grid-template-areas: "stack";
-    width: 100%;
-  }
   .flow-card {
-    grid-area: stack;
     display: flex;
     flex-direction: column;
     background: #fff;
@@ -2240,18 +2318,6 @@ h2 .italic {
     border-radius: 24px;
     box-shadow: 0 2px 8px rgba(8, 10, 20, 0.04);
     overflow: hidden;
-    /* KEIN opacity-Fade auf der Card-Ebene — sonst flackert sie
-       wahrnehmbar durch 0 oder ueberlagert in Mitte sichtbar mit
-       Doppel-Titel-/Doppel-Lottie-Bild. Stattdessen z-index-Swap: die
-       aktive Card liegt mit solidem weissen Background ueber den
-       anderen und deckt sie komplett ab. Wechsel ist optisch instant
-       und sauber. */
-    z-index: 1;
-    pointer-events: none;
-  }
-  .flow-card[data-active] {
-    z-index: 2;
-    pointer-events: auto;
   }
 
   /* Media area: cream background, centered placeholder content,
@@ -2309,78 +2375,12 @@ h2 .italic {
     line-height: 1.45;
   }
 
-  /* Arrow buttons — siblings of .flow-cards inside the relative
-     .flow-mobile, so they're never under an opacity:0 stacked card.
-     Pinned to the bottom-right of the carousel as a pair, sitting on
-     the same Y-line as the pagination dots (which live bottom-left
-     inside the text area). The text area reserves padding-bottom: 70px
-     so neither the dots nor the arrows ever collide with the copy.
-
-     iOS touch-routing notes:
-       - `touch-action: manipulation` disables the 300ms double-tap
-         delay that otherwise swallows quick taps on small targets.
-       - The SVG child gets `pointer-events: none` so a tap on the
-         chevron line bubbles straight to the button — without this,
-         iOS sometimes treats the SVG as the tap target and the click
-         handler on the button doesn't fire.
-       - 44×44 hits Apple HIG minimum tap-target size. */
-  .flow-card-nav {
-    position: absolute;
-    bottom: 22px;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    border-radius: 14px;
-    border: none;
-    /* Brand-blue CTA-style buttons — matches the .hero-cta gradient,
-       gives the carousel controls clear discoverability so first-time
-       visitors notice that the section has multiple cards. */
-    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 3;
-    /* Explicit property list (NOT `all`) so `transform` is excluded —
-       the :active scale should be instant, not eased over 150ms. */
-    transition:
-      filter 0.15s ease,
-      opacity 0.15s ease;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .flow-card-nav svg {
-    pointer-events: none;
-  }
-  /* Hover state guarded behind `hover: hover` so iOS doesn't latch the
-     sticky-hover (post-tap hover stays glued to the button until the
-     user taps elsewhere — very visible with a brand-color background). */
-  @media (hover: hover) {
-    .flow-card-nav:hover:not(:disabled) {
-      filter: brightness(1.08);
-    }
-  }
-  .flow-card-nav:active:not(:disabled) {
-    transform: scale(0.94);
-  }
-  .flow-card-nav:disabled {
-    opacity: 0.4;
-    cursor: default;
-    pointer-events: none;
-  }
-  .flow-card-nav-next { right: 22px; }
-
-  /* Text area: title + copy + absolutely-positioned pagination dots.
-     The dots are pinned to the card bottom-left via `position: absolute`
-     instead of riding in the normal flow under the copy — that way the
-     dots' Y stays fixed regardless of how many lines the copy wraps to.
-     The extra bottom padding (56px) reserves the dot strip's footprint
-     so the copy text never overlaps it. */
+  /* Text area: title + copy. Kein Dots-/Nav-Footprint mehr — die
+     Karten stehen alle sichtbar untereinander, es gibt nichts mehr zu
+     paginieren. */
   .flow-card-text {
-    position: relative;
     flex: 1;
-    padding: 22px 22px 88px;
+    padding: 22px 22px 26px;
     background: #fff;
   }
   .flow-card-title {
@@ -2396,39 +2396,17 @@ h2 .italic {
     font-size: 15px;
     color: var(--ink-dim);
     line-height: 1.5;
-    /* No bottom margin — dots and Next button are absolutely positioned,
-       not in flow, so the copy doesn't need to push them down. The 22px
-       gap between copy and button comes from the text area's
-       padding-bottom: 88px minus the button's top offset (22 + 44 = 66). */
     margin: 0;
   }
-  .flow-card-dots {
-    position: absolute;
-    left: 22px;
-    /* Same 22px inset as the Next button (and as the text padding) —
-       both UI clusters are bottom-anchored to the card edge rather than
-       center-aligned to each other. Reads as one ground-line, not as
-       dots floating to match the button's mid-point. */
-    bottom: 22px;
-    display: flex;
-    gap: 7px;
-  }
-  .flow-card-dot {
-    width: 14px;
-    height: 6px;
-    border-radius: 2px;
-    background: var(--ink-mute);
-    transition: background 0.2s ease;
-  }
-  .flow-card-dot[data-active] {
-    background: var(--blue);
+  .flow-card-text .flow-step-link {
+    margin-top: 10px;
   }
 
-  /* Heading aligns left of the carousel on mobile (matches body copy). */
+  /* Heading stays centered on mobile, only the spacing tightens. */
   .flow-section-head {
     max-width: none;
     margin: 0 0 40px;
-    text-align: left;
+    text-align: center;
   }
   .flow-section-head h2,
   .flow-section-head .section-sub {
@@ -2442,10 +2420,7 @@ h2 .italic {
   .flow-tab-num,
   .flow-tab-title,
   .flow-tab-copy,
-  .flow-anim,
-  .flow-card,
-  .flow-card-dot,
-  .flow-card-nav {
+  .flow-anim {
     transition: none;
   }
 }
