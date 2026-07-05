@@ -2071,12 +2071,13 @@ h2 .accent {
 }
 /* Aktiv-Box (Hintergrund + Border) lebt auf dem <li>, nicht dem
    <button> — so sitzt der optionale Step-Link (der aus HTML-Gruenden
-   ausserhalb des Buttons lebt) MIT im blaeulichen Kasten. Border 5px
-   + Radius 14px: Jan-Design 2026-07-05. */
+   ausserhalb des Buttons lebt) MIT im blaeulichen Kasten. Border 5px,
+   Radius nur rechts — links bleibt die blaue Bar gerade/eckig
+   (Jan-Design 2026-07-05). */
 .flow-tab-item {
   width: 100%;
   border-left: 5px solid transparent;
-  border-radius: 14px;
+  border-radius: 0 14px 14px 0;
   transition:
     border-color 0.25s ease,
     background-color 0.2s ease;
