@@ -368,7 +368,7 @@ export function SignupForm({ slug }: Props) {
           disabled={status === "submitting"}
         >
           <AppleIcon />
-          <span>Continue with Apple</span>
+          <span>Sign up with Apple</span>
         </button>
         <button
           type="button"
@@ -377,7 +377,7 @@ export function SignupForm({ slug }: Props) {
           disabled={status === "submitting"}
         >
           <GoogleIcon />
-          <span>Continue with Google</span>
+          <span>Sign up with Google</span>
         </button>
       </div>
 
@@ -417,7 +417,7 @@ export function SignupForm({ slug }: Props) {
 
         <button
           type="submit"
-          className="beta-submit beta-submit-quiet"
+          className="beta-submit"
           aria-busy={status === "submitting"}
           disabled={status === "submitting"}
         >

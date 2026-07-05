@@ -543,9 +543,17 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
 }
 
 /* === LOGIN PAGE === */
+/* Auth-/Sign-up-Card — Card-Chrome ist der Default fuer alle
+   Einsatzorte (Landing-#beta, /a/[slug], /login, /affiliate/login),
+   Look analog .feature-card / .faq-list. */
 .login-card {
   max-width: 420px;
   width: 100%;
+  background: var(--bg-page);
+  border: 0.5px solid var(--line);
+  border-radius: 24px;
+  padding: 36px 32px 30px;
+  box-shadow: 0 4px 16px rgba(26, 29, 38, 0.04);
 }
 .login-headline {
   font-family: var(--font-geist-sans), sans-serif;
@@ -1465,17 +1473,6 @@ h2 .accent {
   margin: 0 0 24px;
 }
 
-/* Card-Chrome nur im Landing-Kontext (.big-cta auf organic + /a/[slug]) —
-   /login rendert dieselbe .login-card bewusst ohne Card, dort ist die
-   ganze Seite das Formular. Look analog .feature-card / .faq-list. */
-.big-cta .login-card {
-  background: var(--bg-page);
-  border: 0.5px solid var(--line);
-  border-radius: 24px;
-  padding: 36px 32px 30px;
-  box-shadow: 0 4px 16px rgba(26, 29, 38, 0.04);
-}
-
 .beta-form {
   text-align: left;
   display: flex;
@@ -1518,6 +1515,10 @@ h2 .accent {
   border-color: rgba(74, 122, 247, 0.5);
   box-shadow: 0 0 0 3px rgba(74, 122, 247, 0.14);
 }
+/* Bewusst ohne Glow-Shadow (Design-Entscheidung 2026-07-05): auf den
+   Auth-Cards lesen sich Apple/Google/Email als gleichwertige Methoden,
+   der Glow erklaerte den Email-Pfad faelschlich zum Hauptweg. Der
+   Glow bleibt Hero-CTAs vorbehalten. */
 .beta-submit {
   margin-top: 8px;
   background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
@@ -1531,18 +1532,11 @@ h2 .accent {
   cursor: pointer;
   transition:
     transform 0.15s,
-    box-shadow 0.2s,
     opacity 0.2s;
   letter-spacing: -0.1px;
-  box-shadow:
-    0 8px 24px rgba(74, 122, 247, 0.36),
-    0 2px 6px rgba(74, 122, 247, 0.18);
 }
 .beta-submit:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow:
-    0 12px 32px rgba(74, 122, 247, 0.46),
-    0 2px 6px rgba(74, 122, 247, 0.22);
 }
 .beta-submit:active:not(:disabled) {
   transform: translateY(0);
@@ -1556,21 +1550,6 @@ h2 .accent {
    im Form auf dem Submit-Button gesetzt waehrend status="submitting". */
 .beta-submit[aria-busy="true"] {
   cursor: wait;
-}
-/* Leise Variante fuer den Email-Submit im Sign-up-Modus: dort sind
-   Apple/Google der gewollte Primaerpfad, der Gradient+Glow wuerde die
-   Hierarchie umdrehen (Notion/Linear-Pattern: OAuth laut, Email leise).
-   Der OTP-Schritt behaelt bewusst den vollen .beta-submit — da ist der
-   Button die einzige Aktion auf dem Screen. */
-.beta-submit-quiet {
-  background: var(--blue-soft);
-  color: var(--blue-deep);
-  box-shadow: none;
-}
-.beta-submit-quiet:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background: #cfddfb;
-  box-shadow: none;
 }
 .beta-submit-error {
   text-align: center;
@@ -1977,7 +1956,7 @@ h2 .accent {
     padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 32px) 20px
       80px;
   }
-  .big-cta .login-card {
+  .login-card {
     padding: 28px 20px 24px;
     border-radius: 20px;
   }
