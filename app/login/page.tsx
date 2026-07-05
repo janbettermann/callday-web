@@ -24,7 +24,7 @@ function useAffiliateCookieCleanup() {
 }
 
 /**
- * /login — Sign-In + Sign-Up Page mit drei Auth-Methoden:
+ * /login — Sign-In Page mit drei Auth-Methoden:
  *   1. Apple (OAuth via Supabase)
  *   2. Google (OAuth via Supabase)
  *   3. Email + Password (Default) — Fallback "Email me a code" → OTP-Flow
@@ -34,9 +34,17 @@ function useAffiliateCookieCleanup() {
  *
  * Mode-State steuert welche Form sichtbar ist:
  *   - signin       : Email + Password (Default)
- *   - signup       : Email + Password (mit signUp() statt signIn)
  *   - otp-email    : Email-only, sendet 8-stelligen Code
  *   - otp-code     : Code-Input (8 Ziffern)
+ *
+ * KEIN Sign-Up-Modus mehr (entfernt 2026-07-05): Sign-up laeuft in der
+ * Beta ausschliesslich ueber die SignupForm auf der Landing (/#beta) —
+ * nur dort haengt die TestFlight-Mail-Logik dran; der /login-Sign-Up
+ * war eine Sackgasse ohne Invite-Mail und zeigte veraltete Trial-Copy
+ * (Pre-Launch-Regel: keine Preis-Kommunikation). Der "New to Callday?"-
+ * Link unten fuehrt zur Landing-Card. Beim Launch-Cutover braucht das
+ * Checkout-Auth-Gate (?mode=signup, lebt auf launch-prep) wieder einen
+ * Sign-Up-Einstieg — dann bewusst neu entscheiden.
  *
  * Reset-Password gibt's nicht als eigenen Flow — Forgot-Password leitet
  * zum OTP-Mode, da der User sich damit auch ohne Passwort einloggen kann.
@@ -53,7 +61,7 @@ function useAffiliateCookieCleanup() {
 
 const CODE_LENGTH = 8;
 
-type Mode = "signin" | "signup" | "otp-email" | "otp-code";
+type Mode = "signin" | "otp-email" | "otp-code";
 type Status = "idle" | "submitting" | "error";
 
 /**
@@ -98,15 +106,10 @@ function LoginForm() {
   const next = searchParams.get("next") || "/";
   const presetEmail = searchParams.get("email") || "";
   const initialError = searchParams.get("error");
-  // ?mode=signup zeigt direkt die Sign-Up-Variante. Wird vom Checkout-
-  // Auth-Gate gesetzt damit User die vom Pricing-CTA kommen nicht im
-  // Sign-In-Mode landen ("ich hab doch noch keinen Account").
-  const modeParam = searchParams.get("mode");
-  const initialMode: Mode = modeParam === "signup" ? "signup" : "signin";
 
   useAffiliateCookieCleanup();
 
-  const [mode, setMode] = useState<Mode>(initialMode);
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState(presetEmail);
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -157,58 +160,30 @@ function LoginForm() {
     const supabase = createSupabaseBrowser();
     const cleanEmail = email.trim();
 
-    if (mode === "signin") {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password,
-      });
-      if (error) {
-        // Recovery-Pfad: User hat sich registriert aber Confirmation-Code
-        // nie eingegeben. Wir springen direkt in den OTP-Step OHNE neuen
-        // Code zu triggern — sonst rennen wir in Supabase's Rate-Limit
-        // ("can only request this after N seconds") wenn der Original-
-        // Code gerade erst rausging. Der User kann den alten Code
-        // probieren; falls abgelaufen, gibt's den Resend-Button im
-        // OTP-Step der dann nicht mehr rate-limited ist.
-        if (isEmailNotConfirmed(error)) {
-          setStatus("idle");
-          setMode("otp-code");
-          setInfoMessage(
-            `Your email isn't confirmed yet. Enter the ${CODE_LENGTH}-digit code we sent to ${cleanEmail} — or request a new one if it expired.`,
-          );
-          return;
-        }
-        setStatus("error");
-        setErrorMessage(error.message);
-        return;
-      }
-      router.push(next);
-      return;
-    }
-
-    // mode === "signup"
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
       password,
     });
     if (error) {
+      // Recovery-Pfad: User hat sich registriert aber Confirmation-Code
+      // nie eingegeben. Wir springen direkt in den OTP-Step OHNE neuen
+      // Code zu triggern — sonst rennen wir in Supabase's Rate-Limit
+      // ("can only request this after N seconds") wenn der Original-
+      // Code gerade erst rausging. Der User kann den alten Code
+      // probieren; falls abgelaufen, gibt's den Resend-Button im
+      // OTP-Step der dann nicht mehr rate-limited ist.
+      if (isEmailNotConfirmed(error)) {
+        setStatus("idle");
+        setMode("otp-code");
+        setInfoMessage(
+          `Your email isn't confirmed yet. Enter the ${CODE_LENGTH}-digit code we sent to ${cleanEmail} — or request a new one if it expired.`,
+        );
+        return;
+      }
       setStatus("error");
       setErrorMessage(error.message);
       return;
     }
-
-    // Wenn Email-Confirmation aktiv ist, ist session=null und der User
-    // muss einen Code aus der Mail eintippen (Confirm-Signup-Token).
-    if (!data.session) {
-      setStatus("idle");
-      setMode("otp-code");
-      setInfoMessage(
-        `We sent an ${CODE_LENGTH}-digit code to ${cleanEmail}. Enter it to confirm your account.`,
-      );
-      return;
-    }
-
-    // Falls Email-Confirmation deaktiviert ist, sind wir direkt drin.
     router.push(next);
   }
 
@@ -417,19 +392,11 @@ function LoginForm() {
     );
   }
 
-  // === Render: signin / signup ===
-  const isSignUp = mode === "signup";
-
+  // === Render: signin ===
   return (
     <div className="login-card">
-      <h1 className="login-headline">
-        {isSignUp ? "Create your account" : "Sign in to Callday"}
-      </h1>
-      <p className="login-sub">
-        {isSignUp
-          ? "Start your 7-day free trial. No card required."
-          : "Welcome back. Pick a method to continue."}
-      </p>
+      <h1 className="login-headline">Sign in to Callday</h1>
+      <p className="login-sub">Welcome back. Pick a method to continue.</p>
 
       <div className="login-oauth-stack">
         <button
@@ -475,11 +442,10 @@ function LoginForm() {
           <input
             type="password"
             required
-            autoComplete={isSignUp ? "new-password" : "current-password"}
-            minLength={isSignUp ? 8 : undefined}
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder={isSignUp ? "At least 8 characters" : "Your password"}
+            placeholder="Your password"
             disabled={status === "submitting"}
           />
         </label>
@@ -490,13 +456,7 @@ function LoginForm() {
           aria-busy={status === "submitting"}
           disabled={!email || !password || status === "submitting"}
         >
-          {status === "submitting"
-            ? isSignUp
-              ? "Creating account..."
-              : "Signing in..."
-            : isSignUp
-              ? "Create account"
-              : "Sign in"}
+          {status === "submitting" ? "Signing in..." : "Sign in"}
         </button>
 
         {errorMessage && (
@@ -514,47 +474,31 @@ function LoginForm() {
         )}
       </form>
 
-      {!isSignUp && (
-        <div className="login-link-row">
-          <button
-            type="button"
-            className="login-text-link"
-            onClick={() => {
-              switchMode("otp-email");
-              setInfoMessage(
-                "Sign in with a one-time code, then change your password in your account.",
-              );
-            }}
-          >
-            Forgot password?
-          </button>
-        </div>
-      )}
+      <div className="login-link-row">
+        <button
+          type="button"
+          className="login-text-link"
+          onClick={() => {
+            switchMode("otp-email");
+            setInfoMessage(
+              "Sign in with a one-time code, then change your password in your account.",
+            );
+          }}
+        >
+          Forgot password?
+        </button>
+      </div>
 
+      {/* Sign-up lebt auf der Landing (#beta) — nur dort haengt die
+          TestFlight-Mail-Logik dran, siehe Doc-Comment oben. */}
       <div className="login-switch-mode">
-        {isSignUp ? (
-          <>
-            Already have an account?{" "}
-            <button
-              type="button"
-              className="login-text-link login-text-link-strong"
-              onClick={() => switchMode("signin")}
-            >
-              Sign in
-            </button>
-          </>
-        ) : (
-          <>
-            New to Callday?{" "}
-            <button
-              type="button"
-              className="login-text-link login-text-link-strong"
-              onClick={() => switchMode("signup")}
-            >
-              Create an account
-            </button>
-          </>
-        )}
+        New to Callday?{" "}
+        <Link
+          href="/#beta"
+          className="login-text-link login-text-link-strong"
+        >
+          Sign up
+        </Link>
       </div>
     </div>
   );
