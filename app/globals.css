@@ -2069,8 +2069,24 @@ h2 .accent {
   flex-direction: column;
   gap: 8px;
 }
+/* Aktiv-Box (Hintergrund + Border) lebt auf dem <li>, nicht dem
+   <button> — so sitzt der optionale Step-Link (der aus HTML-Gruenden
+   ausserhalb des Buttons lebt) MIT im blaeulichen Kasten. Border 5px
+   + Radius 14px: Jan-Design 2026-07-05. */
 .flow-tab-item {
   width: 100%;
+  border-left: 5px solid transparent;
+  border-radius: 14px;
+  transition:
+    border-color 0.25s ease,
+    background-color 0.2s ease;
+}
+.flow-tab-item:not([data-active]):hover {
+  background-color: rgba(74, 122, 247, 0.03);
+}
+.flow-tab-item[data-active] {
+  border-left-color: var(--blue);
+  background-color: rgba(74, 122, 247, 0.05);
 }
 .flow-tab {
   display: flex;
@@ -2080,21 +2096,10 @@ h2 .accent {
   text-align: left;
   background: transparent;
   border: 0;
-  border-left: 3px solid transparent;
   padding: 16px 20px;
   font-family: inherit;
   cursor: pointer;
   color: var(--ink);
-  transition:
-    border-color 0.25s ease,
-    background-color 0.2s ease;
-}
-.flow-tab:hover {
-  background-color: rgba(74, 122, 247, 0.03);
-}
-.flow-tab-item[data-active] .flow-tab {
-  border-left-color: var(--blue);
-  background-color: rgba(74, 122, 247, 0.05);
 }
 .flow-tab-head {
   display: flex;
@@ -2137,10 +2142,12 @@ h2 .accent {
 .flow-step-link:hover {
   text-decoration: underline;
 }
-/* Desktop: Link lebt ausserhalb des Tab-Buttons — auf den Copy-Text
-   einruecken (3px Tab-Border + 20px Button-Padding + 62px Copy-Einzug). */
+/* Desktop: Link lebt ausserhalb des Tab-Buttons, aber innerhalb der
+   Aktiv-Box auf dem <li> — auf den Copy-Text einruecken (20px
+   Button-Padding + 62px Copy-Einzug; die Border sitzt jetzt am <li>)
+   und unten Luft lassen, damit die Box nicht direkt am Link endet. */
 .flow-tab-link {
-  margin: 6px 20px 0 85px;
+  margin: -2px 20px 16px 82px;
 }
 
 /* --- Right column: cream sub-card holding the animation placeholders.
@@ -2346,6 +2353,7 @@ h2 .accent {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .flow-tab-item,
   .flow-tab,
   .flow-tab-num,
   .flow-tab-title,
