@@ -278,10 +278,11 @@ export function SignupForm({ slug }: Props) {
   }
 
   // === Render: OTP-Code-Step (nach Email/PW Sign-Up) ===
+  // h2 statt h1 — die Landings haben ihr h1 im Hero.
   if (mode === "otp-code") {
     return (
       <div className="login-card">
-        <h1 className="login-headline">Check your inbox.</h1>
+        <h2 className="login-headline">Check your inbox.</h2>
         <p className="login-sub">
           {infoMessage ?? (
             <>
@@ -353,13 +354,19 @@ export function SignupForm({ slug }: Props) {
   }
 
   // === Render: Sign-Up ===
-  // Pill + Headline + Sub bewusst weggelassen — die Page-Hero ueber dem
-  // Form liefert den Pitch (organic Landing wie Affiliate-Landing sind
-  // strukturell identisch). Form bleibt als reine Action-Section.
+  // Headline + Sub leben IN der Card (Jan-Decision 2026-07-05) — macht
+  // sie zur selben self-contained Einheit wie die /login-Card. Die
+  // big-cta-Sections der Landings rendern deshalb kein eigenes h2 mehr.
   // Affiliate-Attribution laeuft komplett im Backend (Trigger / Callback)
   // — Affiliate erscheint nirgendwo auf der Seite (Jan-Decision).
   return (
     <div className="login-card">
+      <h2 className="login-headline">
+        Get <span className="accent">early access.</span>
+      </h2>
+      <p className="login-sub">
+        We send your TestFlight invite the moment you confirm.
+      </p>
       <div className="login-oauth-stack">
         <button
           type="button"

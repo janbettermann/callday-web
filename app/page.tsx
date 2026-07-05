@@ -207,19 +207,10 @@ export default function Home() {
       </section>
 
       {/* === BIG CTA — Account-Sign-Up, identisch zur Affiliate-Landing
-          (/a/[slug]) nur ohne slug. Seit 2026-07-05 vereinheitlicht: Account
-          statt Beta-Bewerbung, TestFlight-Mail nach Email-Bestätigung. === */}
+          (/a/[slug]) nur ohne slug. Headline + Sub leben IN der Card
+          (self-contained wie die /login-Card), daher kein h2 hier. === */}
       <section className="big-cta" id="beta">
         <div className="container big-cta-inner">
-          <h2>
-            Get <span className="accent">early access.</span>
-          </h2>
-          <p
-            className="form-card-subtitle"
-            style={{ textAlign: "center", maxWidth: 520, margin: "0 auto 28px" }}
-          >
-            We send your TestFlight invite the moment you confirm.
-          </p>
           <div style={{ display: "flex", justifyContent: "center" }}>
             <SignupForm />
           </div>

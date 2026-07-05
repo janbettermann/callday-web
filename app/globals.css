@@ -545,9 +545,10 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
 /* === LOGIN PAGE === */
 /* Auth-/Sign-up-Card — Card-Chrome ist der Default fuer alle
    Einsatzorte (Landing-#beta, /a/[slug], /login, /affiliate/login),
-   Look analog .feature-card / .faq-list. */
+   Look analog .feature-card / .faq-list. max-width = 420px Inhalt
+   + 2×32px Padding, damit Felder/Buttons ihre volle Breite behalten. */
 .login-card {
-  max-width: 420px;
+  max-width: 484px;
   width: 100%;
   background: var(--bg-page);
   border: 0.5px solid var(--line);
@@ -1466,13 +1467,6 @@ h2 .accent {
 
 /* === SIGNUP FORM (SignupForm auf Landing + /a/[slug], OTP-Steps in
    /login + /affiliate/login) === */
-.form-card-subtitle {
-  font-size: 14px;
-  color: var(--ink-dim);
-  line-height: 1.5;
-  margin: 0 0 24px;
-}
-
 .beta-form {
   text-align: left;
   display: flex;

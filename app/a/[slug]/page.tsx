@@ -286,19 +286,10 @@ export default async function AffiliateLanding({
       </section>
 
       {/* === BIG CTA — Account-Sign-Up, identisch zur organic Landing bis
-          auf den slug (Affiliate-Attribution). Form-Visuals (Card-Hintergrund,
-          Border, OAuth-Buttons) sind self-contained in SignupForm. === */}
+          auf den slug (Affiliate-Attribution). Headline + Sub leben IN der
+          Card (self-contained wie die /login-Card), daher kein h2 hier. === */}
       <section className="big-cta" id="beta">
         <div className="container big-cta-inner">
-          <h2>
-            Get <span className="accent">early access.</span>
-          </h2>
-          <p
-            className="form-card-subtitle"
-            style={{ textAlign: "center", maxWidth: 520, margin: "0 auto 28px" }}
-          >
-            We send your TestFlight invite the moment you confirm.
-          </p>
           <div style={{ display: "flex", justifyContent: "center" }}>
             <SignupForm slug={slug} />
           </div>
