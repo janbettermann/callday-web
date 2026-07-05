@@ -286,10 +286,13 @@ export default async function AffiliateLanding({
       </section>
 
       {/* === BIG CTA — Account-Sign-Up, identisch zur organic Landing bis
-          auf den slug (Affiliate-Attribution). Headline + Sub leben IN der
-          Card (self-contained wie die /login-Card), daher kein h2 hier. === */}
+          auf den slug (Affiliate-Attribution). Section-h2 hier, Card-Titel
+          + Sub (linksbuendig) leben in der SignupForm. === */}
       <section className="big-cta" id="beta">
         <div className="container big-cta-inner">
+          <h2>
+            Get <span className="accent">early access.</span>
+          </h2>
           <div style={{ display: "flex", justifyContent: "center" }}>
             <SignupForm slug={slug} />
           </div>

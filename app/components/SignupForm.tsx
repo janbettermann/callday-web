@@ -354,17 +354,16 @@ export function SignupForm({ slug }: Props) {
   }
 
   // === Render: Sign-Up ===
-  // Headline + Sub leben IN der Card (Jan-Decision 2026-07-05) — macht
-  // sie zur selben self-contained Einheit wie die /login-Card. Die
-  // big-cta-Sections der Landings rendern deshalb kein eigenes h2 mehr.
+  // Die Section-Headline "Get early access." rendern die Landings als
+  // h2 UEBER der Card; in der Card sitzt ein kleiner linksbuendiger
+  // Titel + Sub (Jan-Decision 2026-07-05 abends, Revert der
+  // In-Card-Headline vom Nachmittag).
   // Affiliate-Attribution laeuft komplett im Backend (Trigger / Callback)
   // — Affiliate erscheint nirgendwo auf der Seite (Jan-Decision).
   return (
     <div className="login-card">
-      <h2 className="login-headline">
-        Get <span className="accent">early access.</span>
-      </h2>
-      <p className="login-sub">
+      <h3 className="login-card-title">Start calling today</h3>
+      <p className="login-card-sub">
         After you sign up, we&apos;ll send your TestFlight invite to
         download the Callday app.
       </p>

@@ -1469,6 +1469,26 @@ h2 .accent {
 
 /* === SIGNUP FORM (SignupForm auf Landing + /a/[slug], OTP-Steps in
    /login + /affiliate/login) === */
+/* Card-interner Titel + Sub, linksbuendig (explizit — .big-cta setzt
+   text-align:center). Die Section-Headline "Get early access." lebt
+   als h2 UEBER der Card (Jan-Decision 2026-07-05 abends). */
+.login-card-title {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: var(--ink);
+  text-align: left;
+  margin: 0 0 6px;
+}
+.login-card-sub {
+  font-size: 14px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+  text-align: left;
+  margin: 0 0 24px;
+}
+
 .beta-form {
   text-align: left;
   display: flex;
