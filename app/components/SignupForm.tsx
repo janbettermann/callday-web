@@ -365,7 +365,8 @@ export function SignupForm({ slug }: Props) {
         Get <span className="accent">early access.</span>
       </h2>
       <p className="login-sub">
-        We send your TestFlight invite the moment you confirm.
+        After you sign up, we&apos;ll send your TestFlight invite to
+        download the Callday app.
       </p>
       <div className="login-oauth-stack">
         <button
