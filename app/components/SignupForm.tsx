@@ -421,7 +421,7 @@ export function SignupForm({ slug }: Props) {
           aria-busy={status === "submitting"}
           disabled={status === "submitting"}
         >
-          {status === "submitting" ? "Creating account..." : "Create account"}
+          {status === "submitting" ? "Signing up..." : "Sign up"}
         </button>
 
         {errorMessage && (
