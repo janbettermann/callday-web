@@ -6,15 +6,15 @@ import { FlowTabs } from "../../components/FlowTabs";
 import { SiteNav } from "../../components/SiteNav";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { trackPageView } from "@/lib/affiliate-page-views";
-import { AffiliateSignupForm } from "./AffiliateSignupForm";
+import { SignupForm } from "../../components/SignupForm";
 
 /**
  * /a/[slug] — Founding-Affiliate-Landing.
  *
  * Strukturell IDENTISCH zur organic Landing (app/page.tsx) — Hero,
- * Flow-Animations, Stats, Differentiators, FAQ, Footer. Einziger
- * Unterschied: im #beta-CTA-Block sitzt der AffiliateSignupForm
- * statt der BetaApplicationForm.
+ * Flow-Animations, Stats, Differentiators, FAQ, Footer, und seit
+ * 2026-07-05 auch dasselbe SignupForm. Einziger Unterschied: hier
+ * bekommt es den slug fuer die Affiliate-Attribution.
  *
  * Bewusste Entscheidungen (2026-06-26):
  *   - **Keine Affiliate-Pill.** Affiliate erscheint NIRGENDWO auf der
@@ -285,10 +285,9 @@ export default async function AffiliateLanding({
         </div>
       </section>
 
-      {/* === BIG CTA — Affiliate-Sign-Up.
-          Selber Header wie organic Landing, aber statt der BetaApplicationForm
-          steht hier der AffiliateSignupForm. Form-Visuals (Card-Hintergrund,
-          Border, OAuth-Buttons) sind self-contained in AffiliateSignupForm. === */}
+      {/* === BIG CTA — Account-Sign-Up, identisch zur organic Landing bis
+          auf den slug (Affiliate-Attribution). Form-Visuals (Card-Hintergrund,
+          Border, OAuth-Buttons) sind self-contained in SignupForm. === */}
       <section className="big-cta" id="beta">
         <div className="container big-cta-inner">
           <h2>
@@ -301,7 +300,7 @@ export default async function AffiliateLanding({
             We send your TestFlight invite the moment you confirm.
           </p>
           <div style={{ display: "flex", justifyContent: "center" }}>
-            <AffiliateSignupForm slug={slug} />
+            <SignupForm slug={slug} />
           </div>
         </div>
       </section>

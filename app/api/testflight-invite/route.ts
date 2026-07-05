@@ -1,7 +1,10 @@
 /**
- * POST /api/affiliate/post-signup
+ * POST /api/testflight-invite
  *
  * Triggert die TestFlight-Invite-Mail an den eingeloggten User.
+ * Hiess bis 2026-07-05 /api/affiliate/post-signup — seit der
+ * Sign-Up-Vereinheitlichung (organic + affiliate nutzen dieselbe
+ * SignupForm) ist der Endpoint nicht mehr affiliate-spezifisch.
  *
  * Auth-Modell (post Audit-Fix #5/#6):
  *   - Auth via Supabase-SSR-Session-Cookie. Nicht-eingeloggte Caller → 401.
@@ -9,22 +12,21 @@
  *     vorgeben. Das schliesst den unauthenticated-Mailer-Vektor (Audit
  *     #5) und entfernt das 1h-Account-Age-Gate (Audit #6, Resend-Button
  *     funktioniert dauerhaft).
- *   - Kein Body noetig — der frueher uebergebene `slug` wurde ohnehin
- *     nirgends verwertet, Attribution laeuft komplett durch den Trigger
+ *   - Kein Body noetig — Attribution laeuft komplett durch den Trigger
  *     bzw /auth/callback.
  *
  * Caller:
- *   - AffiliateSignupForm (Email/PW-Pfad) nach erfolgreichem verifyOtp
+ *   - SignupForm (Email/PW-Pfad) nach erfolgreichem verifyOtp
  *   - ResendTestFlightButton auf /account
  *
- * /auth/callback ruft NICHT mehr diesen Endpoint sondern direkt
- * sendTestflightInvite() (kein Self-HTTP-Roundtrip mehr, Audit #7).
+ * /auth/callback ruft NICHT diesen Endpoint sondern direkt
+ * sendTestflightInvite() (kein Self-HTTP-Roundtrip, Audit #7).
  */
 
 import { NextRequest } from "next/server";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
-import { sendTestflightInvite } from "@/lib/affiliate-invite";
+import { sendTestflightInvite } from "@/lib/testflight-invite";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { BetaApplicationForm } from "./components/BetaApplicationForm";
 import { CalldayLogo } from "./components/CalldayLogo";
 import { FaqAccordion } from "./components/FaqAccordion";
 import { FlowTabs } from "./components/FlowTabs";
+import { SignupForm } from "./components/SignupForm";
 import { SiteNav } from "./components/SiteNav";
 
 export default function Home() {
@@ -206,21 +206,22 @@ export default function Home() {
         </div>
       </section>
 
-      {/* === BIG CTA — early-access signup. One form, two outcomes (closed
-          beta or launch list) decided server-side; UI presents both as
-          equal wins so nobody feels like a runner-up. === */}
+      {/* === BIG CTA — Account-Sign-Up, identisch zur Affiliate-Landing
+          (/a/[slug]) nur ohne slug. Seit 2026-07-05 vereinheitlicht: Account
+          statt Beta-Bewerbung, TestFlight-Mail nach Email-Bestätigung. === */}
       <section className="big-cta" id="beta">
         <div className="container big-cta-inner">
           <h2>
             Get <span className="accent">early access.</span>
           </h2>
-
-          <div className="form-card">
-            <div className="form-card-title">Start calling today</div>
-            <p className="form-card-subtitle">
-              We send your TestFlight invite the moment you sign up.
-            </p>
-            <BetaApplicationForm />
+          <p
+            className="form-card-subtitle"
+            style={{ textAlign: "center", maxWidth: 520, margin: "0 auto 28px" }}
+          >
+            We send your TestFlight invite the moment you confirm.
+          </p>
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <SignupForm />
           </div>
         </div>
       </section>

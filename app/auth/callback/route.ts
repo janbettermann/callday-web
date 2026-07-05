@@ -20,24 +20,31 @@
  * Open-Redirect-Protection: das next aus dem Cookie muss eine relative
  * URL sein (mit / beginnen, kein //, kein protocol). Sonst Fallback "/".
  *
+ * Sign-Up-Flow (SignupForm auf organic Landing + /a/[slug]):
+ *   Die Form setzt vor signInWithOAuth den Cookie `signup_flow` (analog
+ *   zum login_next-Cookie, da Supabase Query-Params von redirectTo
+ *   strippt). Ist er gesetzt, schicken wir nach dem PKCE-Exchange die
+ *   TestFlight-Mail — aber nur fuer frische Profile (<5 min), damit ein
+ *   Re-Login ueber die Form keinen Mail-Spam ausloest. Der /login-Pfad
+ *   setzt den Cookie nicht und triggert daher nie eine Mail.
+ *
  * Affiliate-Attribution (Phase 1 Affiliate-Programm):
- *   /a/[slug] setzt vor signInWithOAuth den Cookie `affiliate_slug`
- *   (analog zum login_next-Cookie, da Supabase Query-Params von
- *   redirectTo strippt). Nach erfolgreichem PKCE-Exchange resolven wir
- *   den Slug gegen affiliates und UPDATEn profiles.referred_by_affiliate_id
- *   — nur wenn aktuell null (idempotent gegen Re-Login derselben User).
- *   Bei neu angelegtem Profil triggern wir ausserdem die TestFlight-Mail
- *   ueber /api/affiliate/post-signup.
+ *   /a/[slug] setzt zusaetzlich den Cookie `affiliate_slug`. Nach
+ *   erfolgreichem PKCE-Exchange resolven wir den Slug gegen affiliates
+ *   und UPDATEn profiles.referred_by_affiliate_id — nur wenn aktuell
+ *   null (idempotent gegen Re-Login derselben User). Attribution und
+ *   TestFlight-Mail sind bewusst entkoppelt: ein pausierter/unbekannter
+ *   Slug kostet nur die Attribution, nicht die Mail.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
-import { sendTestflightInvite } from "@/lib/affiliate-invite";
+import { sendTestflightInvite } from "@/lib/testflight-invite";
 
 export const dynamic = "force-dynamic";
 
-const AFFILIATE_PROFILE_FRESHNESS_MS = 5 * 60 * 1000;
+const SIGNUP_PROFILE_FRESHNESS_MS = 5 * 60 * 1000;
 
 function safeNextPath(raw: string | null | undefined): string {
   if (!raw) return "/";
@@ -52,14 +59,16 @@ function safeNextPath(raw: string | null | undefined): string {
 }
 
 /**
- * Loescht alle State-Cookies die /a/[slug] und /login vor OAuth setzen.
- * MUSS auf JEDEM Exit-Pfad von /auth/callback gerufen werden, sonst
- * leakt z.B. `affiliate_slug` ueber Cancel-Flows in einen nachfolgenden
- * /login-Sign-In und attribuiert organische User an einen Affiliate.
+ * Loescht alle State-Cookies die die SignupForm und /login vor OAuth
+ * setzen. MUSS auf JEDEM Exit-Pfad von /auth/callback gerufen werden,
+ * sonst leakt z.B. `affiliate_slug` ueber Cancel-Flows in einen
+ * nachfolgenden /login-Sign-In und attribuiert organische User an einen
+ * Affiliate.
  */
 function clearAuthStateCookies(response: NextResponse): void {
   response.cookies.delete("login_next");
   response.cookies.delete("affiliate_slug");
+  response.cookies.delete("signup_flow");
   response.cookies.delete("affiliate_signup_provider");
 }
 
@@ -105,7 +114,7 @@ export async function GET(request: NextRequest) {
 
   // Affiliate-Attribution + Post-Signup-Mail.
   // Soft-failure: alle Schritte sind try/catched, ein Fehler hier
-  // unterbricht den Login-Flow nicht — Attribution-Loss waere
+  // unterbricht den Login-Flow nicht — Attribution-/Mail-Loss waere
   // suboptimal, aber Login-Abbruch nach erfolgreichem OAuth waere
   // schlimmer.
   const affiliateSlug = decodeAffiliateSlug(
@@ -119,7 +128,21 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Erfolgreich — login_next + affiliate-Cookies löschen, dann Redirect.
+  // TestFlight-Mail fuer frische Sign-Ups aus der SignupForm. Der
+  // affiliate_slug-Fallback deckt Sessions ab, die die Form noch vor dem
+  // signup_flow-Cookie-Deploy gestartet haben — kann nach ein paar Tagen
+  // entfallen.
+  const isSignupFlow =
+    request.cookies.get("signup_flow")?.value === "1" || affiliateSlug !== null;
+  if (isSignupFlow) {
+    try {
+      await maybeSendSignupInvite(supabase);
+    } catch (err) {
+      console.error("[/auth/callback] signup invite failed", err);
+    }
+  }
+
+  // Erfolgreich — login_next + Signup-Cookies löschen, dann Redirect.
   const response = NextResponse.redirect(`${origin}${next}`);
   clearAuthStateCookies(response);
   return response;
@@ -144,11 +167,11 @@ function decodeAffiliateSlug(raw: string | undefined): string | null {
 async function attachAffiliateAttribution(
   ssrClient: Awaited<ReturnType<typeof createSupabaseSSR>>,
   slug: string,
-): Promise<boolean> {
+): Promise<void> {
   const {
     data: { user },
   } = await ssrClient.auth.getUser();
-  if (!user) return false;
+  if (!user) return;
 
   // Service-Role brauchen wir hier weil:
   //   1. RLS auf affiliates ist Admin-only
@@ -163,7 +186,7 @@ async function attachAffiliateAttribution(
     .eq("status", "active")
     .maybeSingle();
 
-  if (!affiliate) return false; // Slug unknown / paused — silent skip
+  if (!affiliate) return; // Slug unknown / paused — silent skip
 
   // Idempotenter UPDATE: setzen nur wenn noch null. Verhindert dass ein
   // existierender Affiliate-A-User der spaeter via /a/affiliate-b einloggt
@@ -173,24 +196,36 @@ async function attachAffiliateAttribution(
     .update({ referred_by_affiliate_id: affiliate.id })
     .eq("id", user.id)
     .is("referred_by_affiliate_id", null);
+}
 
-  // Frischer Sign-Up? Profil in den letzten 5 Min angelegt → ja.
-  // Schuetzt Mail-Spam wenn ein existierender User nochmal ueber den
-  // Affiliate-Link kommt (sonst kriegt er bei jedem Re-Login eine
-  // TestFlight-Mail).
+/**
+ * Schickt die TestFlight-Mail — aber nur wenn das Profil in den letzten
+ * 5 Min angelegt wurde. Schuetzt vor Mail-Spam wenn ein existierender
+ * User nochmal ueber die SignupForm einloggt (OAuth-Sign-Up und -Sign-In
+ * sind aus Supabase-Sicht derselbe Flow).
+ */
+async function maybeSendSignupInvite(
+  ssrClient: Awaited<ReturnType<typeof createSupabaseSSR>>,
+): Promise<void> {
+  const {
+    data: { user },
+  } = await ssrClient.auth.getUser();
+  if (!user) return;
+
+  const admin = getServerSupabase();
   const { data: profile } = await admin
     .from("profiles")
     .select("email, name, created_at")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!profile?.email || !profile.created_at) return false;
+  if (!profile?.email || !profile.created_at) return;
 
   const createdMs = new Date(profile.created_at).getTime();
-  if (Date.now() - createdMs > AFFILIATE_PROFILE_FRESHNESS_MS) return false;
+  if (Date.now() - createdMs > SIGNUP_PROFILE_FRESHNESS_MS) return;
 
   // Direkter Funktions-Call statt Self-HTTP-Roundtrip — siehe
-  // lib/affiliate-invite.ts. sendTestflightInvite returnt strukturiert
+  // lib/testflight-invite.ts. sendTestflightInvite returnt strukturiert
   // statt zu throwen, daher kein try/catch noetig.
   const displayName =
     (profile.name && profile.name.trim()) ||
@@ -200,6 +235,4 @@ async function attachAffiliateAttribution(
     toEmail: profile.email,
     displayName,
   });
-
-  return true;
 }

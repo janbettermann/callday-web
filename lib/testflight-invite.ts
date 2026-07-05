@@ -1,8 +1,12 @@
 /**
  * sendTestflightInvite — gemeinsame Mail-Send-Logik fuer:
- *   1. /api/affiliate/post-signup (Email/PW Sign-Up nach OTP-Verifikation,
+ *   1. /api/testflight-invite (Email/PW Sign-Up nach OTP-Verifikation,
  *      Resend-Button auf /account)
  *   2. /auth/callback (OAuth Sign-Up nach PKCE-Exchange)
+ *
+ * Hiess bis 2026-07-05 lib/affiliate-invite.ts — seit der Vereinheitlichung
+ * des Sign-Ups (organic Landing nutzt dieselbe SignupForm wie /a/[slug])
+ * ist der Pfad nicht mehr affiliate-spezifisch.
  *
  * Vorher hat /auth/callback die Mail via HTTP-Self-Roundtrip an die API
  * geschickt. Das war fragil (Cookies fehlen, origin ist bei Vercel-Preview
@@ -83,7 +87,8 @@ export async function sendTestflightInvite(input: {
   }
 
   // email_logs ist fire-and-forget — application_id bleibt null da der
-  // User ueber Affiliate-Flow kam (keine application-row). Email-Type
+  // User ueber den Account-Sign-Up kam (keine application-row; die
+  // applications-Tabelle ist seit 2026-07-05 historisch). Email-Type
   // 'testflight_invite' stimmt mit dem Constraint ueberein.
   if (result.status !== "skipped") {
     const admin = getServerSupabase();

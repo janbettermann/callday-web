@@ -39,7 +39,7 @@ app/
 ├── layout.tsx            # Root layout (Fonts, Metadata)
 ├── globals.css           # Marketing-Site-CSS (sun-glow background, light theme)
 ├── components/
-│   └── BetaApplicationForm.tsx  # Beta-Form (client component)
+│   └── SignupForm.tsx    # Account-Sign-Up (client component, Landing + /a/[slug])
 ├── auth/
 │   └── confirmed/page.tsx       # Supabase-Email-Confirmation-Landing
 └── (legal)/              # Route group → URL ist /privacy bzw. /terms
@@ -53,7 +53,6 @@ mdx-components.tsx        # MDX-Typografie-Overrides für Legal-Seiten
 
 - [ ] Privacy & Terms: Platzhalter (`[Vor- und Nachname]`, `[Adresse]`, `[DATUM]`,
       `[USt-IdNr.]`, etc.) ersetzen, von einem Anwalt prüfen lassen
-- [ ] Beta-Form: echtes Backend anschließen (Supabase `beta_applications`-Tabelle)
 - [ ] Phone-Mockup: aktuelles Callday-Screenshot statt Platzhalter einsetzen
       (`public/phone-mockup.png`)
 - [ ] OpenGraph-Image (`public/og.png`, 1200×630) erstellen

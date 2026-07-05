@@ -30,13 +30,16 @@ function isUserAlreadyRegistered(error: {
 }
 
 /**
- * Affiliate-Sign-Up-Form fuer /a/[slug].
+ * Sign-Up-Form fuer die organische Landing (app/page.tsx) UND die
+ * Affiliate-Landings (/a/[slug]) — seit 2026-07-05 vereinheitlicht,
+ * vorher lief organic ueber die BetaApplicationForm + applications-Tabelle.
+ * Einziger Unterschied zwischen den beiden Einsatzorten: `slug` ist auf
+ * den Affiliate-Seiten gesetzt und steuert die Attribution.
  *
  * Default-Mode ist SIGNUP (im Unterschied zu /login das auf SIGNIN
- * defaultet). Affiliate-Pill ueber dem Form macht die Empfehlung
- * sichtbar (sofern slug aktiv aufgeloest wurde).
+ * defaultet).
  *
- * Slug-Transport durch den Sign-Up-Flow:
+ * Slug-Transport durch den Sign-Up-Flow (nur wenn slug vorhanden):
  *   - Email/PW: user_metadata.referred_by_affiliate_slug → handle_new_user
  *     Trigger resolvet zu profiles.referred_by_affiliate_id in derselben
  *     INSERT-Transaktion.
@@ -48,11 +51,19 @@ function isUserAlreadyRegistered(error: {
  *     Marketing-Tracking-Cookie (siehe Plan-Decision in
  *     project_beta_affiliate_program).
  *
- * Edge-Case: Slug unknown / Affiliate paused → kommt als affiliate=null
- * rein. Pill wird nicht angezeigt, FK bleibt null (silent fallback zu
- * organic). Sign-Up funktioniert trotzdem.
+ * TestFlight-Mail-Trigger:
+ *   - Email/PW: Client ruft /api/testflight-invite nach erfolgreichem
+ *     verifyOtp (siehe sendPostSignupMail unten).
+ *   - OAuth: der `signup_flow`-Cookie (gesetzt in handleOAuth) signalisiert
+ *     /auth/callback, dass dieser PKCE-Exchange aus einem Sign-Up-Form kam
+ *     — der Callback schickt dann die Mail fuer frische Profile. Ohne den
+ *     Cookie wuerde ein organischer OAuth-Sign-Up keine Mail bekommen
+ *     (der /login-Pfad soll ja keine ausloesen).
  *
- * Nach erfolgreichem Sign-Up landet der User auf /account?welcome=affiliate
+ * Edge-Case: Slug unknown / Affiliate paused → Attribution faellt silent
+ * zurueck auf organic (FK bleibt null). Sign-Up funktioniert trotzdem.
+ *
+ * Nach erfolgreichem Sign-Up landet der User auf /account?welcome=signup
  * — siehe TestFlight-Recovery-Section in /account.
  */
 
@@ -62,7 +73,8 @@ type Mode = "signup" | "otp-code";
 type Status = "idle" | "submitting" | "error";
 
 interface Props {
-  slug: string;
+  /** Affiliate-Slug fuer Attribution — nur auf /a/[slug] gesetzt. */
+  slug?: string;
 }
 
 // 5 Minuten = OAuth-Round-Trip-Realismus. Vorher waren das 10 Min,
@@ -70,21 +82,14 @@ interface Props {
 // auf /login) breiter machte als noetig. /login + /auth/callback loeschen
 // die Cookies jetzt zusaetzlich aktiv, dieser Wert ist die letzte
 // Verteidigung.
-const AFFILIATE_COOKIE_MAX_AGE_S = 300;
+const SIGNUP_COOKIE_MAX_AGE_S = 300;
 
-function setAffiliateSlugCookie(slug: string) {
+function setSignupCookie(name: string, value: string) {
   if (typeof document === "undefined") return;
-  const value = encodeURIComponent(slug);
-  document.cookie = `affiliate_slug=${value}; path=/; max-age=${AFFILIATE_COOKIE_MAX_AGE_S}; samesite=lax`;
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${SIGNUP_COOKIE_MAX_AGE_S}; samesite=lax`;
 }
 
-function setLoginNextCookie(next: string) {
-  if (typeof document === "undefined") return;
-  const value = encodeURIComponent(next);
-  document.cookie = `login_next=${value}; path=/; max-age=${AFFILIATE_COOKIE_MAX_AGE_S}; samesite=lax`;
-}
-
-export function AffiliateSignupForm({ slug }: Props) {
+export function SignupForm({ slug }: Props) {
   const router = useRouter();
 
   const [mode, setMode] = useState<Mode>("signup");
@@ -108,8 +113,13 @@ export function AffiliateSignupForm({ slug }: Props) {
     resetMessages();
     setStatus("submitting");
 
-    setAffiliateSlugCookie(slug);
-    setLoginNextCookie("/account?welcome=affiliate");
+    if (slug) {
+      setSignupCookie("affiliate_slug", slug);
+    }
+    // Markiert den PKCE-Exchange als Sign-Up-Form-Ursprung — /auth/callback
+    // schickt dann die TestFlight-Mail fuer frische Profile.
+    setSignupCookie("signup_flow", "1");
+    setSignupCookie("login_next", "/account?welcome=signup");
 
     const supabase = createSupabaseBrowser();
     const origin = window.location.origin;
@@ -152,9 +162,9 @@ export function AffiliateSignupForm({ slug }: Props) {
     // Account-Page hat einen Resend-Button als Recovery-Pfad. Server
     // liest die Ziel-Email aus der SSR-Session (kein Body noetig).
     try {
-      await fetch("/api/affiliate/post-signup", { method: "POST" });
+      await fetch("/api/testflight-invite", { method: "POST" });
     } catch (err) {
-      console.error("[/a/[slug]] post-signup mail failed", err);
+      console.error("[SignupForm] post-signup mail failed", err);
     }
   }
 
@@ -185,11 +195,13 @@ export function AffiliateSignupForm({ slug }: Props) {
     const { data, error } = await supabase.auth.signUp({
       email: cleanEmail,
       password,
-      options: {
-        // handle_new_user Trigger liest das hier und schreibt es als
-        // profiles.referred_by_affiliate_id (atomisch im selben INSERT).
-        data: { referred_by_affiliate_slug: slug },
-      },
+      options: slug
+        ? {
+            // handle_new_user Trigger liest das hier und schreibt es als
+            // profiles.referred_by_affiliate_id (atomisch im selben INSERT).
+            data: { referred_by_affiliate_slug: slug },
+          }
+        : undefined,
     });
 
     if (error) {
@@ -229,7 +241,7 @@ export function AffiliateSignupForm({ slug }: Props) {
     // Auto-confirmed (z.B. dev-Env oder Confirmation off) → TestFlight-Mail
     // jetzt senden, dann zu /account.
     void sendPostSignupMail();
-    router.push("/account?welcome=affiliate");
+    router.push("/account?welcome=signup");
   }
 
   async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
@@ -262,7 +274,7 @@ export function AffiliateSignupForm({ slug }: Props) {
     // Fire-and-forget; Account-Page hat Resend-Button als Recovery.
     void sendPostSignupMail();
 
-    router.push("/account?welcome=affiliate");
+    router.push("/account?welcome=signup");
   }
 
   // === Render: OTP-Code-Step (nach Email/PW Sign-Up) ===
@@ -342,8 +354,8 @@ export function AffiliateSignupForm({ slug }: Props) {
 
   // === Render: Sign-Up ===
   // Pill + Headline + Sub bewusst weggelassen — die Page-Hero ueber dem
-  // Form liefert den Pitch (siehe app/a/[slug]/page.tsx, identisch zur
-  // organic Landing). Form bleibt als reine Action-Section.
+  // Form liefert den Pitch (organic Landing wie Affiliate-Landing sind
+  // strukturell identisch). Form bleibt als reine Action-Section.
   // Affiliate-Attribution laeuft komplett im Backend (Trigger / Callback)
   // — Affiliate erscheint nirgendwo auf der Seite (Jan-Decision).
   return (

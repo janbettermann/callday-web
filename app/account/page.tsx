@@ -89,7 +89,10 @@ export default async function AccountPage({
   searchParams: Promise<{ welcome?: string }>;
 }) {
   const { welcome } = await searchParams;
-  const isAffiliateWelcome = welcome === "affiliate";
+  // "signup" ist der aktuelle Wert (SignupForm auf Landing + /a/[slug]);
+  // "affiliate" bleibt als Legacy-Wert akzeptiert fuer Sessions die den
+  // Sign-Up vor dem Vereinheitlichungs-Deploy (2026-07-05) gestartet haben.
+  const isSignupWelcome = welcome === "signup" || welcome === "affiliate";
 
   const supabase = await createSupabaseSSR();
   const {
@@ -160,8 +163,8 @@ export default async function AccountPage({
           <h1 className="account-headline">Hi {firstName}.</h1>
           <p className="account-sub">Manage your subscription and account.</p>
 
-          {/* Affiliate-Welcome-Banner (zeigt nur direkt nach Sign-Up via /a/[slug]) */}
-          {isAffiliateWelcome && testflightLink && (
+          {/* Welcome-Banner (zeigt nur direkt nach Sign-Up via SignupForm) */}
+          {isSignupWelcome && testflightLink && (
             <section
               className="account-card"
               style={{
@@ -351,7 +354,7 @@ export default async function AccountPage({
                 Open App Store
               </a>
             )}
-            {profile.email && !isAffiliateWelcome && (
+            {profile.email && !isSignupWelcome && (
               <p className="account-hint">
                 Need the install email again?{" "}
                 <ResendTestFlightButton />

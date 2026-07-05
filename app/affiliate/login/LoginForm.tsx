@@ -11,7 +11,7 @@ import { requestMagicLinkAction } from "./actions";
  * /affiliate/login?sent=<email> → die Page rendert dann den SentCard.
  *
  * Note: noValidate + Custom-Validation-Message-Pattern (analog zur
- * AffiliateSignupForm) — Button immer klickbar, Hint bei leerem Feld.
+ * SignupForm) — Button immer klickbar, Hint bei leerem Feld.
  */
 
 interface Props {

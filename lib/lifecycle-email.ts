@@ -3,10 +3,12 @@
  * 'launch_list' triggert die Launch-List-Welcome-Mail).
  *
  * Aktuell nur noch von send-launch-list-welcome benutzt. Der ehemalige
- * Zwilling send-testflight-invite ist im Juni 2026 entfallen, weil die
- * TestFlight-Einladung jetzt direkt aus /api/beta/apply mitgeht (Instant-
- * Approval, kein zweistufiger Flow mehr). Wrapper-Struktur bleibt, falls
- * später weitere Status-Lifecycle-Mails dazukommen.
+ * Zwilling send-testflight-invite ist im Juni 2026 entfallen (Instant-
+ * Approval statt zweistufigem Flow). Betrifft nur den historischen
+ * applications-Bestand — seit 2026-07-05 laufen neue Sign-Ups als
+ * Accounts ueber die SignupForm, ohne applications-Row (TestFlight-Mail
+ * via lib/testflight-invite.ts). Wrapper-Struktur bleibt, falls später
+ * weitere Status-Lifecycle-Mails dazukommen.
  *
  * Auth: Supabase Database Webhook schickt einen custom X-Webhook-Secret-
  * Header (vom User im Studio konfiguriert), wir verifizieren ihn gegen

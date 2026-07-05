@@ -6,7 +6,7 @@ import { useState } from "react";
  * Resend-Button auf /account fuer die TestFlight-Invite-Mail.
  *
  * Recovery-Pfad fuer User die die Mail nicht bekommen / verlegt haben.
- * POST geht an /api/affiliate/post-signup — der Endpoint liest die
+ * POST geht an /api/testflight-invite — der Endpoint liest die
  * Ziel-Email aus der SSR-Session (post Audit-Fix #5/#6), Caller muss
  * KEINE Email uebergeben und es gibt kein Account-Age-Gate mehr.
  *
@@ -26,7 +26,7 @@ export function ResendTestFlightButton() {
     setErrorMessage(null);
 
     try {
-      const response = await fetch("/api/affiliate/post-signup", {
+      const response = await fetch("/api/testflight-invite", {
         method: "POST",
       });
 

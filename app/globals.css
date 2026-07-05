@@ -523,7 +523,7 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
    above .bg-orb. Without this they'd inherit the (dynamic) body bg
    and turn dark while the user is still scrolling through the page.
    Same applies to standalone pages without a .hero (auth/confirmed,
-   beta/applied) — the body bg defaults to dark, so they need their
+   affiliate/login) — the body bg defaults to dark, so they need their
    own cream backdrop or the page reads as black-on-black. */
 .social-proof,
 .flow,
@@ -1456,26 +1456,8 @@ h2 .accent {
   margin-bottom: 48px;
 }
 
-/* === BETA APPLICATION FORM === */
-/* === FORM CARD — wraps the form in a single anchored card. === */
-.form-card {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 36px 36px 30px;
-  background: var(--bg-page);
-  border: 0.5px solid var(--line);
-  border-radius: 24px;
-  box-shadow: 0 4px 16px rgba(26, 29, 38, 0.04);
-  text-align: left;
-}
-.form-card-title {
-  font-family: var(--font-geist-sans), sans-serif;
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.3px;
-  color: var(--ink);
-  margin-bottom: 6px;
-}
+/* === SIGNUP FORM (SignupForm auf Landing + /a/[slug], OTP-Steps in
+   /login + /affiliate/login) === */
 .form-card-subtitle {
   font-size: 14px;
   color: var(--ink-dim);
@@ -1487,11 +1469,6 @@ h2 .accent {
   text-align: left;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-.beta-form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 .beta-field {
@@ -1506,20 +1483,9 @@ h2 .accent {
   letter-spacing: 0.2px;
   padding-left: 2px;
 }
-.beta-field-optional {
-  color: var(--ink-faint);
-  font-weight: 400;
-}
-.beta-field-hint {
-  font-size: 12px;
-  color: var(--ink-faint);
-  padding-left: 2px;
-  line-height: 1.4;
-}
 /* iOS-Settings-Style: gray fill instead of white bg, no visible border,
    subtle focus ring. Reads as "inset cell" not "bordered input". */
-.beta-field input,
-.beta-field select {
+.beta-field input {
   background: rgba(26, 29, 38, 0.045);
   border: 1px solid transparent;
   border-radius: 12px;
@@ -1536,64 +1502,10 @@ h2 .accent {
 .beta-field input::placeholder {
   color: rgba(26, 29, 38, 0.36);
 }
-.beta-field input:focus,
-.beta-field select:focus {
+.beta-field input:focus {
   background: var(--bg-page);
   border-color: rgba(74, 122, 247, 0.5);
   box-shadow: 0 0 0 3px rgba(74, 122, 247, 0.14);
-}
-.beta-field select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(26,29,38,0.5)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 16px center;
-  padding-right: 44px;
-}
-.beta-field select option {
-  background: var(--bg-page);
-  color: var(--ink);
-}
-/* Bewusst markanter als die normalen Inputs — TestFlight-Pflicht ist
-   die einzige harte Knock-Out-Bedingung im Form, die Checkbox darf
-   nicht im Grau-Fill der Inputs untergehen. */
-.beta-checkbox {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  background: rgba(74, 122, 247, 0.07);
-  border: 1px solid rgba(74, 122, 247, 0.22);
-  border-radius: 12px;
-  cursor: pointer;
-  transition:
-    background 0.18s,
-    border-color 0.18s;
-}
-.beta-checkbox:hover {
-  background: rgba(74, 122, 247, 0.1);
-  border-color: rgba(74, 122, 247, 0.32);
-}
-.beta-checkbox input {
-  margin-top: 3px;
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  accent-color: var(--blue);
-  cursor: pointer;
-}
-.beta-checkbox > span {
-  font-size: 14px;
-  color: var(--ink);
-  line-height: 1.5;
-}
-.beta-checkbox-note {
-  display: block;
-  font-size: 12px;
-  color: var(--ink-faint);
-  margin-top: 4px;
 }
 .beta-submit {
   margin-top: 8px;
@@ -2038,13 +1950,6 @@ h2 .accent {
   .legal-article {
     padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 32px) 20px
       80px;
-  }
-  .beta-form-grid {
-    grid-template-columns: 1fr;
-  }
-  .form-card {
-    padding: 26px 22px 24px;
-    border-radius: 20px;
   }
 }
 

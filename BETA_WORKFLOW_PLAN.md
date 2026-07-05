@@ -3,6 +3,17 @@
 Implementierungs-Plan für den vollständigen Lifecycle von Beta-Application
 bis Founder-Code-Redemption beim Launch.
 
+> **Update 2026-07-05 — HISTORISCH:** Das Beta-Bewerbungsformular ist
+> abgeschafft. Die organische Landing nutzt jetzt dieselbe Account-basierte
+> `SignupForm` wie die Affiliate-Landings (`/a/[slug]`) — Sign-Up erzeugt
+> direkt ein Supabase-Konto (`profiles`), die TestFlight-Mail geht nach
+> Email-Bestätigung raus (`lib/testflight-invite.ts`). `BetaApplicationForm`,
+> `/api/beta/apply` und `/beta/applied` sind entfernt. Die
+> `applications`-Tabelle bleibt als historischer Datenbestand liegen
+> (Alt-Bewerber vor der Umstellung); neue Sign-Ups landen NUR in `profiles`.
+> Die Founder-Code-Abschnitte unten sind seit der Founder-Tier-Streichung
+> (2026-06-25) ohnehin obsolet. Dieses Doc dient nur noch als Historie.
+
 > **Update 2026-06-22 — Instant-Approval:** Der zweistufige Beta-Flow
 > (status='pending' → manueller Approve im Studio → TestFlightInvite-Mail
 > per Database-Webhook) ist abgeschafft. `/api/beta/apply` setzt jetzt
