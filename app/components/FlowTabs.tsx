@@ -58,8 +58,6 @@ const STEPS: Step[] = [
   },
 ];
 
-const ROTATE_MS = 10000;
-
 /**
  * The 3-step flow section.
  *
@@ -70,8 +68,10 @@ const ROTATE_MS = 10000;
  *   Desktop (>960 px) — `.flow-layout`:
  *     2-column grid. Left column is `.flow-tablist` (3 packed tabs).
  *     Right column is `.flow-stage` (3 anim slots, absolutely stacked,
- *     only the active one opacity:1). Auto-rotates every ROTATE_MS;
- *     first user click stops the rotation for the session.
+ *     only the active one opacity:1). KEINE Auto-Rotation mehr
+ *     (entfernt 2026-07-05): der Step wechselt nur per Klick —
+ *     gleiches Produktprinzip wie beim Mobile-Karussell-Removal,
+ *     "nichts bewegt sich ohne bewussten Tap".
  *
  *   Mobile (≤960 px) — `.flow-mobile`:
  *     A vertical stack of 3 white cards, all visible at once — scroll
@@ -84,38 +84,29 @@ const ROTATE_MS = 10000;
  *     (eigener IntersectionObserver pro Karte, siehe MobileFlowCard).
  *
  * CSS toggles the two wrappers via `display: none` so only one is
- * laid out at a time. `prefers-reduced-motion: reduce` is respected:
- * no auto-rotate, no crossfade, videos stay paused on frame 0.
+ * laid out at a time. `prefers-reduced-motion: reduce` wird in
+ * FlowAnimation respektiert: Videos bleiben auf Frame 0 pausiert.
  */
 export function FlowTabs() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [userTookOver, setUserTookOver] = useState(false);
   const [isInView, setIsInView] = useState(false);
-  const reduceMotion = useRef(false);
   const desktopRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    reduceMotion.current = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-  }, []);
-
   /**
-   * Spielt Animation + Auto-Rotation nur ab waehrend der Desktop-Tree
-   * im Viewport sichtbar ist. Verlaesst der User die Sektion, pausiert
-   * alles auf Frame 0; kommt er wieder rein, startet die Story neu bei
-   * Step 01 (sofern der User nicht manuell geklickt hat — dann
-   * respektieren wir seine Auswahl auch nach Re-Entry).
+   * Spielt die aktive Animation nur ab, waehrend der Desktop-Tree im
+   * Viewport sichtbar ist. Verlaesst der User die Sektion, pausiert
+   * das Video auf Frame 0; kommt er wieder rein, startet es von vorn.
+   * Die Step-Auswahl selbst bleibt erhalten — sie wechselt nur per
+   * Klick, nie automatisch.
    *
    * Nur der Desktop-Tree wird beobachtet — auf Mobile ist er
-   * display:none und intersected nie, also bleibt die Rotation dort
-   * automatisch aus. Die Mobile-Karten steuern ihre Sichtbarkeit
-   * selbst (eigener Observer pro Karte in MobileFlowCard). Threshold
-   * 0.5 = halbe Sektion im Viewport: empirischer Sweet-Spot, bei dem
-   * die rechte Animations-Spalte garantiert vollstaendig sichtbar ist
-   * bevor wir play druecken. IntersectionObserver feuert in beide
-   * Richtungen wenn die Threshold gekreuzt wird, also auch beim
-   * Verlassen — kein Disconnect.
+   * display:none und intersected nie. Die Mobile-Karten steuern ihre
+   * Sichtbarkeit selbst (eigener Observer pro Karte in MobileFlowCard).
+   * Threshold 0.5 = halbe Sektion im Viewport: empirischer Sweet-Spot,
+   * bei dem die rechte Animations-Spalte garantiert vollstaendig
+   * sichtbar ist bevor wir play druecken. IntersectionObserver feuert
+   * in beide Richtungen wenn die Threshold gekreuzt wird, also auch
+   * beim Verlassen — kein Disconnect.
    */
   useEffect(() => {
     const el = desktopRef.current;
@@ -128,21 +119,8 @@ export function FlowTabs() {
     return () => obs.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (userTookOver || reduceMotion.current || !isInView) return;
-    // Reset bei jedem Re-Entry: Story faengt wieder bei Step 01 an,
-    // damit der User die Animation von Anfang sieht — auch wenn die
-    // Rotation vor dem Wegscrollen schon weiter war.
-    setActiveIndex(0);
-    const id = window.setInterval(() => {
-      setActiveIndex((i) => (i + 1) % STEPS.length);
-    }, ROTATE_MS);
-    return () => window.clearInterval(id);
-  }, [userTookOver, isInView]);
-
   const handleSelect = (i: number) => {
     setActiveIndex(i);
-    setUserTookOver(true);
   };
 
   return (

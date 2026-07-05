@@ -2015,7 +2015,7 @@ h2 .accent {
      tab buttons) and a `.flow-stage` on the right — a portrait box
      (aspect-ratio 4/5) holding 3 dashed-stripe `.flow-anim`
      placeholders, absolutely stacked, only the active one opacity:1.
-     Auto-rotates every 6 s; first user click stops the rotation.
+     Step-Wechsel NUR per Klick — Auto-Rotation entfernt 2026-07-05.
 
    Mobile (≤960 px) — `.flow-mobile` only:
      A vertical stack of 3 `.flow-card`s (white card with
