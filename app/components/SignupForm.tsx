@@ -417,7 +417,7 @@ export function SignupForm({ slug }: Props) {
 
         <button
           type="submit"
-          className="beta-submit"
+          className="beta-submit beta-submit-quiet"
           aria-busy={status === "submitting"}
           disabled={status === "submitting"}
         >

@@ -1557,6 +1557,21 @@ h2 .accent {
 .beta-submit[aria-busy="true"] {
   cursor: wait;
 }
+/* Leise Variante fuer den Email-Submit im Sign-up-Modus: dort sind
+   Apple/Google der gewollte Primaerpfad, der Gradient+Glow wuerde die
+   Hierarchie umdrehen (Notion/Linear-Pattern: OAuth laut, Email leise).
+   Der OTP-Schritt behaelt bewusst den vollen .beta-submit — da ist der
+   Button die einzige Aktion auf dem Screen. */
+.beta-submit-quiet {
+  background: var(--blue-soft);
+  color: var(--blue-deep);
+  box-shadow: none;
+}
+.beta-submit-quiet:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #cfddfb;
+  box-shadow: none;
+}
 .beta-submit-error {
   text-align: center;
   font-size: 14px;
