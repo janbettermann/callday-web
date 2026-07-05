@@ -558,7 +558,9 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
 }
 .login-headline {
   font-family: var(--font-geist-sans), sans-serif;
-  font-size: clamp(28px, 4vw, 36px);
+  /* Floor 32px statt 28px — auf Phones greift immer der clamp-Floor,
+     und 28px wirkte in der Card zu klein (Jan-Feedback 2026-07-05). */
+  font-size: clamp(32px, 4vw, 36px);
   font-weight: 600;
   letter-spacing: -0.5px;
   line-height: 1.1;
