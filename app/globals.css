@@ -574,6 +574,11 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
   text-align: center;
   margin: 0 0 32px;
 }
+/* Confirm-Screen: mehr Luft zwischen den Zeilen des mehrzeiligen Sub-Texts
+   (nur hier, damit Login/Affiliate-Login unberuehrt bleiben). */
+.confirm-sub {
+  line-height: 1.6;
+}
 .login-back-link {
   display: block;
   /* width: fit-content — als <Link> (Anchor, /confirm) wuerde der Block

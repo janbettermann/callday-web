@@ -123,7 +123,7 @@ export function ConfirmCard() {
   return (
     <div className="login-card">
       <h1 className="login-headline">Check your inbox</h1>
-      <p className="login-sub">
+      <p className="login-sub confirm-sub">
         {infoMessage ??
           (askForEmail ? (
             <>
@@ -161,12 +161,12 @@ export function ConfirmCard() {
           </label>
         )}
 
-        <label className="beta-field">
-          <span className="beta-field-label">Sign-up code</span>
+        <div className="beta-field">
           <input
             type="text"
             required
             autoFocus={!askForEmail}
+            aria-label="Sign-up code"
             inputMode="numeric"
             autoComplete="one-time-code"
             value={code}
@@ -186,7 +186,7 @@ export function ConfirmCard() {
               fontVariantNumeric: "tabular-nums",
             }}
           />
-        </label>
+        </div>
 
         {/* maxLength bewusst NICHT auf dem Input — wenn der User einen
             formatierten Code paste'd (z.B. "1234 5678" mit Space), wuerde
