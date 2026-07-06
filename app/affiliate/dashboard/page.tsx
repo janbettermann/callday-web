@@ -9,6 +9,8 @@ import {
   verifyAffiliateSession,
 } from "@/lib/affiliate-auth";
 import { getServerSupabase } from "@/lib/supabase-server";
+import { getAffiliateActivity, fmtRelative } from "@/lib/affiliate-activity";
+import { ActivityList } from "../ActivityList";
 
 import { CopyLinkButton } from "./CopyLinkButton";
 import { AddPostForm } from "./AddPostForm";
@@ -37,12 +39,6 @@ export const metadata: Metadata = {
   title: "Your dashboard · Callday Affiliates",
   robots: { index: false, follow: false },
 };
-
-interface ActivityEvent {
-  type: "view" | "signup";
-  created_at: string;
-  referrer_host?: string | null;
-}
 
 interface PostRow {
   id: string;
@@ -83,22 +79,12 @@ export default async function AffiliateDashboardPage() {
     founder_tier: boolean;
   };
 
-  // Eine Quelle fuer alles: ALLE Views + Sign-ups des Affiliates (Volumen ist
-  // klein, ~100 Views/Monat). Daraus: Unique-Visitor-Count, Recent-Activity-
-  // Dedupe UND die zeitliche Post-Korrelation. Posts separat.
-  // Activated bewusst NICHT angezeigt — liegt nicht im Einflussbereich des
-  // Affiliates, waere demotivierend. Admin-Dashboard zeigt es weiterhin.
-  const [viewsRes, signupsRes, postsRes] = await Promise.all([
-    sb
-      .from("affiliate_page_views")
-      .select("created_at, referrer_host, visitor_hash")
-      .eq("affiliate_id", affiliateId)
-      .order("created_at", { ascending: true }),
-    sb
-      .from("profiles")
-      .select("created_at")
-      .eq("referred_by_affiliate_id", affiliateId)
-      .order("created_at", { ascending: false }),
+  // Views + Sign-ups + abgeleiteter Activity-Feed kommen aus dem geteilten
+  // Helper (dieselbe Quelle wie /affiliate/activity, kein Copy-Paste). Posts +
+  // Korrelation bleiben hier. Activated bewusst NICHT angezeigt (nicht im
+  // Einflussbereich des Affiliates) — Admin-Dashboard zeigt es weiterhin.
+  const [act, postsRes] = await Promise.all([
+    getAffiliateActivity(affiliateId),
     sb
       .from("affiliate_posts")
       .select("id, url, platform, posted_at, note")
@@ -106,53 +92,15 @@ export default async function AffiliateDashboardPage() {
       .order("posted_at", { ascending: false }),
   ]);
 
-  const allViews = (viewsRes.data ?? []) as Array<{
-    created_at: string;
-    referrer_host: string | null;
-    visitor_hash: string;
-  }>;
-  const allSignups = (signupsRes.data ?? []) as Array<{ created_at: string }>;
+  const {
+    allViews,
+    allSignups,
+    uniqueVisitors,
+    signupCount,
+    signupRate,
+    activity,
+  } = act;
   const posts = (postsRes.data ?? []) as PostRow[];
-
-  const uniqueVisitors = new Set(allViews.map((v) => v.visitor_hash)).size;
-  const signupCount = allSignups.length;
-  const signupRate =
-    uniqueVisitors === 0
-      ? "—"
-      : `${Math.round((signupCount / uniqueVisitors) * 100)}%`;
-
-  // Visitor-Dedupe: pro visitor_hash nur den ersten (aeltesten) Eintrag.
-  // allViews lief ASC → erstes Vorkommen ist der aelteste. visitor_hash
-  // rotiert taeglich (daily-salt) → derselbe Mensch am naechsten Tag = neuer
-  // Hash = neuer Visitor. Innerhalb eines Tages: nur erster Visit.
-  const firstVisitByHash = new Map<
-    string,
-    { created_at: string; referrer_host: string | null }
-  >();
-  for (const v of allViews) {
-    if (!firstVisitByHash.has(v.visitor_hash)) {
-      firstVisitByHash.set(v.visitor_hash, {
-        created_at: v.created_at,
-        referrer_host: v.referrer_host,
-      });
-    }
-  }
-
-  const visitorEvents: ActivityEvent[] = Array.from(
-    firstVisitByHash.values(),
-  ).map((v) => ({
-    type: "view",
-    created_at: v.created_at,
-    referrer_host: v.referrer_host,
-  }));
-  const signupEvents: ActivityEvent[] = allSignups.map((s) => ({
-    type: "signup",
-    created_at: s.created_at,
-  }));
-
-  const activity: ActivityEvent[] = [...visitorEvents, ...signupEvents]
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))
-    .slice(0, 50);
 
   // Zeitliche Korrelation: Unique-Visitors + Sign-ups im Fenster
   // [posted_at, posted_at + POST_WINDOW_HOURS] pro Post. Fenster koennen sich
@@ -369,81 +317,22 @@ export default async function AffiliateDashboardPage() {
             Recent activity
           </div>
 
-          {activity.length === 0 ? (
-            <p
+          <ActivityList activity={activity.slice(0, 10)} />
+          {activity.length > 10 ? (
+            <Link
+              href="/affiliate/activity"
               style={{
-                margin: 0,
-                color: "var(--ink-dim)",
-                fontSize: 14,
+                display: "inline-block",
+                marginTop: 16,
+                fontSize: 13,
+                fontWeight: 500,
+                color: "var(--blue-deep, #2563e8)",
+                textDecoration: "none",
               }}
             >
-              No activity yet. Share your link to get started.
-            </p>
-          ) : (
-            <ul
-              style={{
-                margin: 0,
-                padding: 0,
-                listStyle: "none",
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-              }}
-            >
-              {activity.map((e, i) => (
-                <li
-                  key={i}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "10px 0",
-                    borderTop: i === 0 ? "none" : "0.5px solid var(--line)",
-                    gap: 12,
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 14,
-                      color: "var(--ink-dim)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      minWidth: 0,
-                    }}
-                  >
-                    <EventDot type={e.type} />
-                    <span style={{ whiteSpace: "nowrap" }}>
-                      {labelForEvent(e)}
-                    </span>
-                    {e.type === "view" && e.referrer_host ? (
-                      <span
-                        style={{
-                          fontSize: 12,
-                          color: "var(--ink-faint)",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        · {e.referrer_host}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 13,
-                      color: "var(--ink-faint)",
-                      fontVariantNumeric: "tabular-nums",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {fmtRelative(e.created_at)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+              View all activity →
+            </Link>
+          ) : null}
         </section>
 
         {/* === Posts === */}
@@ -693,42 +582,4 @@ function StatCard({
       </div>
     </div>
   );
-}
-
-function labelForEvent(e: ActivityEvent): string {
-  return e.type === "signup" ? "Sign-up" : "Visitor";
-}
-
-function EventDot({ type }: { type: ActivityEvent["type"] }) {
-  const color =
-    type === "signup"
-      ? "var(--blue-deep, #2563e8)"
-      : "var(--ink-faint, #94a3b8)";
-  return (
-    <span
-      aria-hidden
-      style={{
-        display: "inline-block",
-        width: 6,
-        height: 6,
-        borderRadius: 999,
-        background: color,
-        flexShrink: 0,
-      }}
-    />
-  );
-}
-
-function fmtRelative(iso: string): string {
-  const d = new Date(iso);
-  const diff = Date.now() - d.getTime();
-  const m = Math.floor(diff / 60_000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const days = Math.floor(h / 24);
-  if (days === 1) return "yesterday";
-  if (days < 30) return `${days}d ago`;
-  return d.toISOString().slice(0, 10);
 }
