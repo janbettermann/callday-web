@@ -1,13 +1,31 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 
 type FaqItem = {
   q: string;
   a: ReactNode;
+  // Fuer eingeloggte Rueckkehrer ausblenden (sie haben sich schon
+  // registriert — die Frage ist dann irrelevant).
+  hideWhenLoggedIn?: boolean;
 };
 
 const ITEMS: FaqItem[] = [
+  {
+    q: "What happens after I sign up?",
+    a: (
+      <>
+        <p>
+          Confirm your account and your TestFlight invite lands in your
+          inbox right away, sent from <strong>hello@callday.io</strong>.
+          Install Callday from there and sign in with the same account.
+        </p>
+        <p>If you don&apos;t see the email, check spam.</p>
+      </>
+    ),
+    hideWhenLoggedIn: true,
+  },
   {
     q: "Is the beta really free?",
     a: (
@@ -60,10 +78,15 @@ const ITEMS: FaqItem[] = [
  */
 export function FaqAccordion() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  // Eingeloggte Rueckkehrer sehen die hideWhenLoggedIn-Fragen nicht
+  // ("What happens after I sign up?" ist fuer sie erledigt). openIndex=0
+  // haelt die erste SICHTBARE Frage offen — funktioniert in beiden Faellen.
+  const loggedIn = useIsLoggedIn();
+  const items = loggedIn ? ITEMS.filter((it) => !it.hideWhenLoggedIn) : ITEMS;
 
   return (
     <ul className="faq-list">
-      {ITEMS.map((item, i) => {
+      {items.map((item, i) => {
         const isOpen = i === openIndex;
         return (
           <li key={item.q} className="faq-item" data-open={isOpen || undefined}>
