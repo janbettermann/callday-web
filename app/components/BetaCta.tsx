@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { SignupForm } from "./SignupForm";
-import { createSupabaseBrowser } from "@/lib/supabase-browser";
+import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 
 /**
  * #beta-Sektion auf den Landings (organic + /a/[slug]).
@@ -12,28 +11,16 @@ import { createSupabaseBrowser } from "@/lib/supabase-browser";
  * Account (Install + Verwaltung) fuehrt, statt sie nochmal zur Anmeldung
  * aufzufordern (das waere redundant + leicht irrefuehrend).
  *
- * Auth-Check client-seitig via getSession (liest die Session aus dem
- * Cookie, kein Netzwerk), damit die Landing statisch bleibt. Default =
- * ausgeloggt (99% der Besucher); der seltene eingeloggte Rueckkehrer sieht
- * nach dem Session-Read einen kurzen Swap. Gleiches Pattern wie SiteNav.
+ * Login-Check via geteiltem useIsLoggedIn-Hook (ein getSession fuer alle
+ * Landing-Swaps, Landing bleibt statisch). Default = ausgeloggt (99% der
+ * Besucher); der seltene eingeloggte Rueckkehrer sieht nach dem Session-Read
+ * einen kurzen Swap.
  *
  * `slug` wird nur ans SignupForm durchgereicht (Affiliate-Attribution) —
  * fuer den eingeloggten Zweig irrelevant.
  */
 export function BetaCta({ slug }: { slug?: string }) {
-  const [loggedIn, setLoggedIn] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    createSupabaseBrowser()
-      .auth.getSession()
-      .then(({ data }) => {
-        if (active) setLoggedIn(!!data.session);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const loggedIn = useIsLoggedIn();
 
   return (
     <>

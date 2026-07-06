@@ -7,6 +7,7 @@ import { SiteNav } from "../../components/SiteNav";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { trackPageView } from "@/lib/affiliate-page-views";
 import { BetaCta } from "../../components/BetaCta";
+import { HeroCta } from "../../components/HeroCta";
 
 /**
  * /a/[slug] — Founding-Affiliate-Landing.
@@ -116,14 +117,7 @@ export default async function AffiliateLanding({
             procrastination. Callday keeps you on the phone, one tap at a time.
           </p>
 
-          <div className="hero-cta-wrap reveal delay-3">
-            <a href="#beta" className="hero-cta">
-              Get early access
-            </a>
-            <p className="hero-cta-meta">
-              Start calling today. Free iOS beta.
-            </p>
-          </div>
+          <HeroCta />
         </div>
       </section>
 

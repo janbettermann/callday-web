@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CalldayLogo } from "./CalldayLogo";
-import { createSupabaseBrowser } from "@/lib/supabase-browser";
+import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 
 /**
  * Notion-style sticky nav: transparent + light text while the dark
@@ -26,24 +26,9 @@ import { createSupabaseBrowser } from "@/lib/supabase-browser";
  */
 export function SiteNav() {
   const [scrolled, setScrolled] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
-
   // Header-CTA je nach Login-Status: eingeloggte Rueckkehrer bekommen einen
-  // Account-Link statt "Get early access". Client-seitig gecheckt, damit die
-  // (statische) Landing-Page nicht dynamisch werden muss. getSession() liest
-  // die Session aus dem Cookie ohne Netzwerk-Roundtrip — praktisch kein
-  // Flackern; Default bleibt der ausgeloggte Zustand (99% der Besucher).
-  useEffect(() => {
-    let active = true;
-    createSupabaseBrowser()
-      .auth.getSession()
-      .then(({ data }) => {
-        if (active) setLoggedIn(!!data.session);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  // Account-Link statt "Get early access" (geteilter Hook, siehe useIsLoggedIn).
+  const loggedIn = useIsLoggedIn();
 
   useEffect(() => {
     const hero = document.querySelector(".hero");

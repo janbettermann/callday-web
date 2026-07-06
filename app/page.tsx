@@ -3,6 +3,7 @@ import { CalldayLogo } from "./components/CalldayLogo";
 import { FaqAccordion } from "./components/FaqAccordion";
 import { FlowTabs } from "./components/FlowTabs";
 import { BetaCta } from "./components/BetaCta";
+import { HeroCta } from "./components/HeroCta";
 import { SiteNav } from "./components/SiteNav";
 
 export default function Home() {
@@ -34,14 +35,7 @@ export default function Home() {
             procrastination. Callday keeps you on the phone, one tap at a time.
           </p>
 
-          <div className="hero-cta-wrap reveal delay-3">
-            <a href="#beta" className="hero-cta">
-              Get early access
-            </a>
-            <p className="hero-cta-meta">
-              Start calling today. Free iOS beta.
-            </p>
-          </div>
+          <HeroCta />
         </div>
       </section>
 
