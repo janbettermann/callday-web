@@ -11,7 +11,11 @@ import {
 import { getServerSupabase } from "@/lib/supabase-server";
 
 import { CopyLinkButton } from "./CopyLinkButton";
-import { affiliateSignOutAction } from "./actions";
+import { AddPostForm } from "./AddPostForm";
+import {
+  affiliateSignOutAction,
+  deleteAffiliatePostAction,
+} from "./actions";
 
 /**
  * /affiliate/dashboard — Affiliate's eigene Mini-Page.
@@ -39,6 +43,17 @@ interface ActivityEvent {
   created_at: string;
   referrer_host?: string | null;
 }
+
+interface PostRow {
+  id: string;
+  url: string;
+  platform: string | null;
+  posted_at: string;
+  note: string | null;
+}
+
+// Zeitfenster fuer die Post→Views/Sign-ups-Korrelation.
+const POST_WINDOW_HOURS = 48;
 
 export default async function AffiliateDashboardPage() {
   const jar = await cookies();
@@ -68,66 +83,53 @@ export default async function AffiliateDashboardPage() {
     founder_tier: boolean;
   };
 
-  // Zwei Datenquellen parallel: Page-Views (Click-Tracking-Tabelle, unique
-  // via visitor_hash distinct) + Signups (profiles.referred_by_affiliate_id).
+  // Eine Quelle fuer alles: ALLE Views + Sign-ups des Affiliates (Volumen ist
+  // klein, ~100 Views/Monat). Daraus: Unique-Visitor-Count, Recent-Activity-
+  // Dedupe UND die zeitliche Post-Korrelation. Posts separat.
   // Activated bewusst NICHT angezeigt — liegt nicht im Einflussbereich des
-  // Affiliates (Produkt-Aktivierung), waere demotivierend ("5 sign-ups,
-  // 0 activated"). Admin-Dashboard zeigt es weiterhin.
-  //
-  // Recent-Views-Limit ist 200 (statt 50) damit beim Visitor-Dedupe genug
-  // History vorhanden ist um den ersten Visit pro Hash zu finden. Bei
-  // ~100 Views/Monat reicht 200 fuer ~2 Monate. Falls Volume hoch geht:
-  // SQL-side DISTINCT ON via RPC-Funktion.
-  const [uniqueRes, recentViewsRes, profilesRes] = await Promise.all([
-    sb
-      .from("affiliate_page_views")
-      .select("visitor_hash")
-      .eq("affiliate_id", affiliateId),
+  // Affiliates, waere demotivierend. Admin-Dashboard zeigt es weiterhin.
+  const [viewsRes, signupsRes, postsRes] = await Promise.all([
     sb
       .from("affiliate_page_views")
       .select("created_at, referrer_host, visitor_hash")
       .eq("affiliate_id", affiliateId)
-      .order("created_at", { ascending: true })
-      .limit(200),
+      .order("created_at", { ascending: true }),
     sb
       .from("profiles")
-      .select("id, created_at")
+      .select("created_at")
       .eq("referred_by_affiliate_id", affiliateId)
-      .order("created_at", { ascending: false })
-      .limit(50),
+      .order("created_at", { ascending: false }),
+    sb
+      .from("affiliate_posts")
+      .select("id, url, platform, posted_at, note")
+      .eq("affiliate_id", affiliateId)
+      .order("posted_at", { ascending: false }),
   ]);
 
-  const uniqueVisitors = new Set(
-    ((uniqueRes.data ?? []) as Array<{ visitor_hash: string }>).map(
-      (r) => r.visitor_hash,
-    ),
-  ).size;
-
-  const profileRows = (profilesRes.data ?? []) as Array<{
-    id: string;
+  const allViews = (viewsRes.data ?? []) as Array<{
     created_at: string;
+    referrer_host: string | null;
+    visitor_hash: string;
   }>;
+  const allSignups = (signupsRes.data ?? []) as Array<{ created_at: string }>;
+  const posts = (postsRes.data ?? []) as PostRow[];
 
-  const signupCount = profileRows.length;
+  const uniqueVisitors = new Set(allViews.map((v) => v.visitor_hash)).size;
+  const signupCount = allSignups.length;
   const signupRate =
     uniqueVisitors === 0
       ? "—"
       : `${Math.round((signupCount / uniqueVisitors) * 100)}%`;
 
-  // Visitor-Dedupe: pro visitor_hash NUR den ersten Eintrag behalten.
-  // Query lief ASC, also ist der erste Vorkommen automatisch der aelteste.
-  // visitor_hash rotiert taeglich (daily-salt) → derselbe Mensch am
-  // naechsten Tag = neuer Hash = neuer Visitor-Eintrag (= "X war an
-  // 3 verschiedenen Tagen hier"). Innerhalb eines Tages: nur erster Visit.
+  // Visitor-Dedupe: pro visitor_hash nur den ersten (aeltesten) Eintrag.
+  // allViews lief ASC → erstes Vorkommen ist der aelteste. visitor_hash
+  // rotiert taeglich (daily-salt) → derselbe Mensch am naechsten Tag = neuer
+  // Hash = neuer Visitor. Innerhalb eines Tages: nur erster Visit.
   const firstVisitByHash = new Map<
     string,
     { created_at: string; referrer_host: string | null }
   >();
-  for (const v of (recentViewsRes.data ?? []) as Array<{
-    created_at: string;
-    referrer_host: string | null;
-    visitor_hash: string;
-  }>) {
+  for (const v of allViews) {
     if (!firstVisitByHash.has(v.visitor_hash)) {
       firstVisitByHash.set(v.visitor_hash, {
         created_at: v.created_at,
@@ -143,14 +145,35 @@ export default async function AffiliateDashboardPage() {
     created_at: v.created_at,
     referrer_host: v.referrer_host,
   }));
-  const signupEvents: ActivityEvent[] = profileRows.map((p) => ({
+  const signupEvents: ActivityEvent[] = allSignups.map((s) => ({
     type: "signup",
-    created_at: p.created_at,
+    created_at: s.created_at,
   }));
 
   const activity: ActivityEvent[] = [...visitorEvents, ...signupEvents]
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
     .slice(0, 50);
+
+  // Zeitliche Korrelation: Unique-Visitors + Sign-ups im Fenster
+  // [posted_at, posted_at + POST_WINDOW_HOURS] pro Post. Fenster koennen sich
+  // ueberlappen (nah beieinander liegende Posts) — bewusst so (zeitliche
+  // Korrelation, keine harte Zuordnung).
+  const windowMs = POST_WINDOW_HOURS * 60 * 60 * 1000;
+  const postStats = posts.map((post) => {
+    const start = new Date(post.posted_at).getTime();
+    const end = start + windowMs;
+    const hashes = new Set<string>();
+    for (const v of allViews) {
+      const t = new Date(v.created_at).getTime();
+      if (t >= start && t <= end) hashes.add(v.visitor_hash);
+    }
+    let signups = 0;
+    for (const s of allSignups) {
+      const t = new Date(s.created_at).getTime();
+      if (t >= start && t <= end) signups += 1;
+    }
+    return { post, visitors: hashes.size, signups };
+  });
 
   const baseUrl =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://callday.io";
@@ -421,6 +444,162 @@ export default async function AffiliateDashboardPage() {
               ))}
             </ul>
           )}
+        </section>
+
+        {/* === Posts === */}
+        <section
+          style={{
+            background: "#ffffff",
+            border: "0.5px solid var(--line)",
+            borderRadius: 24,
+            padding: 28,
+            marginBottom: 24,
+            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "var(--font-mono), monospace",
+              fontSize: 11,
+              textTransform: "uppercase",
+              letterSpacing: "1.5px",
+              color: "var(--ink-faint)",
+              marginBottom: 8,
+            }}
+          >
+            Posts
+          </div>
+          <p
+            style={{
+              margin: "0 0 20px",
+              fontSize: 13,
+              color: "var(--ink-dim)",
+              lineHeight: 1.5,
+            }}
+          >
+            Log a post to see how many visitors and sign-ups came in the{" "}
+            {POST_WINDOW_HOURS} h after it — so you can tell what actually moves
+            your numbers.
+          </p>
+
+          <AddPostForm />
+
+          {postStats.length > 0 ? (
+            <ul
+              style={{
+                margin: "24px 0 0",
+                padding: 0,
+                listStyle: "none",
+                display: "flex",
+                flexDirection: "column",
+                gap: 0,
+              }}
+            >
+              {postStats.map(({ post, visitors, signups }) => (
+                <li
+                  key={post.id}
+                  style={{
+                    padding: "16px 0",
+                    borderTop: "0.5px solid var(--line)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "var(--ink-faint)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        minWidth: 0,
+                      }}
+                    >
+                      {post.platform ? (
+                        <span
+                          style={{
+                            background: "rgba(26,29,38,0.06)",
+                            borderRadius: 6,
+                            padding: "2px 8px",
+                            fontSize: 11,
+                            fontWeight: 500,
+                            color: "var(--ink-dim)",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {post.platform}
+                        </span>
+                      ) : null}
+                      <span style={{ whiteSpace: "nowrap" }}>
+                        posted {fmtRelative(post.posted_at)}
+                      </span>
+                    </span>
+                    <form action={deleteAffiliatePostAction}>
+                      <input type="hidden" name="id" value={post.id} />
+                      <button
+                        type="submit"
+                        aria-label="Remove post"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "var(--ink-faint)",
+                          fontSize: 13,
+                          cursor: "pointer",
+                          padding: 4,
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </form>
+                  </div>
+
+                  <a
+                    href={post.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      fontSize: 14,
+                      color: "var(--blue-deep, #2563e8)",
+                      textDecoration: "none",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {post.url}
+                  </a>
+
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--ink-dim)",
+                      background: "rgba(37,99,232,0.06)",
+                      borderRadius: 10,
+                      padding: "8px 12px",
+                    }}
+                  >
+                    <strong style={{ color: "var(--ink)", fontWeight: 600 }}>
+                      {visitors}
+                    </strong>{" "}
+                    visitors and{" "}
+                    <strong style={{ color: "var(--ink)", fontWeight: 600 }}>
+                      {signups}
+                    </strong>{" "}
+                    sign-ups in the {POST_WINDOW_HOURS} h after
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </section>
 
         {/* === Payouts hint === */}

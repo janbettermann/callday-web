@@ -2,8 +2,13 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
-import { AFFILIATE_SESSION_COOKIE } from "@/lib/affiliate-auth";
+import {
+  AFFILIATE_SESSION_COOKIE,
+  verifyAffiliateSession,
+} from "@/lib/affiliate-auth";
+import { getServerSupabase } from "@/lib/supabase-server";
 
 /**
  * Sign out — clear das Session-Cookie + redirect zu /affiliate/login.
@@ -18,4 +23,80 @@ export async function affiliateSignOutAction() {
     expires: new Date(0),
   });
   redirect("/affiliate/login");
+}
+
+async function requireAffiliateId(): Promise<string> {
+  const jar = await cookies();
+  const affiliateId = await verifyAffiliateSession(
+    jar.get(AFFILIATE_SESSION_COOKIE)?.value,
+  );
+  if (!affiliateId) redirect("/affiliate/login");
+  return affiliateId;
+}
+
+export type AddPostState = { error?: string; ok?: boolean } | null;
+
+/**
+ * Legt einen vom Affiliate gemeldeten Post an (Link + Zeitpunkt). `posted_at`
+ * kommt als UTC-ISO-String vom Client — die datetime-local→UTC-Umrechnung
+ * passiert im Browser (AddPostForm), damit die Wall-Clock-Zeit stimmt.
+ * Fuer useActionState: (prevState, formData) → newState.
+ */
+export async function addAffiliatePostAction(
+  _prev: AddPostState,
+  formData: FormData,
+): Promise<AddPostState> {
+  const affiliateId = await requireAffiliateId();
+
+  const url = String(formData.get("url") ?? "").trim();
+  const postedAtIso = String(formData.get("posted_at") ?? "").trim();
+  const platform = String(formData.get("platform") ?? "").trim() || null;
+
+  if (!url) return { error: "Add the post link." };
+  let normalizedUrl: string;
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error();
+    normalizedUrl = u.toString();
+  } catch {
+    return { error: "That doesn't look like a link — include https://" };
+  }
+
+  if (!postedAtIso) return { error: "Pick when you posted it." };
+  const postedAt = new Date(postedAtIso);
+  if (Number.isNaN(postedAt.getTime())) {
+    return { error: "That date/time isn't valid." };
+  }
+
+  const sb = getServerSupabase();
+  const { error } = await sb.from("affiliate_posts").insert({
+    affiliate_id: affiliateId,
+    url: normalizedUrl,
+    platform,
+    posted_at: postedAt.toISOString(),
+  });
+  if (error) return { error: "Couldn't save the post. Try again." };
+
+  revalidatePath("/affiliate/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Loescht einen Post. Der `.eq("affiliate_id", …)`-Guard verhindert, dass ein
+ * Affiliate fremde Posts loescht (service_role bypassed RLS, also muss der
+ * Scope in der Query stehen).
+ */
+export async function deleteAffiliatePostAction(formData: FormData) {
+  const affiliateId = await requireAffiliateId();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  const sb = getServerSupabase();
+  await sb
+    .from("affiliate_posts")
+    .delete()
+    .eq("id", id)
+    .eq("affiliate_id", affiliateId);
+
+  revalidatePath("/affiliate/dashboard");
 }
