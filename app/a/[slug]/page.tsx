@@ -6,7 +6,7 @@ import { FlowTabs } from "../../components/FlowTabs";
 import { SiteNav } from "../../components/SiteNav";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { trackPageView } from "@/lib/affiliate-page-views";
-import { SignupForm } from "../../components/SignupForm";
+import { BetaCta } from "../../components/BetaCta";
 
 /**
  * /a/[slug] — Founding-Affiliate-Landing.
@@ -290,12 +290,7 @@ export default async function AffiliateLanding({
           + Sub (linksbuendig) leben in der SignupForm. === */}
       <section className="big-cta" id="beta">
         <div className="container big-cta-inner">
-          <h2>
-            Get <span className="accent">early access.</span>
-          </h2>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <SignupForm slug={slug} />
-          </div>
+          <BetaCta slug={slug} />
         </div>
       </section>
 
