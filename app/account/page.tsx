@@ -160,7 +160,7 @@ export default async function AccountPage() {
       <main className="account-page">
         <div className="account-inner">
           <h1 className="account-headline">Hi {firstName}.</h1>
-          <p className="account-sub">Manage your subscription and account.</p>
+          <p className="account-sub">You call. Callday handles the rest.</p>
 
           {/* Install-/Onboarding-Card — immer sichtbar: direkt nach dem Signup
               UND wenn ein Rueckkehrer (neues Handy) die App neu laden muss. */}
