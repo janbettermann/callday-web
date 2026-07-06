@@ -1100,19 +1100,10 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
   font-weight: 500;
   user-select: none;
   list-style: none;
+  text-align: center;
 }
 .account-details-summary::-webkit-details-marker {
   display: none;
-}
-.account-details-summary::before {
-  content: "▸";
-  display: inline-block;
-  margin-right: 8px;
-  font-size: 10px;
-  transition: transform 0.15s;
-}
-.account-details[open] .account-details-summary::before {
-  transform: rotate(90deg);
 }
 .account-details-content {
   padding-top: 16px;
