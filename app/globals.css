@@ -556,6 +556,18 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
   padding: 36px 32px 30px;
   box-shadow: 0 4px 16px rgba(26, 29, 38, 0.04);
 }
+/* Landing-CTA-Box (#beta, Main + Affiliate) im Stil der Account-"You're
+   in"-Card: blaue Toenung, blaue Border, gleiche Breite (560px). Nur hier
+   — /login, /confirm, /affiliate/login behalten die neutrale .login-card. */
+.big-cta .login-card {
+  max-width: 560px;
+  border: 1px solid rgba(37, 99, 232, 0.3);
+  background: linear-gradient(
+    180deg,
+    rgba(37, 99, 232, 0.06) 0%,
+    rgba(255, 255, 255, 1) 100%
+  );
+}
 .login-headline {
   font-family: var(--font-geist-sans), sans-serif;
   /* Floor 32px statt 28px — auf Phones greift immer der clamp-Floor,
