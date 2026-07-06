@@ -50,19 +50,23 @@ export function ResendTestFlightButton() {
         type="button"
         onClick={handleResend}
         disabled={status === "sending" || status === "sent"}
-        className="account-btn account-btn-secondary"
+        className="account-linkbtn"
       >
         {status === "sending"
-          ? "Sending..."
+          ? "Sending…"
           : status === "sent"
-            ? "Email sent ✓"
-            : "Resend TestFlight invite"}
+            ? "Invite sent ✓"
+            : "Resend invite"}
       </button>
 
       {status === "error" && errorMessage && (
-        <p className="beta-submit-error" role="alert" style={{ marginTop: 8 }}>
+        <span
+          className="beta-submit-error"
+          role="alert"
+          style={{ display: "block", marginTop: 8 }}
+        >
           {errorMessage}
-        </p>
+        </span>
       )}
     </>
   );

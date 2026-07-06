@@ -935,6 +935,101 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
   color: var(--ink-faint);
   margin: 12px 0 0;
 }
+
+/* --- Welcome-Card (post-signup, ?welcome=signup) --- */
+.account-welcome-title {
+  font-size: 24px;
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+}
+.account-welcome-lede {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0 0 20px;
+}
+.account-welcome-device {
+  color: var(--ink-dim);
+  margin-bottom: 4px;
+}
+.account-step-text strong {
+  font-weight: 600;
+}
+.account-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.account-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.account-welcome-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+.account-welcome-actions .account-btn {
+  margin-top: 0;
+}
+/* Auf dem blau getoenten Welcome-Card ist der globale --line-Rahmen (6%)
+   quasi unsichtbar — der Outline-Button (Install TestFlight) braucht mehr
+   Kontur. */
+.account-welcome-actions .account-btn-secondary {
+  border-color: rgba(26, 29, 38, 0.14);
+}
+/* Resend als inline Textlink im Hint (nicht als Button). */
+.account-linkbtn {
+  display: inline;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 500;
+  color: var(--blue-deep);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.account-linkbtn:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+  text-decoration: none;
+}
+.account-step-num {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(37, 99, 232, 0.22);
+}
+.account-step-text {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+.account-step-email {
+  display: inline-block;
+  font-weight: 600;
+  color: var(--blue-deep);
+  background: var(--blue-tint);
+  padding: 1px 7px;
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
 .account-btn {
   display: inline-block;
   width: 100%;

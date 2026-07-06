@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { CalldayLogo } from "../components/CalldayLogo";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
+import { parseUserAgent } from "@/lib/user-agent";
 import {
   createPortalSessionAction,
   deleteAccountAction,
@@ -74,26 +76,17 @@ function linkedProviders(
 /**
  * /account — Self-Service Hub für eingeloggte User.
  *
- * Drei Sektionen:
- *   1. Subscription: Status + Plan + Renewal, "Manage subscription" Button
+ * Sektionen:
+ *   1. Install/Onboarding: "You're in" + TestFlight-2-Step + Resend.
+ *      Immer sichtbar — deckt Erst-Signup UND Reinstall (neues Handy) ab.
+ *   2. Subscription: Status + Plan + Renewal, "Manage subscription" Button
  *      (öffnet Stripe Customer Portal via Server Action).
- *   2. Account: Email, "Delete account" Form mit Email-Re-Type-Safeguard.
- *   3. Mobile: App-Store-Link + Open-App-Hint.
+ *   3. Account: Email, Sign-in-Methoden, "Delete account" mit Re-Type-Safeguard.
  *
  * Auth-Gate: nicht-eingeloggte User werden zu /login?next=/account
  * geschickt. Per @supabase/ssr-Middleware werden Cookies vorher refreshed.
  */
-export default async function AccountPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ welcome?: string }>;
-}) {
-  const { welcome } = await searchParams;
-  // "signup" ist der aktuelle Wert (SignupForm auf Landing + /a/[slug]);
-  // "affiliate" bleibt als Legacy-Wert akzeptiert fuer Sessions die den
-  // Sign-Up vor dem Vereinheitlichungs-Deploy (2026-07-05) gestartet haben.
-  const isSignupWelcome = welcome === "signup" || welcome === "affiliate";
-
+export default async function AccountPage() {
   const supabase = await createSupabaseSSR();
   const {
     data: { user },
@@ -104,6 +97,12 @@ export default async function AccountPage({
   }
 
   const testflightLink = process.env.TESTFLIGHT_PUBLIC_LINK;
+  // TestFlight-App im App Store — fixe Apple-App-ID, global konstant.
+  const testflightAppStoreUrl =
+    "https://apps.apple.com/app/testflight/id899247664";
+
+  // Device-Kontext fuer den Welcome-State (Desktop -> "auf iPhone weitermachen").
+  const { isIOS } = parseUserAgent((await headers()).get("user-agent"));
 
   const { data: profileRow } = await supabase
     .from("profiles")
@@ -163,8 +162,9 @@ export default async function AccountPage({
           <h1 className="account-headline">Hi {firstName}.</h1>
           <p className="account-sub">Manage your subscription and account.</p>
 
-          {/* Welcome-Banner (zeigt nur direkt nach Sign-Up via SignupForm) */}
-          {isSignupWelcome && testflightLink && (
+          {/* Install-/Onboarding-Card — immer sichtbar: direkt nach dem Signup
+              UND wenn ein Rueckkehrer (neues Handy) die App neu laden muss. */}
+          {testflightLink && (
             <section
               className="account-card"
               style={{
@@ -173,19 +173,68 @@ export default async function AccountPage({
                   "linear-gradient(180deg, rgba(37,99,232,0.06) 0%, rgba(255,255,255,1) 100%)",
               }}
             >
-              <h2 className="account-card-title">You&apos;re in.</h2>
-              <p className="account-body">
-                One step left: install Callday from TestFlight, then sign in
-                with the same email on your iPhone.
+              <h2 className="account-card-title account-welcome-title">
+                You&apos;re in 🎉
+              </h2>
+              <p className="account-welcome-lede">
+                Your first calls are one install away.
               </p>
-              <a
-                href={testflightLink}
-                className="account-btn account-btn-primary"
-              >
-                Open TestFlight
-              </a>
+
+              <ol className="account-steps">
+                <li className="account-step">
+                  <span className="account-step-num">1</span>
+                  <span className="account-step-text">
+                    Install <strong>TestFlight</strong> — Apple&apos;s free
+                    beta app
+                  </span>
+                </li>
+                <li className="account-step">
+                  <span className="account-step-num">2</span>
+                  <span className="account-step-text">
+                    Unlock Callday inside TestFlight
+                  </span>
+                </li>
+                <li className="account-step">
+                  <span className="account-step-num">3</span>
+                  <span className="account-step-text">
+                    Sign in with{" "}
+                    {profile.email ? (
+                      <span className="account-step-email">
+                        {profile.email}
+                      </span>
+                    ) : (
+                      "the same email"
+                    )}{" "}
+                    and start calling
+                  </span>
+                </li>
+              </ol>
+
+              {!isIOS && (
+                <p className="account-hint account-welcome-device">
+                  TestFlight runs on iPhone — open this page (or the email we
+                  sent) on your iPhone to continue.
+                </p>
+              )}
+
+              <div className="account-welcome-actions">
+                <a
+                  href={testflightAppStoreUrl}
+                  className="account-btn account-btn-secondary"
+                >
+                  Install TestFlight
+                </a>
+                <a
+                  href={testflightLink}
+                  className="account-btn account-btn-primary"
+                >
+                  Unlock Callday
+                </a>
+              </div>
+
               <p className="account-hint">
-                Didn&apos;t get the email?{" "}
+                We also send an invite email, but the buttons above are all you
+                need. No need to dig through your inbox.{" "}
                 {profile.email ? (
                   <ResendTestFlightButton />
                 ) : (
@@ -329,37 +378,6 @@ export default async function AccountPage({
                 </form>
               </div>
             </details>
-          </section>
-
-          {/* Mobile App Section */}
-          <section className="account-card">
-            <h2 className="account-card-title">Callday on iPhone</h2>
-            <p className="account-body">
-              Open Callday on your iPhone and sign in with the same email.
-              {hasActiveSubscription && " Your subscription is already active."}
-            </p>
-            {testflightLink ? (
-              <a
-                href={testflightLink}
-                className="account-btn account-btn-secondary"
-              >
-                Open TestFlight
-              </a>
-            ) : (
-              /* Fallback wenn ENV-Var fehlt — sollte nie produktiv passieren */
-              <a
-                href="https://apps.apple.com/"
-                className="account-btn account-btn-secondary"
-              >
-                Open App Store
-              </a>
-            )}
-            {profile.email && !isSignupWelcome && (
-              <p className="account-hint">
-                Need the install email again?{" "}
-                <ResendTestFlightButton />
-              </p>
-            )}
           </section>
 
           <form action={signOutAction}>
