@@ -132,13 +132,13 @@ export function ConfirmCard() {
             </>
           ) : handoff.variant === "welcome-back" ? (
             <>
-              Welcome back. Enter the {SIGNUP_CODE_LENGTH}-digit code we
-              sent to <strong>{handoff.email}</strong>{" "}
-              and you&apos;re in — or request a new one if it expired.
+              Welcome back. Enter the sign-up code we sent to{" "}
+              <strong>{handoff.email}</strong> and you&apos;re in — or
+              request a new one if it expired.
             </>
           ) : (
             <>
-              Enter the {SIGNUP_CODE_LENGTH}-digit code we sent to{" "}
+              Enter the sign-up code we sent to{" "}
               <strong>{handoff.email}</strong>. Then you&apos;re in.
             </>
           ))}
