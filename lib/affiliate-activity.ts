@@ -98,6 +98,54 @@ export async function getAffiliateActivity(
   };
 }
 
+export interface PostRow {
+  id: string;
+  url: string;
+  platform: string | null;
+  posted_at: string;
+  note: string | null;
+}
+
+export interface PostStat {
+  post: PostRow;
+  visitors: number;
+  signups: number;
+}
+
+// Zeitfenster fuer die Post→Views/Sign-ups-Korrelation.
+export const POST_WINDOW_HOURS = 48;
+
+/**
+ * Pro Post: Unique-Visitors + Sign-ups im Fenster [posted_at, +windowHours].
+ * Fenster koennen sich ueberlappen (nah beieinander liegende Posts) — bewusst
+ * so (zeitliche Korrelation, keine harte Zuordnung). Pure Funktion, damit
+ * Dashboard (nutzt die vorhandenen allViews/allSignups) und /affiliate/posts
+ * sie teilen — kein Doppel-Fetch, kein Copy-Paste.
+ */
+export function computePostStats(
+  posts: PostRow[],
+  allViews: AffiliateActivity["allViews"],
+  allSignups: AffiliateActivity["allSignups"],
+  windowHours: number = POST_WINDOW_HOURS,
+): PostStat[] {
+  const windowMs = windowHours * 60 * 60 * 1000;
+  return posts.map((post) => {
+    const start = new Date(post.posted_at).getTime();
+    const end = start + windowMs;
+    const hashes = new Set<string>();
+    for (const v of allViews) {
+      const t = new Date(v.created_at).getTime();
+      if (t >= start && t <= end) hashes.add(v.visitor_hash);
+    }
+    let signups = 0;
+    for (const s of allSignups) {
+      const t = new Date(s.created_at).getTime();
+      if (t >= start && t <= end) signups += 1;
+    }
+    return { post, visitors: hashes.size, signups };
+  });
+}
+
 /** Relative-Zeit-Formatter (TZ-agnostisch — nur Dauer). */
 export function fmtRelative(iso: string): string {
   const d = new Date(iso);

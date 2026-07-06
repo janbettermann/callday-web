@@ -7,25 +7,30 @@ import {
   AFFILIATE_SESSION_COOKIE,
   verifyAffiliateSession,
 } from "@/lib/affiliate-auth";
-import { getAffiliateActivity } from "@/lib/affiliate-activity";
+import { getServerSupabase } from "@/lib/supabase-server";
+import {
+  getAffiliateActivity,
+  computePostStats,
+  type PostRow,
+} from "@/lib/affiliate-activity";
 import { AffiliateNav } from "../AffiliateNav";
 import { AffiliateFooter } from "../AffiliateFooter";
-import { ActivityList } from "../ActivityList";
+import { PostList } from "../PostList";
 
 /**
- * /affiliate/activity — vollständige Activity-Liste (Views + Sign-ups).
- * Das Dashboard zeigt nur die letzten 10 + einen Link hierher. Gleiche
- * Datenquelle (getAffiliateActivity) und dieselbe ActivityList-Komponente.
+ * /affiliate/posts — alle je geloggten Posts (mit Korrelation). Das Dashboard
+ * zeigt nur die heutigen; hier ist das Archiv. Gleiche Datenlogik
+ * (getAffiliateActivity + computePostStats) und dieselbe PostList-Komponente.
  */
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Activity · Callday Affiliates",
+  title: "Posts · Callday Affiliates",
   robots: { index: false, follow: false },
 };
 
-export default async function AffiliateActivityPage() {
+export default async function AffiliatePostsPage() {
   const jar = await cookies();
   const affiliateId = await verifyAffiliateSession(
     jar.get(AFFILIATE_SESSION_COOKIE)?.value,
@@ -35,7 +40,18 @@ export default async function AffiliateActivityPage() {
     redirect("/affiliate/login");
   }
 
-  const { activity } = await getAffiliateActivity(affiliateId);
+  const sb = getServerSupabase();
+  const [act, postsRes] = await Promise.all([
+    getAffiliateActivity(affiliateId),
+    sb
+      .from("affiliate_posts")
+      .select("id, url, platform, posted_at, note")
+      .eq("affiliate_id", affiliateId)
+      .order("posted_at", { ascending: false }),
+  ]);
+
+  const posts = (postsRes.data ?? []) as PostRow[];
+  const postStats = computePostStats(posts, act.allViews, act.allSignups);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
@@ -69,12 +85,12 @@ export default async function AffiliateActivityPage() {
             color: "var(--ink)",
           }}
         >
-          All activity
+          All posts
         </h1>
         <p
           style={{ margin: "0 0 32px", fontSize: 14, color: "var(--ink-dim)" }}
         >
-          Every visitor and sign-up through your link.
+          Every post you&apos;ve logged and how it moved your numbers.
         </p>
 
         <section
@@ -86,7 +102,7 @@ export default async function AffiliateActivityPage() {
             boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
           }}
         >
-          <ActivityList activity={activity} />
+          <PostList posts={postStats} />
         </section>
       </main>
 

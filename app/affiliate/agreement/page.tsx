@@ -7,25 +7,23 @@ import {
   AFFILIATE_SESSION_COOKIE,
   verifyAffiliateSession,
 } from "@/lib/affiliate-auth";
-import { getAffiliateActivity } from "@/lib/affiliate-activity";
 import { AffiliateNav } from "../AffiliateNav";
 import { AffiliateFooter } from "../AffiliateFooter";
-import { ActivityList } from "../ActivityList";
 
 /**
- * /affiliate/activity — vollständige Activity-Liste (Views + Sign-ups).
- * Das Dashboard zeigt nur die letzten 10 + einen Link hierher. Gleiche
- * Datenquelle (getAffiliateActivity) und dieselbe ActivityList-Komponente.
+ * /affiliate/agreement — Container fuer den Affiliate-Vertrag. Der finale
+ * Text kommt vom Anwalt (Onboarding ist bis dahin geblockt); bis dahin ein
+ * ehrlicher Platzhalter. Wenn der Text da ist, ersetzt er die Platzhalter-Card.
  */
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Activity · Callday Affiliates",
+  title: "Agreement · Callday Affiliates",
   robots: { index: false, follow: false },
 };
 
-export default async function AffiliateActivityPage() {
+export default async function AffiliateAgreementPage() {
   const jar = await cookies();
   const affiliateId = await verifyAffiliateSession(
     jar.get(AFFILIATE_SESSION_COOKIE)?.value,
@@ -34,8 +32,6 @@ export default async function AffiliateActivityPage() {
   if (!affiliateId) {
     redirect("/affiliate/login");
   }
-
-  const { activity } = await getAffiliateActivity(affiliateId);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
@@ -69,12 +65,12 @@ export default async function AffiliateActivityPage() {
             color: "var(--ink)",
           }}
         >
-          All activity
+          Affiliate agreement
         </h1>
         <p
           style={{ margin: "0 0 32px", fontSize: 14, color: "var(--ink-dim)" }}
         >
-          Every visitor and sign-up through your link.
+          The terms of the Callday founding-affiliate program.
         </p>
 
         <section
@@ -86,7 +82,34 @@ export default async function AffiliateActivityPage() {
             boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
           }}
         >
-          <ActivityList activity={activity} />
+          <p
+            style={{
+              margin: "0 0 12px",
+              fontSize: 15,
+              lineHeight: 1.6,
+              color: "var(--ink)",
+            }}
+          >
+            Your affiliate agreement is being finalized.
+          </p>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 14,
+              lineHeight: 1.6,
+              color: "var(--ink-dim)",
+            }}
+          >
+            Once it&apos;s ready, the full terms will live right here and
+            we&apos;ll email you a copy. Questions in the meantime? Reach us at{" "}
+            <a
+              href="mailto:hello@callday.io"
+              style={{ color: "var(--blue-deep, #2563e8)" }}
+            >
+              hello@callday.io
+            </a>
+            .
+          </p>
         </section>
       </main>
 

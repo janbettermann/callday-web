@@ -3,21 +3,24 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { CalldayLogo } from "../../components/CalldayLogo";
 import {
   AFFILIATE_SESSION_COOKIE,
   verifyAffiliateSession,
 } from "@/lib/affiliate-auth";
 import { getServerSupabase } from "@/lib/supabase-server";
-import { getAffiliateActivity, fmtRelative } from "@/lib/affiliate-activity";
+import {
+  getAffiliateActivity,
+  computePostStats,
+  POST_WINDOW_HOURS,
+  type PostRow,
+} from "@/lib/affiliate-activity";
+import { AffiliateNav } from "../AffiliateNav";
+import { AffiliateFooter } from "../AffiliateFooter";
 import { ActivityList } from "../ActivityList";
+import { PostList } from "../PostList";
 
 import { CopyLinkButton } from "./CopyLinkButton";
 import { AddPostForm } from "./AddPostForm";
-import {
-  affiliateSignOutAction,
-  deleteAffiliatePostAction,
-} from "./actions";
 
 /**
  * /affiliate/dashboard — Affiliate's eigene Mini-Page.
@@ -39,17 +42,6 @@ export const metadata: Metadata = {
   title: "Your dashboard · Callday Affiliates",
   robots: { index: false, follow: false },
 };
-
-interface PostRow {
-  id: string;
-  url: string;
-  platform: string | null;
-  posted_at: string;
-  note: string | null;
-}
-
-// Zeitfenster fuer die Post→Views/Sign-ups-Korrelation.
-const POST_WINDOW_HOURS = 48;
 
 export default async function AffiliateDashboardPage() {
   const jar = await cookies();
@@ -92,36 +84,9 @@ export default async function AffiliateDashboardPage() {
       .order("posted_at", { ascending: false }),
   ]);
 
-  const {
-    allViews,
-    allSignups,
-    uniqueVisitors,
-    signupCount,
-    signupRate,
-    activity,
-  } = act;
+  const { uniqueVisitors, signupCount, signupRate, activity } = act;
   const posts = (postsRes.data ?? []) as PostRow[];
-
-  // Zeitliche Korrelation: Unique-Visitors + Sign-ups im Fenster
-  // [posted_at, posted_at + POST_WINDOW_HOURS] pro Post. Fenster koennen sich
-  // ueberlappen (nah beieinander liegende Posts) — bewusst so (zeitliche
-  // Korrelation, keine harte Zuordnung).
-  const windowMs = POST_WINDOW_HOURS * 60 * 60 * 1000;
-  const postStats = posts.map((post) => {
-    const start = new Date(post.posted_at).getTime();
-    const end = start + windowMs;
-    const hashes = new Set<string>();
-    for (const v of allViews) {
-      const t = new Date(v.created_at).getTime();
-      if (t >= start && t <= end) hashes.add(v.visitor_hash);
-    }
-    let signups = 0;
-    for (const s of allSignups) {
-      const t = new Date(s.created_at).getTime();
-      if (t >= start && t <= end) signups += 1;
-    }
-    return { post, visitors: hashes.size, signups };
-  });
+  const postStats = computePostStats(posts, act.allViews, act.allSignups);
 
   const baseUrl =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://callday.io";
@@ -130,73 +95,38 @@ export default async function AffiliateDashboardPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
-      <nav className="site-nav" data-scrolled="true">
-        <div className="container nav-inner">
-          <Link href="/" className="logo" style={{ textDecoration: "none" }}>
-            <CalldayLogo size={32} />
-            Callday
-          </Link>
-        </div>
-      </nav>
+      <AffiliateNav />
 
       <main
         className="container"
         style={{ paddingTop: 80, paddingBottom: 80, maxWidth: 800 }}
       >
         {/* === Header === */}
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: 16,
-            marginBottom: 40,
-          }}
-        >
-          <div>
-            <div
-              style={{
-                fontFamily: "var(--font-mono), monospace",
-                fontSize: 11,
-                textTransform: "uppercase",
-                letterSpacing: "1.5px",
-                color: "var(--ink-faint)",
-                marginBottom: 8,
-              }}
-            >
-              {aff.founder_tier ? "Founding affiliate" : "Affiliate"}
-            </div>
-            <h1
-              style={{
-                fontSize: 36,
-                fontWeight: 700,
-                letterSpacing: "-1px",
-                lineHeight: 1.05,
-                margin: 0,
-                color: "var(--ink)",
-              }}
-            >
-              Hi {firstName}.
-            </h1>
+        <header style={{ marginBottom: 40 }}>
+          <div
+            style={{
+              fontFamily: "var(--font-mono), monospace",
+              fontSize: 11,
+              textTransform: "uppercase",
+              letterSpacing: "1.5px",
+              color: "var(--ink-faint)",
+              marginBottom: 8,
+            }}
+          >
+            {aff.founder_tier ? "Founding affiliate" : "Affiliate"}
           </div>
-          <form action={affiliateSignOutAction}>
-            <button
-              type="submit"
-              style={{
-                background: "#ffffff",
-                border: "0.5px solid var(--line)",
-                color: "var(--ink-dim)",
-                fontSize: 13,
-                fontWeight: 500,
-                padding: "8px 14px",
-                borderRadius: 10,
-                cursor: "pointer",
-                boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-              }}
-            >
-              Sign out
-            </button>
-          </form>
+          <h1
+            style={{
+              fontSize: 36,
+              fontWeight: 700,
+              letterSpacing: "-1px",
+              lineHeight: 1.05,
+              margin: 0,
+              color: "var(--ink)",
+            }}
+          >
+            Hi {firstName}.
+          </h1>
         </header>
 
         {aff.status === "paused" ? (
@@ -318,7 +248,7 @@ export default async function AffiliateDashboardPage() {
           </div>
 
           <ActivityList activity={activity.slice(0, 10)} />
-          {activity.length > 10 ? (
+          {activity.length > 0 ? (
             <Link
               href="/affiliate/activity"
               style={{
@@ -367,127 +297,29 @@ export default async function AffiliateDashboardPage() {
             }}
           >
             Log a post to see how many visitors and sign-ups came in the{" "}
-            {POST_WINDOW_HOURS} h after it — so you can tell what actually moves
-            your numbers.
+            {POST_WINDOW_HOURS} h after it. Today&apos;s posts show here — your
+            full log lives under Posts.
           </p>
 
           <AddPostForm />
 
+          <div style={{ marginTop: 24 }}>
+            <PostList posts={postStats} todayOnly />
+          </div>
           {postStats.length > 0 ? (
-            <ul
+            <Link
+              href="/affiliate/posts"
               style={{
-                margin: "24px 0 0",
-                padding: 0,
-                listStyle: "none",
-                display: "flex",
-                flexDirection: "column",
-                gap: 0,
+                display: "inline-block",
+                marginTop: 16,
+                fontSize: 13,
+                fontWeight: 500,
+                color: "var(--blue-deep, #2563e8)",
+                textDecoration: "none",
               }}
             >
-              {postStats.map(({ post, visitors, signups }) => (
-                <li
-                  key={post.id}
-                  style={{
-                    padding: "16px 0",
-                    borderTop: "0.5px solid var(--line)",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 12,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: "var(--ink-faint)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        minWidth: 0,
-                      }}
-                    >
-                      {post.platform ? (
-                        <span
-                          style={{
-                            background: "rgba(26,29,38,0.06)",
-                            borderRadius: 6,
-                            padding: "2px 8px",
-                            fontSize: 11,
-                            fontWeight: 500,
-                            color: "var(--ink-dim)",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {post.platform}
-                        </span>
-                      ) : null}
-                      <span style={{ whiteSpace: "nowrap" }}>
-                        posted {fmtRelative(post.posted_at)}
-                      </span>
-                    </span>
-                    <form action={deleteAffiliatePostAction}>
-                      <input type="hidden" name="id" value={post.id} />
-                      <button
-                        type="submit"
-                        aria-label="Remove post"
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "var(--ink-faint)",
-                          fontSize: 13,
-                          cursor: "pointer",
-                          padding: 4,
-                        }}
-                      >
-                        Remove
-                      </button>
-                    </form>
-                  </div>
-
-                  <a
-                    href={post.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      fontSize: 14,
-                      color: "var(--blue-deep, #2563e8)",
-                      textDecoration: "none",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {post.url}
-                  </a>
-
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: "var(--ink-dim)",
-                      background: "rgba(37,99,232,0.06)",
-                      borderRadius: 10,
-                      padding: "8px 12px",
-                    }}
-                  >
-                    <strong style={{ color: "var(--ink)", fontWeight: 600 }}>
-                      {visitors}
-                    </strong>{" "}
-                    visitors and{" "}
-                    <strong style={{ color: "var(--ink)", fontWeight: 600 }}>
-                      {signups}
-                    </strong>{" "}
-                    sign-ups in the {POST_WINDOW_HOURS} h after
-                  </div>
-                </li>
-              ))}
-            </ul>
+              View all posts →
+            </Link>
           ) : null}
         </section>
 
@@ -509,21 +341,7 @@ export default async function AffiliateDashboardPage() {
         </p>
       </main>
 
-      <footer className="site-footer">
-        <div className="container footer-inner">
-          <div className="logo">
-            <CalldayLogo size={28} />
-            Callday
-          </div>
-          <div className="footer-tagline">MAKE TODAY A CALLDAY.</div>
-          <div className="footer-meta">
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
-            <Link href="/terms#imprint">Imprint</Link>
-            <a href="mailto:hello@callday.io">hello@callday.io</a>
-          </div>
-        </div>
-      </footer>
+      <AffiliateFooter />
     </div>
   );
 }
