@@ -576,6 +576,10 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
 }
 .login-back-link {
   display: block;
+  /* width: fit-content — als <Link> (Anchor, /confirm) wuerde der Block
+     sonst volle Breite spannen und die Klickflaeche unnatuerlich breit
+     machen; Buttons (/login) shrink-wrappen von selbst. */
+  width: fit-content;
   margin: 24px auto 0;
   background: none;
   border: none;
@@ -583,6 +587,7 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
   font-size: 13px;
   color: var(--ink-faint);
   cursor: pointer;
+  text-decoration: none;
   transition: color 0.15s;
 }
 .login-back-link:hover {

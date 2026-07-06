@@ -4,17 +4,20 @@ import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
+import {
+  sendTestflightInviteMail,
+  writeSignupConfirmHandoff,
+} from "@/lib/signup-confirm";
 
 const SIGNUP_VALIDATION_MESSAGE =
   "Add email and password — or use Apple or Google above.";
-const OTP_VALIDATION_MESSAGE = `Enter the ${8}-digit code from your email.`;
 
 /**
  * Detection fuer "User already registered"-Errors aus supabase.auth.signUp.
  * Typischer Fall: User hat hier vorher Sign-Up gemacht, Tab geschlossen
  * bevor er den Code eingegeben hat, kommt jetzt zurueck und probiert
  * nochmal. Ohne Recovery-Pfad waere er stuck. Wir erkennen den Error
- * und schicken automatisch einen frischen Code, springen in OTP-Mode.
+ * und schicken ihn mit "welcome-back"-Handoff zu /confirm.
  */
 function isUserAlreadyRegistered(error: {
   message?: string;
@@ -52,8 +55,8 @@ function isUserAlreadyRegistered(error: {
  *     project_beta_affiliate_program).
  *
  * TestFlight-Mail-Trigger:
- *   - Email/PW: Client ruft /api/testflight-invite nach erfolgreichem
- *     verifyOtp (siehe sendPostSignupMail unten).
+ *   - Email/PW: /confirm ruft /api/testflight-invite nach erfolgreichem
+ *     verifyOtp (siehe ConfirmCard + lib/signup-confirm.ts).
  *   - OAuth: der `signup_flow`-Cookie (gesetzt in handleOAuth) signalisiert
  *     /auth/callback, dass dieser PKCE-Exchange aus einem Sign-Up-Form kam
  *     — der Callback schickt dann die Mail fuer frische Profile. Ohne den
@@ -63,13 +66,13 @@ function isUserAlreadyRegistered(error: {
  * Edge-Case: Slug unknown / Affiliate paused → Attribution faellt silent
  * zurueck auf organic (FK bleibt null). Sign-Up funktioniert trotzdem.
  *
- * Nach erfolgreichem Sign-Up landet der User auf /account?welcome=signup
- * — siehe TestFlight-Recovery-Section in /account.
+ * Der OTP-Code-Step lebt seit 2026-07-05 auf der eigenen Route /confirm
+ * (Email-Handoff via sessionStorage, siehe lib/signup-confirm.ts) — der
+ * fruehere In-Place-Swap war nicht reload-fest und als Funnel-Step
+ * unsichtbar. Nach erfolgreichem Confirm landet der User auf
+ * /account?welcome=signup — siehe TestFlight-Recovery-Section in /account.
  */
 
-const CODE_LENGTH = 8;
-
-type Mode = "signup" | "otp-code";
 type Status = "idle" | "submitting" | "error";
 
 interface Props {
@@ -92,25 +95,17 @@ function setSignupCookie(name: string, value: string) {
 export function SignupForm({ slug }: Props) {
   const router = useRouter();
 
-  const [mode, setMode] = useState<Mode>("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
-  function resetMessages() {
-    setErrorMessage(null);
-    setInfoMessage(null);
-  }
-
   async function handleOAuth(provider: "apple" | "google") {
     if (status === "submitting") return;
-    resetMessages();
+    setErrorMessage(null);
     setStatus("submitting");
 
     if (slug) {
@@ -135,43 +130,10 @@ export function SignupForm({ slug }: Props) {
     // signInWithOAuth navigiert weg — kein router.push noetig.
   }
 
-  /**
-   * Resend-Action im OTP-Step (siehe Render unten). Triggert frischen
-   * Code via signInWithOtp. Bei Rate-Limit zeigen wir Supabase's Message
-   * direkt — User kann es nach der angegebenen Wartezeit erneut versuchen.
-   */
-  async function handleResendOtp() {
-    if (status === "submitting" || !email) return;
-    resetMessages();
-    setStatus("submitting");
-    const supabase = createSupabaseBrowser();
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-    });
-    setStatus("idle");
-    if (error) {
-      setErrorMessage(error.message);
-      return;
-    }
-    setInfoMessage(`A new ${CODE_LENGTH}-digit code is on its way to ${email.trim()}.`);
-    setCode("");
-  }
-
-  async function sendPostSignupMail() {
-    // Fire-and-forget — Failures sind nicht kritisch fuer den Sign-Up-Flow.
-    // Account-Page hat einen Resend-Button als Recovery-Pfad. Server
-    // liest die Ziel-Email aus der SSR-Session (kein Body noetig).
-    try {
-      await fetch("/api/testflight-invite", { method: "POST" });
-    } catch (err) {
-      console.error("[SignupForm] post-signup mail failed", err);
-    }
-  }
-
   async function handleSignupSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (status === "submitting") return;
-    resetMessages();
+    setErrorMessage(null);
 
     // Client-Validation statt disabled-Button: User klickt → wir geben
     // konkretes Feedback ("Email + Password noetig — oder Apple/Google").
@@ -206,17 +168,18 @@ export function SignupForm({ slug }: Props) {
 
     if (error) {
       // Recovery-Pfad: User hat sich schon registriert (Tab vorher
-      // geschlossen) → direkt in den OTP-Step OHNE neuen Code zu
-      // triggern. Sonst kollidieren wir mit dem Supabase-Rate-Limit
-      // ("can only request this after N seconds") wenn der Original-
-      // Code grade erst rausging. User kann den alten Code probieren;
-      // falls abgelaufen → Resend-Button im OTP-Step.
+      // geschlossen) → zu /confirm OHNE neuen Code zu triggern. Sonst
+      // kollidieren wir mit dem Supabase-Rate-Limit ("can only request
+      // this after N seconds") wenn der Original-Code grade erst
+      // rausging. User kann den alten Code probieren; falls abgelaufen
+      // → Resend-Button auf /confirm. Status bleibt "submitting" bis
+      // die Navigation durch ist (Button bleibt busy, kein Form-Flash).
       if (isUserAlreadyRegistered(error)) {
-        setStatus("idle");
-        setMode("otp-code");
-        setInfoMessage(
-          `Welcome back. Enter the ${CODE_LENGTH}-digit code we sent to ${cleanEmail} — or request a new one if it expired.`,
-        );
+        writeSignupConfirmHandoff({
+          email: cleanEmail,
+          variant: "welcome-back",
+        });
+        router.push("/confirm");
         return;
       }
       setStatus("error");
@@ -224,133 +187,22 @@ export function SignupForm({ slug }: Props) {
       return;
     }
 
-    // Email-Confirmation aktiv → session ist null, User muss OTP-Code aus
-    // der Mail eintippen. Kein Magic-Link, reiner Code. TestFlight-Mail
-    // wird ERST nach erfolgreichem verifyOtp rausgeschickt — sonst landen
-    // zwei Mails parallel im Postfach (Verification + TestFlight) was
-    // verwirrend ist + Typo-Emails kriegen unnoetig TestFlight-Links.
+    // Email-Confirmation aktiv → session ist null, User muss den OTP-Code
+    // aus der Mail auf /confirm eintippen. Kein Magic-Link, reiner Code.
+    // TestFlight-Mail wird ERST nach erfolgreichem verifyOtp rausgeschickt
+    // — sonst landen zwei Mails parallel im Postfach (Verification +
+    // TestFlight) was verwirrend ist + Typo-Emails kriegen unnoetig
+    // TestFlight-Links.
     if (!data.session) {
-      setStatus("idle");
-      setMode("otp-code");
-      setInfoMessage(
-        `We sent an ${CODE_LENGTH}-digit code to ${cleanEmail}. Enter it to confirm your account.`,
-      );
+      writeSignupConfirmHandoff({ email: cleanEmail, variant: "fresh" });
+      router.push("/confirm");
       return;
     }
 
     // Auto-confirmed (z.B. dev-Env oder Confirmation off) → TestFlight-Mail
     // jetzt senden, dann zu /account.
-    void sendPostSignupMail();
+    void sendTestflightInviteMail("SignupForm");
     router.push("/account?welcome=signup");
-  }
-
-  async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (status === "submitting") return;
-    resetMessages();
-
-    // Client-Validation statt disabled-Button (selbe Logik wie SignupSubmit).
-    if (code.length !== CODE_LENGTH) {
-      setErrorMessage(OTP_VALIDATION_MESSAGE);
-      return;
-    }
-
-    setStatus("submitting");
-
-    const supabase = createSupabaseBrowser();
-    const cleanEmail = email.trim();
-    const { error } = await supabase.auth.verifyOtp({
-      email: cleanEmail,
-      token: code.trim(),
-      type: "email",
-    });
-    if (error) {
-      setStatus("error");
-      setErrorMessage(error.message);
-      return;
-    }
-
-    // Email ist jetzt verifiziert — TestFlight-Mail rausschicken.
-    // Fire-and-forget; Account-Page hat Resend-Button als Recovery.
-    void sendPostSignupMail();
-
-    router.push("/account?welcome=signup");
-  }
-
-  // === Render: OTP-Code-Step (nach Email/PW Sign-Up) ===
-  // h2 statt h1 — die Landings haben ihr h1 im Hero.
-  if (mode === "otp-code") {
-    return (
-      <div className="login-card">
-        <h2 className="login-headline">Check your inbox.</h2>
-        <p className="login-sub">
-          {infoMessage ?? (
-            <>
-              We sent an {CODE_LENGTH}-digit code to <strong>{email}</strong>.
-              Enter it below to confirm your account.
-            </>
-          )}
-        </p>
-
-        <form className="beta-form" onSubmit={handleVerifyCode} noValidate>
-          <label className="beta-field">
-            <span className="beta-field-label">Sign-up code</span>
-            <input
-              type="text"
-              required
-              autoFocus
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              value={code}
-              onChange={(e) =>
-                setCode(e.target.value.replace(/\D/g, "").slice(0, CODE_LENGTH))
-              }
-              placeholder="12345678"
-              disabled={status === "submitting"}
-              style={{
-                letterSpacing: "0.4em",
-                textAlign: "center",
-                fontSize: "22px",
-                fontFamily:
-                  "ui-monospace, 'SF Mono', Monaco, Consolas, monospace",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            />
-          </label>
-
-          {/* maxLength bewusst NICHT auf dem Input — wenn der User einen
-              formatierten Code paste'd (z.B. "1234 5678" mit Space), wuerde
-              maxLength=8 die Eingabe VOR onChange truncaten und das Regex
-              koennte die 8 Digits nicht mehr extrahieren. Stattdessen
-              uebernimmt der replace+slice im onChange die Begrenzung. */}
-
-          <button
-            type="submit"
-            className="beta-submit"
-            aria-busy={status === "submitting"}
-            disabled={status === "submitting"}
-          >
-            {status === "submitting" ? "Verifying..." : "Confirm account"}
-          </button>
-
-          {errorMessage && (
-            <p className="beta-submit-error" role="alert">
-              {errorMessage}
-            </p>
-          )}
-        </form>
-
-        <button
-          type="button"
-          onClick={handleResendOtp}
-          disabled={status === "submitting" || !email}
-          className="login-text-link"
-          style={{ display: "block", margin: "16px auto 0" }}
-        >
-          Didn&apos;t get the code? Send a new one
-        </button>
-      </div>
-    );
   }
 
   // === Render: Sign-Up ===
