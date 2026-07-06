@@ -132,13 +132,13 @@ export function ConfirmCard() {
             </>
           ) : handoff.variant === "welcome-back" ? (
             <>
-              Welcome back. Enter the sign-up code we sent to{" "}
+              Welcome back. Enter the confirmation code we sent to{" "}
               <strong>{handoff.email}</strong> and you&apos;re in — or
               request a new one if it expired.
             </>
           ) : (
             <>
-              Enter the sign-up code we sent to{" "}
+              Enter the confirmation code we sent to{" "}
               <strong>{handoff.email}</strong>. Then you&apos;re in.
             </>
           ))}
@@ -166,7 +166,7 @@ export function ConfirmCard() {
             type="text"
             required
             autoFocus={!askForEmail}
-            aria-label="Sign-up code"
+            aria-label="Confirmation code"
             inputMode="numeric"
             autoComplete="one-time-code"
             value={code}
