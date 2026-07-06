@@ -9,19 +9,6 @@ type FaqItem = {
 
 const ITEMS: FaqItem[] = [
   {
-    q: "What happens after I sign up?",
-    a: (
-      <>
-        <p>
-          Confirm your account and your TestFlight invite lands in your
-          inbox right away, sent from <strong>hello@callday.io</strong>.
-          Install Callday from there and sign in with the same account.
-        </p>
-        <p>If you don&apos;t see the email, check spam.</p>
-      </>
-    ),
-  },
-  {
     q: "Is the beta really free?",
     a: (
       <p>
