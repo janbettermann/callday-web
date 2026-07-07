@@ -95,7 +95,7 @@ export default async function AffiliatePayoutsPage({
               flexShrink: 0,
               width: 75,
               height: 20,
-              transform: "translateY(5px)",
+              transform: "translateY(3px)",
               backgroundImage: "url(/paypal.svg)",
               backgroundSize: "contain",
               backgroundRepeat: "no-repeat",
