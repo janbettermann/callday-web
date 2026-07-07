@@ -123,8 +123,8 @@ export function getDemoEarnings(): AffiliateEarnings {
   const HOLD = 90 * DAY;
   const monthly = "com.dealswipe.app.pro.monthly";
 
-  // Szenario: ~100 zahlende Referrals, ~6 Monate ~stabil → ~100 €7-Provisionen
-  // (50% von €14) pro Monat. Der 90-Tage-Hold sperrt die letzten 3 Monate der
+  // Szenario: ~100 zahlende Referrals, ~6 Monate ~stabil → ~100 $7.50-Provisionen
+  // (50% von $14.99) pro Monat. Der 90-Tage-Hold sperrt die letzten 3 Monate der
   // Charges (pending); was danach reift, ist available bzw. schon paid. Ergibt
   // eine ~3:1-Relation pending:available, die direkt das 90-Tage-Fenster spiegelt.
   const batch = (
@@ -142,8 +142,8 @@ export function getDemoEarnings(): AffiliateEarnings {
         id: `${prefix}-${i}`,
         charged_at: new Date(chargedAtMs).toISOString(),
         hold_until: new Date(chargedAtMs + HOLD).toISOString(),
-        commission_cents: 700,
-        charge_currency: "EUR",
+        commission_cents: 750,
+        charge_currency: "USD",
         product_id: monthly,
         clawback_at: null,
         paid_at: null,
@@ -152,11 +152,11 @@ export function getDemoEarnings(): AffiliateEarnings {
     });
 
   const raw: CommissionRaw[] = [
-    // Pending: letzte 3 Monate im Hold → 300 × €7 = €2.100
+    // Pending: letzte 3 Monate im Hold → 300 × $7.50 = $2,250
     ...batch("p", 300, 1, 89),
-    // Available: Hold vorbei, noch nicht ausgezahlt → 100 × €7 = €700
+    // Available: Hold vorbei, noch nicht ausgezahlt → 100 × $7.50 = $750
     ...batch("a", 100, 91, 120),
-    // Paid: früher ausgezahlt → 200 × €7 = €1.400
+    // Paid: früher ausgezahlt → 200 × $7.50 = $1,500
     ...batch("d", 200, 121, 180, (ms) => ({
       paid_at: new Date(ms + HOLD + 5 * DAY).toISOString(),
     })),
