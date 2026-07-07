@@ -71,7 +71,7 @@ export default async function AffiliatePayoutsPage({
           style={{
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "center",
+            alignItems: "baseline",
             gap: 12,
             margin: "0 0 6px",
           }}
@@ -93,8 +93,9 @@ export default async function AffiliatePayoutsPage({
             aria-label="Payouts via PayPal"
             style={{
               flexShrink: 0,
-              width: 98,
-              height: 26,
+              width: 75,
+              height: 20,
+              transform: "translateY(5px)",
               backgroundImage: "url(/paypal.svg)",
               backgroundSize: "contain",
               backgroundRepeat: "no-repeat",
