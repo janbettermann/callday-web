@@ -156,7 +156,7 @@ export default async function AffiliatePayoutsPage({
                 <MoneyCard
                   label="Active referrals"
                   value={String(activeReferrals)}
-                  hint="Subscribed and paying"
+                  hint="Earning you recurring commission"
                   dot
                 />
               ) : null}
