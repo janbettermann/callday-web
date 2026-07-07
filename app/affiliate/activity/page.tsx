@@ -9,7 +9,7 @@ import {
 import { getAffiliateActivity } from "@/lib/affiliate-activity";
 import { AffiliateNav } from "../AffiliateNav";
 import { AffiliateFooter } from "../AffiliateFooter";
-import { ActivityList } from "../ActivityList";
+import { ActivityFeed } from "../ActivityFeed";
 import { affiliateMainStyle } from "../layout-styles";
 
 /**
@@ -69,7 +69,7 @@ export default async function AffiliateActivityPage() {
             boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
           }}
         >
-          <ActivityList activity={activity} />
+          <ActivityFeed activity={activity} />
         </section>
       </main>
 
