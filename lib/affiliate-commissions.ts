@@ -65,7 +65,14 @@ function computeEarnings(raw: CommissionRaw[]): AffiliateEarnings {
   const nowMs = Date.now();
   const byCurrency = new Map<string, CurrencyEarnings>();
 
-  const rows: CommissionRow[] = raw.map((r) => {
+  // Neueste zuerst (der DB-Pfad sortiert schon in der Query; hier nochmal, damit
+  // computeEarnings unabhängig von der Input-Reihenfolge korrekt ist — v.a. für
+  // die Demo-Daten, die batchweise erzeugt werden).
+  const sorted = [...raw].sort((a, b) =>
+    b.charged_at.localeCompare(a.charged_at),
+  );
+
+  const rows: CommissionRow[] = sorted.map((r) => {
     const status = deriveCommissionStatus(r, nowMs);
     const bucket =
       byCurrency.get(r.charge_currency) ??
@@ -115,48 +122,48 @@ export function getDemoEarnings(): AffiliateEarnings {
   const DAY = 86_400_000;
   const HOLD = 90 * DAY;
   const monthly = "com.dealswipe.app.pro.monthly";
-  const yearly = "com.dealswipe.app.pro.yearly";
 
-  const mk = (
-    id: string,
-    chargedDaysAgo: number,
-    cents: number,
-    productId: string,
-    extra: Partial<CommissionRaw> = {},
-  ): CommissionRaw => {
-    const chargedAtMs = now - chargedDaysAgo * DAY;
-    return {
-      id,
-      charged_at: new Date(chargedAtMs).toISOString(),
-      hold_until: new Date(chargedAtMs + HOLD).toISOString(),
-      commission_cents: cents,
-      charge_currency: "EUR",
-      product_id: productId,
-      clawback_at: null,
-      paid_at: null,
-      ...extra,
-    };
-  };
+  // Szenario: ~100 zahlende Referrals, ~6 Monate ~stabil → ~100 €7-Provisionen
+  // (50% von €14) pro Monat. Der 90-Tage-Hold sperrt die letzten 3 Monate der
+  // Charges (pending); was danach reift, ist available bzw. schon paid. Ergibt
+  // eine ~3:1-Relation pending:available, die direkt das 90-Tage-Fenster spiegelt.
+  const batch = (
+    prefix: string,
+    count: number,
+    minDaysAgo: number,
+    maxDaysAgo: number,
+    extra?: (chargedAtMs: number) => Partial<CommissionRaw>,
+  ): CommissionRaw[] =>
+    Array.from({ length: count }, (_, i) => {
+      const daysAgo =
+        minDaysAgo + ((maxDaysAgo - minDaysAgo) * i) / Math.max(1, count - 1);
+      const chargedAtMs = now - daysAgo * DAY;
+      return {
+        id: `${prefix}-${i}`,
+        charged_at: new Date(chargedAtMs).toISOString(),
+        hold_until: new Date(chargedAtMs + HOLD).toISOString(),
+        commission_cents: 700,
+        charge_currency: "EUR",
+        product_id: monthly,
+        clawback_at: null,
+        paid_at: null,
+        ...extra?.(chargedAtMs),
+      };
+    });
 
   const raw: CommissionRaw[] = [
-    // Pending (frisch berechnet, noch im Hold)
-    mk("demo-1", 3, 700, monthly),
-    mk("demo-2", 21, 700, monthly),
-    mk("demo-3", 45, 700, monthly),
-    // Available (Hold vorbei)
-    mk("demo-4", 100, 700, monthly),
-    mk("demo-5", 135, 700, monthly),
-    // Paid (schon ausgezahlt) — inkl. eines Jahres-Abos
-    mk("demo-6", 200, 700, monthly, {
-      paid_at: new Date(now - 105 * DAY).toISOString(),
-    }),
-    mk("demo-7", 240, 5950, yearly, {
-      paid_at: new Date(now - 145 * DAY).toISOString(),
-    }),
-    // Reversed (Refund im Hold) — zählt in keinen Bucket
-    mk("demo-8", 8, 700, monthly, {
-      clawback_at: new Date(now - 6 * DAY).toISOString(),
-    }),
+    // Pending: letzte 3 Monate im Hold → 300 × €7 = €2.100
+    ...batch("p", 300, 1, 89),
+    // Available: Hold vorbei, noch nicht ausgezahlt → 100 × €7 = €700
+    ...batch("a", 100, 91, 120),
+    // Paid: früher ausgezahlt → 200 × €7 = €1.400
+    ...batch("d", 200, 121, 180, (ms) => ({
+      paid_at: new Date(ms + HOLD + 5 * DAY).toISOString(),
+    })),
+    // Ein paar Reversed (Refunds) für Realismus — zählen in keinen Bucket
+    ...batch("c", 5, 4, 40, (ms) => ({
+      clawback_at: new Date(ms + 3 * DAY).toISOString(),
+    })),
   ];
 
   return computeEarnings(raw);

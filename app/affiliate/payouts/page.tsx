@@ -28,6 +28,9 @@ import { affiliateMainStyle } from "../layout-styles";
 
 export const dynamic = "force-dynamic";
 
+// Earnings-Liste kappen (bei vielen Referrals sonst hunderte Rows).
+const EARNINGS_CAP = 12;
+
 export const metadata: Metadata = {
   title: "Payouts · Callday Affiliates",
   robots: { index: false, follow: false },
@@ -244,20 +247,34 @@ export default async function AffiliatePayoutsPage({
           </div>
 
           {earnings.hasAny ? (
-            <ul
-              style={{
-                margin: 0,
-                padding: 0,
-                listStyle: "none",
-                display: "flex",
-                flexDirection: "column",
-                gap: 0,
-              }}
-            >
-              {earnings.rows.map((r, i) => (
-                <EarningRow key={r.id} row={r} first={i === 0} />
-              ))}
-            </ul>
+            <>
+              <ul
+                style={{
+                  margin: 0,
+                  padding: 0,
+                  listStyle: "none",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 0,
+                }}
+              >
+                {earnings.rows.slice(0, EARNINGS_CAP).map((r, i) => (
+                  <EarningRow key={r.id} row={r} first={i === 0} />
+                ))}
+              </ul>
+              {earnings.rows.length > EARNINGS_CAP ? (
+                <p
+                  style={{
+                    margin: "16px 0 0",
+                    fontSize: 13,
+                    color: "var(--ink-faint)",
+                    textAlign: "center",
+                  }}
+                >
+                  + {earnings.rows.length - EARNINGS_CAP} more commissions
+                </p>
+              ) : null}
+            </>
           ) : (
             <p style={{ margin: 0, color: "var(--ink-dim)", fontSize: 14 }}>
               Your earnings will show here once your referrals subscribe.
