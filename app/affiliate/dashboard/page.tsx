@@ -227,24 +227,12 @@ export default async function AffiliateDashboardPage() {
               marginBottom: 14,
             }}
           >
-            Recent activity
+            Recent link activity
           </div>
 
-          <ActivityList activity={activity.slice(0, 10)} />
+          <ActivityList activity={activity.slice(0, 5)} />
           {activity.length > 0 ? (
-            <Link
-              href="/affiliate/activity"
-              style={{
-                display: "inline-block",
-                marginTop: 16,
-                fontSize: 13,
-                fontWeight: 500,
-                color: "var(--blue-deep, #2563e8)",
-                textDecoration: "none",
-              }}
-            >
-              View all activity →
-            </Link>
+            <ViewAllLink href="/affiliate/activity" label="View all activity" />
           ) : null}
         </section>
 
@@ -290,19 +278,7 @@ export default async function AffiliateDashboardPage() {
             <PostList posts={postStats} todayOnly />
           </div>
           {postStats.length > 0 ? (
-            <Link
-              href="/affiliate/posts"
-              style={{
-                display: "inline-block",
-                marginTop: 16,
-                fontSize: 13,
-                fontWeight: 500,
-                color: "var(--blue-deep, #2563e8)",
-                textDecoration: "none",
-              }}
-            >
-              View all posts →
-            </Link>
+            <ViewAllLink href="/affiliate/posts" label="View all posts" />
           ) : null}
         </section>
 
@@ -325,6 +301,37 @@ export default async function AffiliateDashboardPage() {
       </main>
 
       <AffiliateFooter />
+    </div>
+  );
+}
+
+/**
+ * Zentrierter „View all"-Footer-Link mit feiner Trennlinie darüber.
+ * paddingTop (28) = Card-Padding-Bottom (28), damit der Link denselben Abstand
+ * nach oben (zur Trennlinie) wie nach unten (zur Card-Kante) hat.
+ */
+function ViewAllLink({ href, label }: { href: string; label: string }) {
+  return (
+    <div
+      style={{
+        marginTop: 20,
+        paddingTop: 28,
+        borderTop: "0.5px solid var(--line)",
+        textAlign: "center",
+        lineHeight: 1,
+      }}
+    >
+      <Link
+        href={href}
+        style={{
+          fontSize: 13,
+          fontWeight: 500,
+          color: "var(--blue-deep, #2563e8)",
+          textDecoration: "none",
+        }}
+      >
+        {label}
+      </Link>
     </div>
   );
 }

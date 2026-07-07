@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -59,20 +58,6 @@ export default async function AffiliatePostsPage() {
       <AffiliateNav />
 
       <main className="container" style={affiliateMainStyle}>
-        <Link
-          href="/affiliate/dashboard"
-          style={{
-            display: "inline-block",
-            marginBottom: 24,
-            fontSize: 13,
-            fontWeight: 500,
-            color: "var(--ink-dim)",
-            textDecoration: "none",
-          }}
-        >
-          ← Back to dashboard
-        </Link>
-
         <h1
           style={{
             fontSize: 32,
@@ -83,7 +68,7 @@ export default async function AffiliatePostsPage() {
             color: "var(--ink)",
           }}
         >
-          All posts
+          Posts
         </h1>
         <p
           style={{ margin: "0 0 32px", fontSize: 14, color: "var(--ink-dim)" }}

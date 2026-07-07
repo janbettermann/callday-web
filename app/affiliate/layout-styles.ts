@@ -11,7 +11,9 @@ import type { CSSProperties } from "react";
  * einen echten Abstand.
  */
 export const affiliateMainStyle: CSSProperties = {
-  paddingTop: "calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 48px)",
+  // --nav-h (72px) unterschätzt die real gerenderte Nav-Unterkante um ~5px,
+  // daher 45px Offset für ~40px tatsächlich wahrgenommenen Abstand zum Titel.
+  paddingTop: "calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 45px)",
   paddingBottom: 80,
   maxWidth: 800,
 };
