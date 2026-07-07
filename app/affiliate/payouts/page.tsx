@@ -93,8 +93,8 @@ export default async function AffiliatePayoutsPage({
             aria-label="Payouts via PayPal"
             style={{
               flexShrink: 0,
-              width: 68,
-              height: 18,
+              width: 98,
+              height: 26,
               backgroundImage: "url(/paypal.svg)",
               backgroundSize: "contain",
               backgroundRepeat: "no-repeat",
