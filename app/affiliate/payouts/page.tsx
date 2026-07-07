@@ -93,8 +93,8 @@ export default async function AffiliatePayoutsPage({
               alignItems: "center",
               gap: 12,
               flexWrap: "wrap",
-              background: "rgba(251,191,36,0.14)",
-              border: "0.5px solid rgba(217,119,6,0.35)",
+              background: "rgba(185,126,16,0.1)",
+              border: "0.5px solid rgba(185,126,16,0.3)",
               borderRadius: 16,
               padding: "12px 16px",
               marginBottom: 24,
@@ -104,7 +104,7 @@ export default async function AffiliatePayoutsPage({
               style={{
                 fontSize: 13,
                 fontWeight: 500,
-                color: "#b45309",
+                color: "var(--sun-deep)",
                 lineHeight: 1.4,
               }}
             >
@@ -115,9 +115,9 @@ export default async function AffiliatePayoutsPage({
               style={{
                 flexShrink: 0,
                 fontSize: 13,
-                fontWeight: 600,
-                color: "#7c2d12",
-                background: "var(--sun)",
+                fontWeight: 500,
+                color: "#ffffff",
+                background: "var(--sun-deep)",
                 borderRadius: 100,
                 padding: "6px 14px",
                 textDecoration: "none",
