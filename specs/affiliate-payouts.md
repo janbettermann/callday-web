@@ -24,7 +24,7 @@ Strategie-Update):
 
 | Teil | Repo | Pfad |
 |---|---|---|
-| Migration `affiliate_commissions` + pg_cron | **dealswipe-app** | `supabase/migrations/` |
+| Migrationen `affiliate_commissions` (+ `affiliate_payouts`) | **dealswipe-app** | `supabase/migrations/` |
 | Commission-Erzeugung (RC-Webhook-Erweiterung) | **dealswipe-app** | `supabase/functions/revenuecat-webhook/` |
 | Affiliate-facing Payout-Page („deine Earnings") | **callday-web** | `app/affiliate/payouts/` |
 | Admin-Payout-Run (mark-paid, alle Affiliates) | **callday-web** | `app/[secret]/affiliates/` |
@@ -66,11 +66,13 @@ sind die Spezifikation für die Webhook-Logik:
    `paused` betrifft nur NEUE Attribution (passiert beim Sign-up); bestehende
    Referrals verdienen weiter. `removed` = Vertrag beendet → stop. *(Entscheidung
    bestätigen.)*
-6. **Hold:** neuer Row = `status='pending'`, `hold_until = charge_date + 90d`.
-7. **Clawback:** Refund/Chargeback innerhalb des Holds → betroffenen Commission-Row
-   auf `status='clawback'`. RC-Refund-Signal verifizieren (vermutlich
-   `CANCELLATION` mit `cancel_reason` = Refund-Indikator ODER dediziertes
-   Event — gegen aktuelle RC-Doku prüfen, **Watch-Point**).
+6. **Hold:** neuer Row setzt `hold_until = charged_at + 90d` (unveränderlich).
+   Status pending/available wird daraus + `now()` ABGELEITET, nicht gespeichert
+   (kein Cron; siehe §5).
+7. **Clawback:** Refund/Chargeback → `clawback_at = now()` auf dem betroffenen
+   Row (fällt sofort aus pending/available). RC-Refund-Signal verifizieren
+   (vermutlich `CANCELLATION` mit `cancel_reason` = Refund-Indikator ODER
+   dediziertes Event — gegen aktuelle RC-Doku prüfen, **Watch-Point**).
 8. **Cancel resets bond:** Kündigt der User und re-subscribed später OHNE erneut
    über den Affiliate-Link zu kommen → keine neue Provision. *(v1-Vereinfachung:
    lifetime-solange-FK-present; die saubere Reset-Logik ist eine spätere
@@ -81,35 +83,82 @@ sind die Spezifikation für die Webhook-Logik:
 
 ## 5. Datenmodell — neue Tabelle `affiliate_commissions`
 
+**Architektur-Prinzip: Status wird NICHT gespeichert, sondern abgeleitet.** Kein
+mutabler `status`-Spalte + Cron, der pending→available flippt (Bug-Klasse:
+verpasster/doppelter Lauf, Status↔Timestamp-Drift). Stattdessen: der Row hält nur
+**unveränderliche Fakten** + zwei **event-getriebene** Timestamps; der Status ist
+eine reine Funktion daraus + `now()`.
+
 ```sql
 create table affiliate_commissions (
   id                uuid primary key default gen_random_uuid(),
   affiliate_id      uuid not null references affiliates(id),
   user_id           uuid not null references auth.users(id),
-  -- Idempotenz: ein Commission pro RC-Event. Verhindert Doppel-Insert
-  -- bei RC-Retries (RC redelivered 5xx bis 72h).
+  -- Idempotenz: ein Commission pro RC-Event. `on conflict do nothing`
+  -- fängt RC-Retries (RC redelivered 5xx bis 72h).
   source_event_id   text not null unique,
   source            text not null default 'revenuecat',  -- Zukunft: 'stripe'
   product_id        text,
   charge_amount_cents  int not null,      -- Bruttopreis des Charges
   charge_currency      text not null,     -- 'USD' | 'EUR' | …
   commission_cents     int not null,      -- = round(charge * 0.5)
+
+  -- Unveränderliche Fakten (nach Insert NIE mutiert):
   charged_at        timestamptz not null,
-  status            text not null default 'pending'
-                    check (status in ('pending','available','paid','clawback','reversed')),
-  hold_until        timestamptz not null, -- charged_at + 90d
-  released_at       timestamptz,          -- wann pending → available
-  paid_at           timestamptz,          -- wann ausgezahlt
-  payout_id         uuid,                 -- optional FK → affiliate_payouts
+  hold_until        timestamptz not null,  -- = charged_at + 90d, bei Insert gesetzt
+
+  -- Event-getriebene Timestamps (die EINZIGEN Mutationen, je genau einmal):
+  clawback_at       timestamptz,           -- gesetzt bei Refund/Chargeback
+  paid_at           timestamptz,           -- gesetzt bei echter Auszahlung
+  payout_id         uuid,                  -- gesetzt zusammen mit paid_at (FK → affiliate_payouts)
+
   created_at        timestamptz not null default now()
 );
 
-create index on affiliate_commissions(affiliate_id, status);
-create index on affiliate_commissions(status, hold_until);
+-- Kein gespeicherter Status → keine Status-Indizes.
+create index on affiliate_commissions(affiliate_id);  -- Earnings-Query pro Affiliate (alle Rows)
+create index on affiliate_commissions(user_id);       -- „prior commission?"-Check im Webhook
+-- Bei Volumen (viele Affiliates) zusätzlich ein Partial-Index für die
+-- Admin-„available across all affiliates"-Query — jetzt noch nicht nötig:
+--   create index ... (affiliate_id, hold_until) where paid_at is null and clawback_at is null;
 ```
 
-Optional (später, für Payout-Runs): `affiliate_payouts` (id, affiliate_id,
-total_cents, currency, method='paypal', external_ref, paid_at, note).
+`user_id` = der EINE attributable Profile (siehe Phase B: das `userIds`-Array des
+Webhooks wird auf genau ein Profil mit gesetztem `referred_by_affiliate_id`
+reduziert).
+
+**Status-Ableitung (reine Funktion, nie gespeichert):**
+
+```
+clawback_at IS NOT NULL   → 'clawback'   (storniert, zahlt nie)
+paid_at     IS NOT NULL   → 'paid'
+hold_until  >  now()      → 'pending'    (noch im 90-Tage-Hold)
+hold_until  <= now()      → 'available'  (Hold vorbei, auszahlbar)
+```
+
+Der 90-Tage-Übergang ist damit ein *Vergleich* zur Query-Zeit, keine
+*Zustandsänderung* — „available" ist in der Sekunde korrekt, in der `now()` über
+`hold_until` läuft, ohne Job/Latenz. Nichts kann driften, weil es keinen Status
+gibt, der falsch werden könnte.
+
+**Bucket-Query (Affiliate-Earnings) — PRO WÄHRUNG gruppiert.** Wichtig:
+`sum(commission_cents)` darf NICHT über Währungen hinweg summieren (USD-Cents +
+EUR-Cents = Unsinn). Deshalb `group by charge_currency`; der Helper aggregiert
+den `currencyBreakdown`:
+
+```sql
+select
+  charge_currency,
+  coalesce(sum(commission_cents)
+    filter (where paid_at is null and clawback_at is null and hold_until >  now()), 0) as pending_cents,
+  coalesce(sum(commission_cents)
+    filter (where paid_at is null and clawback_at is null and hold_until <= now()), 0) as available_cents,
+  coalesce(sum(commission_cents)
+    filter (where paid_at is not null), 0) as paid_cents
+from affiliate_commissions
+where affiliate_id = $1
+group by charge_currency;
+```
 
 **Währungs-Watch-Point:** Provisionen entstehen in der Charge-Währung
 (US-first → viele USD). Payout an EU-Affiliates via PayPal ist EUR. Policy vor
@@ -122,7 +171,10 @@ EUR-Charges tolerierbar; dokumentieren.
 ### Phase A — Schema  *(dealswipe-app/supabase)*
 - [ ] Migration: Tabelle `affiliate_commissions` (DDL oben). Additiv, RLS
       enabled ohne Policy = service-role-only (wie die anderen affiliate_*).
-- [ ] (optional) Tabelle `affiliate_payouts` für spätere Payout-Runs.
+- [ ] `affiliate_commissions` reicht für den JETZT-Build (Read-only-Payout-Page).
+      Die `affiliate_payouts`-Tabelle kommt mit Phase E (erst bei echter
+      Auszahlung nötig) — dann aber **empfohlen, nicht optional** (Audit-Trail für
+      echtes Geld, siehe Phase E).
 
 ### Phase B — Commission-Erzeugung  *(dealswipe-app/supabase/functions/revenuecat-webhook)*
 - [ ] TS-Type `RevenueCatEvent` um `price_in_purchased_currency`, `currency`,
@@ -131,28 +183,43 @@ EUR-Charges tolerierbar; dokumentieren.
       `maybeAccrueCommission(event, userIds, supa)`.
 - [ ] Nach dem erfolgreichen `profiles`-Update aufrufen. Logik:
   - [ ] Nur `PRODUCTION` + `period_type=='NORMAL'` + Typ ∈ {INITIAL_PURCHASE, RENEWAL}.
-  - [ ] User → `profiles.referred_by_affiliate_id` laden; null → return.
+  - [ ] **`userIds`-Array → EIN attributabler Profile.** Der Webhook resolved ein
+        Array (app_user_id + original_app_user_id + aliases). `profiles` für diese
+        IDs laden, das mit gesetztem `referred_by_affiliate_id` nehmen (Aliases =
+        eine Person). Keiner gesetzt → organisch → return. Commission bekommt
+        genau diesen `user_id` + `affiliate_id`.
   - [ ] Affiliate laden; `status=='removed'` → return.
   - [ ] Attributionsfenster: erster bezahlter Charge muss ≤ `created_at + 90d`
         (bei Folge-Renewals überspringen — nur der Erst-Charge wird gegen das
         Fenster geprüft; Marker via „existiert schon ein Commission-Row für
         diesen user_id?").
-  - [ ] Insert `affiliate_commissions` (idempotent über `source_event_id = event.id`;
-        `on conflict do nothing`).
-- [ ] Refund-Pfad: bei Refund-Event den Commission-Row des betroffenen Charges
-      auf `clawback` setzen. **RC-Refund-Signal zuerst gegen Doku/Sandbox
+  - [ ] Insert `affiliate_commissions` mit den Fakten (`charged_at`,
+        `hold_until = charged_at + 90d`, Betrag, Währung) — KEIN Status-Feld.
+        Idempotent über `source_event_id = event.id` (`on conflict do nothing`).
+- [ ] **Fehler-/Reihenfolge-Semantik (money-critical):** Ablauf im Webhook =
+      profiles-Update → Commission-Accrual → ERST DANN Event in
+      `revenuecat_event_log` als processed loggen. Schlägt der Accrual-Insert fehl
+      → Webhook gibt **5xx** zurück (Event NICHT geloggt) → RC retried → das
+      `source_event_id`-Unique macht den Retry sicher (kein Doppel-Row). Niemals
+      „profiles ok, Commission verloren, trotzdem 200". (Aktueller Webhook loggt
+      direkt nach dem profiles-Update — das Log-Insert muss hinter den Accrual
+      wandern.)
+- [ ] Refund-Pfad: bei Refund-Event `clawback_at = now()` auf dem betroffenen
+      Commission-Row setzen. **RC-Refund-Signal zuerst gegen Doku/Sandbox
       verifizieren.**
 - [ ] Sandbox-E2E: RC-Sandbox-Purchase (Trial → Renewal → Cancel → Refund)
       durchspielen, Rows prüfen.
 
-### Phase C — Hold → Release  *(dealswipe-app/supabase)*
-- [ ] pg_cron-Job (täglich): `update affiliate_commissions set status='available',
-      released_at=now() where status='pending' and hold_until < now()`.
-- [ ] pg_cron auf Supabase aktivieren (Extension) + Job registrieren.
+### Phase C — Hold → Available: NICHTS im Korrektheits-Pfad zu bauen (abgeleitet)
+- [ ] Kein Cron. Der pending→available-Übergang entsteht aus `hold_until <= now()`
+      zur Query-Zeit (§5). Kein Job, keine Latenz, nichts das driften kann.
+- [ ] (optional, später) leichter Reconcile-Job (Summen gegen RevenueCat
+      abgleichen, Anomalien melden) — reines Monitoring, nicht die Wahrheit.
 
 ### Phase D — Affiliate-facing Payout-Page  *(callday-web)*  ← „ins Dashboard einbauen"
 - [ ] `lib/affiliate-commissions.ts`: `getAffiliateEarnings(affiliateId)` →
       { pendingCents, availableCents, paidCents, currencyBreakdown, rows }.
+      Buckets via die abgeleitete Query aus §5 (kein Status-Feld lesen).
       (Geteilt, service_role, analog `getAffiliateActivity`.)
 - [ ] Route `app/affiliate/payouts/page.tsx` (Cookie-Auth wie die anderen
       Affiliate-Seiten, `affiliateMainStyle`, Hamburger-Nav).
@@ -164,17 +231,29 @@ EUR-Charges tolerierbar; dokumentieren.
       des Affiliates (interne Info, OK).
 
 ### Phase E — Auszahlung (manuell)  *(callday-web `app/[secret]/affiliates`)*
-- [ ] Admin-Payout-View: alle Affiliates mit `available`-Summe (Auszahlungs-Liste).
+- [ ] Migration `affiliate_payouts` (id, affiliate_id, currency, total_cents,
+      method='paypal', external_ref (PayPal-Txn-ID), note, paid_at, created_at).
+      **Empfohlen, nicht optional** — bei echtem Geld willst du den Audit-Trail:
+      „am Datum X per PayPal-Txn R den Betrag Y an Affiliate Z gezahlt", der N
+      Commission-Rows gruppiert. Schützt bei Disputes.
+- [ ] Admin-Payout-View: alle Affiliates mit `available`-Summe **pro Währung**
+      (Auszahlungs-Liste).
 - [ ] Affiliate-Detail: PayPal-Email + available-Betrag anzeigen (Jan überweist
       manuell in PayPal).
-- [ ] Server-Action `markCommissionsPaid(affiliateId)`: available → paid,
-      `paid_at=now()`, optional `affiliate_payouts`-Row + `external_ref`
-      (PayPal-Transaktions-ID). Idempotent, service_role-gescoped.
+- [ ] Server-Action `markCommissionsPaid(affiliateId, currency)`: in EINER
+      Transaktion `affiliate_payouts`-Row anlegen, dann `paid_at = now()` +
+      `payout_id` auf alle gerade **available** Rows dieser Währung setzen
+      (`where affiliate_id=$1 and charge_currency=$2 and paid_at is null and
+      clawback_at is null and hold_until <= now()`). Idempotent per Konstruktion
+      (bezahlte Rows treffen das Filter nicht mehr), service_role-gescoped.
 - [ ] `affiliates`-Tabelle um `paypal_email` erweitern (Onboarding erfasst sie).
 
 ### Phase F — Edge Cases + Härtung
-- [ ] Late-Chargeback (> Hold): Negativ-Row + Verrechnung mit nächster
-      Auszahlung (oder manuelles Handling bei kleiner Zahl).
+- [ ] Late-Chargeback (> Hold, Row hat schon `paid_at`): `clawback_at` setzen →
+      Row ist paid+clawback = überzahlt; Betrag mit der nächsten Auszahlung
+      verrechnen (oder manuell bei kleiner Zahl). Die zwei unabhängigen
+      Timestamps modellieren das, ohne dass ein Status-Enum in einen unmöglichen
+      Zustand gerät.
 - [ ] Reconcile-Skript: Summe `affiliate_commissions` vs. RevenueCat-Dashboard
       (regelmäßig, weil falsche Provisionen Vertrauen verbrennen).
 - [ ] „Cancel resets bond"-Verfeinerung (Regel 8) — falls Missbrauch auftritt.
@@ -200,4 +279,11 @@ EUR-Charges tolerierbar; dokumentieren.
    (= €7 auf €14), bestätigen.
 4. **Paused-Affiliate**: bestehende Referrals weiter verdienen? (Spec: ja;
    nur `removed` stoppt.)
-5. **pg_cron vs. Vercel-Cron** für Hold-Release (Spec: pg_cron, DB-nah).
+5. **`PRODUCT_CHANGE`** (z.B. Monthly→Yearly-Wechsel): löst der eine Provision
+   aus? Nur wenn Apple dabei sofort abbucht — sonst folgt eh ein `RENEWAL`.
+   Spec-Default: NICHT als Trigger (nur INITIAL_PURCHASE + RENEWAL); gegen
+   RC-Verhalten in der Sandbox verifizieren.
+
+*(Erledigt: Hold-Release braucht keinen Cron — Status wird abgeleitet, siehe §5.
+Bucket-Query summiert nicht mehr über Währungen. Webhook-Fehler-Semantik +
+userIds→ein-Profil ergänzt. `affiliate_payouts` von optional auf empfohlen.)*
