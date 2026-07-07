@@ -83,7 +83,7 @@ export default async function AffiliateDashboardPage() {
       .order("posted_at", { ascending: false }),
   ]);
 
-  const { uniqueVisitors, signupCount, signupRate, activity } = act;
+  const { uniqueVisitors, signupCount, activity } = act;
   const posts = (postsRes.data ?? []) as PostRow[];
   const postStats = computePostStats(posts, act.allViews, act.allSignups);
 
@@ -198,11 +198,6 @@ export default async function AffiliateDashboardPage() {
             label="Sign-ups"
             value={signupCount}
             hint="Created an account"
-          />
-          <StatCard
-            label="Sign-up rate"
-            value={signupRate}
-            hint="Sign-ups / Visitors"
           />
         </section>
 
