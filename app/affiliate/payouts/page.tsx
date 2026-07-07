@@ -13,9 +13,18 @@ import {
   getDemoEarnings,
   formatMoney,
 } from "@/lib/affiliate-commissions";
+import { getServerSupabase } from "@/lib/supabase-server";
+import {
+  PAYOUT_COLUMNS,
+  mapPayout,
+  getPayoutSummary,
+  type RawPayout,
+  type PayoutSummary,
+} from "@/lib/affiliate-payout";
 import { AffiliateNav } from "../AffiliateNav";
 import { AffiliateFooter } from "../AffiliateFooter";
 import { affiliateMainStyle } from "../layout-styles";
+import { MethodMark } from "../MethodMark";
 import { EarningsFeed } from "./EarningsFeed";
 
 /**
@@ -55,6 +64,18 @@ export default async function AffiliatePayoutsPage({
   // Aktuell zahlende Referrals (aggregiert, kein PII). Demo passend zum Szenario.
   const activeReferrals = demo ? 100 : await getActiveReferralCount(affiliateId);
 
+  // Aktive Auszahlungsmethode (read-only Zusammenfassung — Einrichtung lebt in
+  // /affiliate/settings). Reflektiert die echte Config, unabhaengig vom Demo.
+  const sb = getServerSupabase();
+  const { data: payoutRow } = await sb
+    .from("affiliates")
+    .select(PAYOUT_COLUMNS)
+    .eq("id", affiliateId)
+    .maybeSingle();
+  const payoutSummary = getPayoutSummary(
+    payoutRow ? mapPayout(payoutRow as unknown as RawPayout) : null,
+  );
+
   // Ohne Daten: eine Null-Zeile in EUR, damit die Karten sinnvoll rendern.
   const buckets =
     earnings.byCurrency.length > 0
@@ -67,42 +88,18 @@ export default async function AffiliatePayoutsPage({
       <AffiliateNav />
 
       <main className="container" style={affiliateMainStyle}>
-        <div
+        <h1
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "baseline",
-            gap: 12,
+            fontSize: 32,
+            fontWeight: 700,
+            letterSpacing: "-0.8px",
+            lineHeight: 1.1,
             margin: "0 0 6px",
+            color: "var(--ink)",
           }}
         >
-          <h1
-            style={{
-              fontSize: 32,
-              fontWeight: 700,
-              letterSpacing: "-0.8px",
-              lineHeight: 1.1,
-              margin: 0,
-              color: "var(--ink)",
-            }}
-          >
-            Payouts
-          </h1>
-          <span
-            role="img"
-            aria-label="Payouts via PayPal"
-            style={{
-              flexShrink: 0,
-              width: 75,
-              height: 20,
-              transform: "translateY(3px)",
-              backgroundImage: "url(/paypal.svg)",
-              backgroundSize: "contain",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right center",
-            }}
-          />
-        </div>
+          Payouts
+        </h1>
         <p
           style={{ margin: "0 0 32px", fontSize: 14, color: "var(--ink-dim)" }}
         >
@@ -203,6 +200,9 @@ export default async function AffiliatePayoutsPage({
           </div>
         ))}
 
+        {/* === Wohin gezahlt wird (read-only; Einrichtung in /settings) === */}
+        <PayoutDestination summary={payoutSummary} />
+
         {/* === How it works — „You're in"-Card-Stil (blauer Tint + Border) === */}
         <section
           style={{
@@ -250,7 +250,15 @@ export default async function AffiliatePayoutsPage({
               refunds, then moves to <em>Available</em>.
             </li>
             <li>
-              Available earnings are paid out via <strong>PayPal</strong>.
+              Available earnings are paid out via{" "}
+              <strong>PayPal or Wise</strong> — set your method in{" "}
+              <Link
+                href="/affiliate/settings"
+                style={{ color: "var(--blue-deep)", textDecoration: "none" }}
+              >
+                Settings
+              </Link>
+              .
             </li>
           </ul>
         </section>
@@ -301,6 +309,86 @@ export default async function AffiliatePayoutsPage({
     </div>
   );
 }
+
+/**
+ * Read-only Zeile „wohin geht die Auszahlung". Reflektiert die aktive (=
+ * verifizierte) Methode aus den Settings; „Change" bzw. „Set up" routen dahin.
+ * Bewusst nur eine Spiegelung — die Payout-Seite bleibt Status, konfiguriert
+ * wird in /affiliate/settings.
+ */
+function PayoutDestination({ summary }: { summary: PayoutSummary }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 12,
+        flexWrap: "wrap",
+        background: "#ffffff",
+        border: "0.5px solid var(--line)",
+        borderRadius: 18,
+        padding: "16px 20px",
+        marginBottom: 24,
+        boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
+      }}
+    >
+      {summary.method ? (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <span
+              style={{
+                fontFamily: "var(--font-mono), monospace",
+                fontSize: 10,
+                textTransform: "uppercase",
+                letterSpacing: "1.2px",
+                color: "var(--ink-faint)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Paid to
+            </span>
+            <MethodMark method={summary.method} height={16} />
+            {summary.destination ? (
+              <span
+                style={{
+                  fontSize: 14,
+                  color: "var(--ink-dim)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {summary.destination}
+              </span>
+            ) : null}
+          </div>
+          <Link href="/affiliate/settings" style={changeLinkStyle}>
+            Change
+          </Link>
+        </>
+      ) : (
+        <>
+          <span style={{ fontSize: 14, color: "var(--ink-dim)" }}>
+            Add a payout method to get paid.
+          </span>
+          <Link href="/affiliate/settings" style={changeLinkStyle}>
+            Set up →
+          </Link>
+        </>
+      )}
+    </div>
+  );
+}
+
+const changeLinkStyle: React.CSSProperties = {
+  flexShrink: 0,
+  fontSize: 13,
+  fontWeight: 600,
+  color: "var(--blue-deep)",
+  textDecoration: "none",
+  whiteSpace: "nowrap",
+};
 
 function MoneyCard({
   label,

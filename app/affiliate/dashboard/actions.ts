@@ -4,11 +4,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-import {
-  AFFILIATE_SESSION_COOKIE,
-  verifyAffiliateSession,
-} from "@/lib/affiliate-auth";
+import { AFFILIATE_SESSION_COOKIE } from "@/lib/affiliate-auth";
 import { getServerSupabase } from "@/lib/supabase-server";
+
+import { requireAffiliateId } from "../require-session";
 
 /**
  * Sign out — clear das Session-Cookie + redirect zu /affiliate/login.
@@ -23,15 +22,6 @@ export async function affiliateSignOutAction() {
     expires: new Date(0),
   });
   redirect("/affiliate/login");
-}
-
-async function requireAffiliateId(): Promise<string> {
-  const jar = await cookies();
-  const affiliateId = await verifyAffiliateSession(
-    jar.get(AFFILIATE_SESSION_COOKIE)?.value,
-  );
-  if (!affiliateId) redirect("/affiliate/login");
-  return affiliateId;
 }
 
 export type AddPostState = { error?: string; ok?: boolean } | null;

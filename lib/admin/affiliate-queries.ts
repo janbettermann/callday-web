@@ -1,6 +1,12 @@
 import "server-only";
 
 import { getServerSupabase } from "../supabase-server";
+import {
+  PAYOUT_COLUMNS,
+  mapPayout,
+  type AffiliatePayout,
+  type RawPayout,
+} from "../affiliate-payout";
 
 /**
  * Admin-Affiliate-Queries — service_role, server-only.
@@ -39,9 +45,10 @@ export interface AffiliateRow {
   view_count: number;
   signup_count: number;
   activated_count: number;
+  payout: AffiliatePayout;
 }
 
-interface RawAffiliate {
+interface RawAffiliate extends RawPayout {
   id: string;
   slug: string;
   name: string;
@@ -70,13 +77,13 @@ export async function fetchAffiliates(): Promise<AffiliateRow[]> {
   const { data, error } = await sb
     .from("affiliates")
     .select(
-      "id, slug, name, email, status, founder_tier, notes, invited_at, first_login_at, last_login_at, created_at",
+      `id, slug, name, email, status, founder_tier, notes, invited_at, first_login_at, last_login_at, created_at, ${PAYOUT_COLUMNS}`,
     )
     .order("created_at", { ascending: false });
 
   if (error) throw error;
 
-  const affiliates = (data ?? []) as RawAffiliate[];
+  const affiliates = (data ?? []) as unknown as RawAffiliate[];
   if (affiliates.length === 0) return [];
 
   // View-, Sign-up- und Activated-Counts pro Affiliate-ID parallel laden.
@@ -92,6 +99,7 @@ export async function fetchAffiliates(): Promise<AffiliateRow[]> {
     view_count: viewCounts.get(a.id) ?? 0,
     signup_count: signupCounts.get(a.id) ?? 0,
     activated_count: activatedCounts.get(a.id) ?? 0,
+    payout: mapPayout(a),
   }));
 }
 
@@ -102,7 +110,7 @@ export async function fetchAffiliateById(
   const { data, error } = await sb
     .from("affiliates")
     .select(
-      "id, slug, name, email, status, founder_tier, notes, invited_at, first_login_at, last_login_at, created_at",
+      `id, slug, name, email, status, founder_tier, notes, invited_at, first_login_at, last_login_at, created_at, ${PAYOUT_COLUMNS}`,
     )
     .eq("id", id)
     .maybeSingle();
@@ -110,7 +118,7 @@ export async function fetchAffiliateById(
   if (error) throw error;
   if (!data) return null;
 
-  const raw = data as RawAffiliate;
+  const raw = data as unknown as RawAffiliate;
   const [viewCounts, signupCounts, activatedCounts] = await Promise.all([
     fetchViewCounts([id]),
     fetchSignupCounts([id]),
@@ -122,6 +130,7 @@ export async function fetchAffiliateById(
     view_count: viewCounts.get(id) ?? 0,
     signup_count: signupCounts.get(id) ?? 0,
     activated_count: activatedCounts.get(id) ?? 0,
+    payout: mapPayout(raw),
   };
 }
 

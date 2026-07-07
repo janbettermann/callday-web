@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/affiliate/posts", label: "Posts" },
   { href: "/affiliate/activity", label: "Activity" },
   { href: "/affiliate/payouts", label: "Payouts" },
+  { href: "/affiliate/settings", label: "Settings" },
   { href: "/affiliate/agreement", label: "Agreement" },
 ];
 

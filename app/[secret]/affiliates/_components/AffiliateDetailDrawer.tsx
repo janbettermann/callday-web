@@ -8,9 +8,16 @@ import type {
   AffiliateStatus,
 } from "@/lib/admin/affiliate-lifecycle";
 import { deriveLifecycle } from "@/lib/admin/affiliate-lifecycle";
+import type {
+  AffiliatePayout,
+  PayoutMethod,
+  PayoutMethodState,
+} from "@/lib/affiliate-payout";
 
+import { MethodMark } from "@/app/affiliate/MethodMark";
 import {
   changeAffiliateStatusAction,
+  markPayoutTestSentAction,
   resendInviteAction,
   updateAffiliateAction,
 } from "../actions";
@@ -86,6 +93,21 @@ function DrawerBody({
       const result = await resendInviteAction(fd);
       if (!result.ok) setActionError(result.error);
       else setActionInfo(`Welcome mail sent to ${affiliate.email}.`);
+    });
+  }
+
+  function handleMarkTestSent(method: PayoutMethod) {
+    clearMessages();
+    const fd = new FormData();
+    fd.set("id", affiliate.id);
+    fd.set("method", method);
+    startTransition(async () => {
+      const result = await markPayoutTestSentAction(fd);
+      if (!result.ok) setActionError(result.error);
+      else
+        setActionInfo(
+          `Marked ${method === "paypal" ? "PayPal" : "Wise"} test transfer as sent.`,
+        );
     });
   }
 
@@ -300,6 +322,14 @@ function DrawerBody({
                 </p>
               ) : null}
             </div>
+          </Section>
+
+          <Section label="Payouts">
+            <PayoutAdmin
+              payout={affiliate.payout}
+              disabled={isPending}
+              onMarkTestSent={handleMarkTestSent}
+            />
           </Section>
 
           <Section label="Details">
@@ -674,4 +704,193 @@ function fmtDateTime(iso: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+/**
+ * Admin-Sicht der Payout-Methoden. Zeigt die vom Affiliate eingegebenen
+ * Zahldaten (damit Jan die Testueberweisung schicken kann) + den Verify-State.
+ * Bei state='pending' der „Mark test transfer sent"-Button — die andere
+ * Seite des Handshakes (Affiliate bestaetigt Eingang) lebt in den Settings.
+ */
+function PayoutAdmin({
+  payout,
+  disabled,
+  onMarkTestSent,
+}: {
+  payout: AffiliatePayout;
+  disabled: boolean;
+  onMarkTestSent: (method: PayoutMethod) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <PayoutMethodRow
+        method="paypal"
+        state={payout.paypal.state}
+        active={payout.activeMethod === "paypal"}
+        details={payout.paypal.email ? [payout.paypal.email] : []}
+        disabled={disabled}
+        onMarkTestSent={onMarkTestSent}
+      />
+      <PayoutMethodRow
+        method="wise"
+        state={payout.wise.state}
+        active={payout.activeMethod === "wise"}
+        details={
+          [
+            payout.wise.accountHolder,
+            payout.wise.country,
+            payout.wise.details,
+          ].filter(Boolean) as string[]
+        }
+        disabled={disabled}
+        onMarkTestSent={onMarkTestSent}
+      />
+    </div>
+  );
+}
+
+function PayoutMethodRow({
+  method,
+  state,
+  active,
+  details,
+  disabled,
+  onMarkTestSent,
+}: {
+  method: PayoutMethod;
+  state: PayoutMethodState;
+  active: boolean;
+  details: string[];
+  disabled: boolean;
+  onMarkTestSent: (method: PayoutMethod) => void;
+}) {
+  return (
+    <div
+      style={{
+        background: "#ffffff",
+        border: "0.5px solid var(--line)",
+        borderRadius: 16,
+        padding: 16,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <MethodMark method={method} height={16} />
+          {active ? (
+            <span
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: "0.6px",
+                textTransform: "uppercase",
+                color: "var(--blue-deep)",
+                background: "rgba(37,99,232,0.1)",
+                borderRadius: 100,
+                padding: "3px 7px",
+              }}
+            >
+              Active
+            </span>
+          ) : null}
+        </div>
+        <PayoutStatePill state={state} />
+      </div>
+
+      {details.length > 0 ? (
+        <div
+          style={{
+            background: "rgba(26,29,38,0.045)",
+            borderRadius: 10,
+            padding: "10px 12px",
+            fontSize: 13,
+            color: "var(--ink)",
+            fontFamily: "var(--font-mono), monospace",
+            lineHeight: 1.5,
+            wordBreak: "break-word",
+            whiteSpace: "pre-wrap",
+            userSelect: "all",
+          }}
+        >
+          {details.join("\n")}
+        </div>
+      ) : (
+        <div style={{ fontSize: 13, color: "var(--ink-faint)" }}>
+          Not set up yet.
+        </div>
+      )}
+
+      {state === "pending" ? (
+        <button
+          type="button"
+          onClick={() => onMarkTestSent(method)}
+          disabled={disabled}
+          style={{
+            alignSelf: "flex-start",
+            background:
+              "linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%)",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: 10,
+            padding: "8px 14px",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: disabled ? "wait" : "pointer",
+            opacity: disabled ? 0.6 : 1,
+            boxShadow: "0 4px 12px rgba(37,99,232,0.2)",
+          }}
+        >
+          Mark test transfer sent
+        </button>
+      ) : null}
+      {state === "test_sent" ? (
+        <div style={{ fontSize: 12.5, color: "var(--ink-dim)" }}>
+          Test sent — waiting for the affiliate to confirm it arrived.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function PayoutStatePill({ state }: { state: PayoutMethodState }) {
+  const map: Record<
+    PayoutMethodState,
+    { label: string; bg: string; fg: string }
+  > = {
+    unset: { label: "Not set up", bg: "rgba(26,29,38,0.06)", fg: "var(--ink-dim)" },
+    pending: { label: "Test pending", bg: "rgba(245,158,11,0.14)", fg: "#a16207" },
+    test_sent: {
+      label: "Awaiting confirm",
+      bg: "rgba(37,99,232,0.12)",
+      fg: "var(--blue-deep)",
+    },
+    verified: { label: "Verified", bg: "rgba(16,185,129,0.14)", fg: "#047857" },
+  };
+  const s = map[state];
+  return (
+    <span
+      style={{
+        fontSize: 10,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
+        color: s.fg,
+        background: s.bg,
+        borderRadius: 100,
+        padding: "3px 9px",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {s.label}
+    </span>
+  );
 }

@@ -231,6 +231,25 @@ EUR-Charges tolerierbar; dokumentieren.
       des Affiliates (interne Info, OK).
 
 ### Phase E — Auszahlung (manuell)  *(callday-web `app/[secret]/affiliates`)*
+
+> **Update 2026-07-07 (2. Session) — Payout-Methoden vorgezogen + self-service.**
+> Statt des ursprünglich hier geplanten admin-erfassten `affiliates.paypal_email`
+> ist die Methoden-Erfassung als **self-service** gebaut (Migration **0041**
+> `affiliate_payout_methods`, deployed): `payout_method` (`paypal|wise`) +
+> `paypal_email` + `wise_account_holder/country/details` + je
+> `*_test_sent_at`/`*_verified_at`. Der Affiliate gibt PayPal **oder** Wise
+> selbst ein (`/affiliate/settings`), mit **zweiseitigem Verify-Handshake**
+> (Admin schickt kleine Testüberweisung → `markPayoutTestSentAction`; Affiliate
+> bestätigt Eingang → `confirmPayoutReceivedAction`; nur verifizierte Methode
+> wird aktiv). Verify-State wird abgeleitet (wie der Commission-Status),
+> Helper/Typen in `lib/affiliate-payout.ts`. Der Admin-Drawer zeigt die
+> Zahldaten + Verify-State (Section „Payouts"). **Wise statt raw bank wire:**
+> von DE/EUR aus sind US-Domestic-Rails (Venmo/Zelle/CashApp) nicht zahlbar und
+> SWIFT-Wire frisst kleine Payouts — Wise deckt „aufs Konto" günstiger ab.
+> **Noch OFFEN in Phase E:** die eigentliche Auszahlungs-Buchung (unten):
+> `affiliate_payouts`-Tabelle, Admin-Payout-View (available pro Währung),
+> `markCommissionsPaid`. Das `paypal_email`-Item ist durch 0041 erledigt.
+
 - [ ] Migration `affiliate_payouts` (id, affiliate_id, currency, total_cents,
       method='paypal', external_ref (PayPal-Txn-ID), note, paid_at, created_at).
       **Empfohlen, nicht optional** — bei echtem Geld willst du den Audit-Trail:
@@ -238,15 +257,17 @@ EUR-Charges tolerierbar; dokumentieren.
       Commission-Rows gruppiert. Schützt bei Disputes.
 - [ ] Admin-Payout-View: alle Affiliates mit `available`-Summe **pro Währung**
       (Auszahlungs-Liste).
-- [ ] Affiliate-Detail: PayPal-Email + available-Betrag anzeigen (Jan überweist
-      manuell in PayPal).
+- [x] Affiliate-Detail: Zahldaten anzeigen (Admin-Drawer „Payouts"-Section,
+      2026-07-07). Available-Betrag pro Währung im Drawer noch offen.
 - [ ] Server-Action `markCommissionsPaid(affiliateId, currency)`: in EINER
       Transaktion `affiliate_payouts`-Row anlegen, dann `paid_at = now()` +
       `payout_id` auf alle gerade **available** Rows dieser Währung setzen
       (`where affiliate_id=$1 and charge_currency=$2 and paid_at is null and
       clawback_at is null and hold_until <= now()`). Idempotent per Konstruktion
       (bezahlte Rows treffen das Filter nicht mehr), service_role-gescoped.
-- [ ] `affiliates`-Tabelle um `paypal_email` erweitern (Onboarding erfasst sie).
+- [x] `affiliates`-Tabelle um Payout-Felder erweitern — erledigt via Migration
+      0041 als self-service `payout_method` + PayPal/Wise-Felder (siehe
+      Update-Box oben), nicht als admin-erfasstes `paypal_email`.
 
 ### Phase F — Edge Cases + Härtung
 - [ ] Late-Chargeback (> Hold, Row hat schon `paid_at`): `clawback_at` setzen →

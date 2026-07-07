@@ -286,3 +286,34 @@ export async function resendInviteAction(
   revalidateAffiliates(adminPath);
   return { ok: true };
 }
+
+// =============================================================
+// markPayoutTestSent — Jan hat die kleine Testueberweisung an die
+// Methode geschickt. Setzt `${method}_test_sent_at` → der Affiliate
+// sieht dann in den Settings den Confirm-Button (zweiseitiger
+// Verify-Handshake, siehe lib/affiliate-payout.ts).
+// =============================================================
+
+export async function markPayoutTestSentAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const adminPath = await requireAdmin();
+  if (!adminPath) return { ok: false, error: "Not authenticated." };
+
+  const id = String(formData.get("id") ?? "").trim();
+  const method = String(formData.get("method") ?? "").trim();
+  if (!id) return { ok: false, error: "Affiliate id missing." };
+  if (method !== "paypal" && method !== "wise") {
+    return { ok: false, error: "Invalid method." };
+  }
+
+  const sb = getServerSupabase();
+  const { error } = await sb
+    .from("affiliates")
+    .update({ [`${method}_test_sent_at`]: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+  revalidateAffiliates(adminPath);
+  return { ok: true };
+}
