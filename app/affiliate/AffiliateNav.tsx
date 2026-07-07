@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/affiliate/dashboard", label: "Dashboard" },
   { href: "/affiliate/posts", label: "Posts" },
   { href: "/affiliate/activity", label: "Activity" },
+  { href: "/affiliate/payouts", label: "Payouts" },
   { href: "/affiliate/agreement", label: "Agreement" },
 ];
 
