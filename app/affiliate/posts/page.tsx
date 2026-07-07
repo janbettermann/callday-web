@@ -10,12 +10,14 @@ import { getServerSupabase } from "@/lib/supabase-server";
 import {
   getAffiliateActivity,
   computePostStats,
+  POST_WINDOW_HOURS,
   type PostRow,
 } from "@/lib/affiliate-activity";
 import { AffiliateNav } from "../AffiliateNav";
 import { AffiliateFooter } from "../AffiliateFooter";
 import { PostList } from "../PostList";
 import { affiliateMainStyle } from "../layout-styles";
+import { PostComposer } from "../dashboard/PostComposer";
 
 /**
  * /affiliate/posts — alle je geloggten Posts (mit Korrelation). Das Dashboard
@@ -58,18 +60,29 @@ export default async function AffiliatePostsPage() {
       <AffiliateNav />
 
       <main className="container" style={affiliateMainStyle}>
-        <h1
+        <div
           style={{
-            fontSize: 32,
-            fontWeight: 700,
-            letterSpacing: "-0.8px",
-            lineHeight: 1.1,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
             margin: "0 0 6px",
-            color: "var(--ink)",
           }}
         >
-          Posts
-        </h1>
+          <h1
+            style={{
+              fontSize: 32,
+              fontWeight: 700,
+              letterSpacing: "-0.8px",
+              lineHeight: 1.1,
+              margin: 0,
+              color: "var(--ink)",
+            }}
+          >
+            Posts
+          </h1>
+          <PostComposer windowHours={POST_WINDOW_HOURS} />
+        </div>
         <p
           style={{ margin: "0 0 32px", fontSize: 14, color: "var(--ink-dim)" }}
         >

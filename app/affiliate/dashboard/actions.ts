@@ -78,6 +78,7 @@ export async function addAffiliatePostAction(
   if (error) return { error: "Couldn't save the post. Try again." };
 
   revalidatePath("/affiliate/dashboard");
+  revalidatePath("/affiliate/posts");
   return { ok: true };
 }
 
@@ -99,4 +100,5 @@ export async function deleteAffiliatePostAction(formData: FormData) {
     .eq("affiliate_id", affiliateId);
 
   revalidatePath("/affiliate/dashboard");
+  revalidatePath("/affiliate/posts");
 }

@@ -7,19 +7,20 @@ import { AddPostForm } from "./AddPostForm";
 
 const triggerStyle: CSSProperties = {
   flexShrink: 0,
-  width: 32,
-  height: 32,
+  width: 26,
+  height: 26,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  borderRadius: 10,
-  background: "rgba(53, 100, 224, 0.1)",
-  border: "0.5px solid rgba(53, 100, 224, 0.22)",
-  color: "var(--blue-deep)",
-  fontSize: 20,
+  borderRadius: "50%",
+  background: "var(--blue-deep)",
+  border: "none",
+  color: "#ffffff",
+  fontSize: 18,
   lineHeight: 1,
   cursor: "pointer",
   padding: 0,
+  boxShadow: "0 2px 8px rgba(37, 99, 232, 0.25)",
 };
 
 /**
