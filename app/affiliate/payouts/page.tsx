@@ -9,6 +9,7 @@ import {
 } from "@/lib/affiliate-auth";
 import {
   getAffiliateEarnings,
+  getActiveReferralCount,
   getDemoEarnings,
   formatMoney,
 } from "@/lib/affiliate-commissions";
@@ -51,6 +52,8 @@ export default async function AffiliatePayoutsPage({
   const earnings = demo
     ? getDemoEarnings()
     : await getAffiliateEarnings(affiliateId);
+  // Aktuell zahlende Referrals (aggregiert, kein PII). Demo passend zum Szenario.
+  const activeReferrals = demo ? 100 : await getActiveReferralCount(affiliateId);
 
   // Ohne Daten: eine Null-Zeile in EUR, damit die Karten sinnvoll rendern.
   const buckets =
@@ -126,7 +129,7 @@ export default async function AffiliatePayoutsPage({
           </div>
         ) : null}
 
-        {buckets.map((b) => (
+        {buckets.map((b, idx) => (
           <div key={b.currency} style={{ marginBottom: 24 }}>
             {showCurrency ? (
               <div
@@ -149,6 +152,13 @@ export default async function AffiliatePayoutsPage({
                 gap: 12,
               }}
             >
+              {idx === 0 ? (
+                <MoneyCard
+                  label="Active referrals"
+                  value={String(activeReferrals)}
+                  hint="Subscribed and paying"
+                />
+              ) : null}
               <MoneyCard
                 label="Pending"
                 value={formatMoney(b.pendingCents, b.currency)}

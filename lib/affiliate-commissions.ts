@@ -113,6 +113,23 @@ export async function getAffiliateEarnings(
 }
 
 /**
+ * Anzahl aktuell zahlender Referrals (Subscription `active`) — aggregiert,
+ * kein PII, für die „Active referrals"-Stat-Card. `subscription_status` wird
+ * vom `revenuecat-webhook` auf `profiles` gepflegt.
+ */
+export async function getActiveReferralCount(
+  affiliateId: string,
+): Promise<number> {
+  const sb = getServerSupabase();
+  const { count } = await sb
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("referred_by_affiliate_id", affiliateId)
+    .eq("subscription_status", "active");
+  return count ?? 0;
+}
+
+/**
  * Illustrative Demo-Earnings für den Beta-Demo-Mode (`?demo=1`). REIN Anzeige —
  * schreibt NICHTS in die DB. Realistische Rows in verschiedenen Zuständen,
  * durch dieselbe `computeEarnings`-Ableitung gejagt wie echte Daten.
