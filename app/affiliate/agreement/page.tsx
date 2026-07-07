@@ -9,6 +9,7 @@ import {
 } from "@/lib/affiliate-auth";
 import { AffiliateNav } from "../AffiliateNav";
 import { AffiliateFooter } from "../AffiliateFooter";
+import { affiliateMainStyle } from "../layout-styles";
 
 /**
  * /affiliate/agreement — Container fuer den Affiliate-Vertrag. Der finale
@@ -37,10 +38,7 @@ export default async function AffiliateAgreementPage() {
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
       <AffiliateNav />
 
-      <main
-        className="container"
-        style={{ paddingTop: 80, paddingBottom: 80, maxWidth: 800 }}
-      >
+      <main className="container" style={affiliateMainStyle}>
         <Link
           href="/affiliate/dashboard"
           style={{

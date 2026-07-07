@@ -16,6 +16,7 @@ import {
 import { AffiliateNav } from "../AffiliateNav";
 import { AffiliateFooter } from "../AffiliateFooter";
 import { PostList } from "../PostList";
+import { affiliateMainStyle } from "../layout-styles";
 
 /**
  * /affiliate/posts — alle je geloggten Posts (mit Korrelation). Das Dashboard
@@ -57,10 +58,7 @@ export default async function AffiliatePostsPage() {
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
       <AffiliateNav />
 
-      <main
-        className="container"
-        style={{ paddingTop: 80, paddingBottom: 80, maxWidth: 800 }}
-      >
+      <main className="container" style={affiliateMainStyle}>
         <Link
           href="/affiliate/dashboard"
           style={{

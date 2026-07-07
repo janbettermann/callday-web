@@ -11,6 +11,7 @@ import { getAffiliateActivity } from "@/lib/affiliate-activity";
 import { AffiliateNav } from "../AffiliateNav";
 import { AffiliateFooter } from "../AffiliateFooter";
 import { ActivityList } from "../ActivityList";
+import { affiliateMainStyle } from "../layout-styles";
 
 /**
  * /affiliate/activity — vollständige Activity-Liste (Views + Sign-ups).
@@ -41,10 +42,7 @@ export default async function AffiliateActivityPage() {
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
       <AffiliateNav />
 
-      <main
-        className="container"
-        style={{ paddingTop: 80, paddingBottom: 80, maxWidth: 800 }}
-      >
+      <main className="container" style={affiliateMainStyle}>
         <Link
           href="/affiliate/dashboard"
           style={{

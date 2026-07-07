@@ -16,6 +16,7 @@ import {
 } from "@/lib/affiliate-activity";
 import { AffiliateNav } from "../AffiliateNav";
 import { AffiliateFooter } from "../AffiliateFooter";
+import { affiliateMainStyle } from "../layout-styles";
 import { ActivityList } from "../ActivityList";
 import { PostList } from "../PostList";
 
@@ -94,18 +95,15 @@ export default async function AffiliateDashboardPage() {
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
       <AffiliateNav />
 
-      <main
-        className="container"
-        style={{ paddingTop: 80, paddingBottom: 80, maxWidth: 800 }}
-      >
+      <main className="container" style={affiliateMainStyle}>
         {/* === Header === */}
         <header style={{ marginBottom: 20 }}>
           <h1
             style={{
-              fontSize: 36,
+              fontSize: 32,
               fontWeight: 700,
-              letterSpacing: "-1px",
-              lineHeight: 1.05,
+              letterSpacing: "-0.8px",
+              lineHeight: 1.1,
               margin: 0,
               color: "var(--ink)",
             }}
