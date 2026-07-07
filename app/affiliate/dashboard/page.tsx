@@ -108,7 +108,7 @@ export default async function AffiliateDashboardPage() {
               color: "var(--ink)",
             }}
           >
-            Affiliate dashboard
+            Dashboard
           </h1>
         </header>
 

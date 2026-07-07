@@ -30,6 +30,27 @@ const itemStyle: React.CSSProperties = {
 };
 
 /**
+ * „Affiliate"-Badge neben dem Logo. Nutzt die Mono-Caps-Label-Sprache der
+ * Seite (wie „YOUR LINK") plus einen dezenten Brand-Blau-Tint — passt auf den
+ * hellen (data-scrolled) Nav-Grund, ohne wie ein CTA zu wirken.
+ */
+const pillStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "4px 10px",
+  borderRadius: 100,
+  background: "rgba(53, 100, 224, 0.1)",
+  border: "0.5px solid rgba(53, 100, 224, 0.22)",
+  color: "var(--blue-deep)",
+  fontFamily: "var(--font-mono), monospace",
+  fontSize: 10,
+  fontWeight: 600,
+  letterSpacing: "0.8px",
+  textTransform: "uppercase",
+  lineHeight: 1,
+};
+
+/**
  * Globale Affiliate-Navigation (Hamburger). Auf allen /affiliate/*-Seiten.
  * Bei 4 Zielen (Dashboard/Posts/Activity/Agreement) waeren sichtbare Tabs auf
  * Mobile zu eng — ein Menue ist die saubere Wahl und skaliert. Sign out liegt
@@ -41,14 +62,17 @@ export function AffiliateNav() {
   return (
     <nav className="site-nav" data-scrolled="true">
       <div className="container nav-inner">
-        <Link
-          href="/affiliate/dashboard"
-          className="logo"
-          style={{ textDecoration: "none" }}
-        >
-          <CalldayLogo size={32} />
-          Callday
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Link
+            href="/affiliate/dashboard"
+            className="logo"
+            style={{ textDecoration: "none" }}
+          >
+            <CalldayLogo size={32} />
+            Callday
+          </Link>
+          <span style={pillStyle}>Affiliate</span>
+        </div>
 
         <div style={{ position: "relative" }}>
           <button
