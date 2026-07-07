@@ -19,7 +19,7 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "pending", label: "Pending" },
   { value: "available", label: "Available" },
   { value: "paid", label: "Paid" },
-  { value: "clawback", label: "Reversed" },
+  { value: "clawback", label: "Refunded" },
 ];
 
 /**
@@ -108,7 +108,7 @@ const STATUS_STYLE: Record<
     bg: "rgba(53,100,224,0.1)",
   },
   paid: { label: "Paid", color: "#0f766e", bg: "rgba(15,118,110,0.1)" },
-  clawback: { label: "Reversed", color: "#b91c1c", bg: "rgba(185,28,28,0.1)" },
+  clawback: { label: "Refunded", color: "#b91c1c", bg: "rgba(185,28,28,0.1)" },
 };
 
 function EarningRow({ row, first }: { row: CommissionRow; first: boolean }) {
