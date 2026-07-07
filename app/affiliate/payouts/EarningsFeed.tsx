@@ -99,8 +99,8 @@ const STATUS_STYLE: Record<
 > = {
   pending: {
     label: "Pending",
-    color: "var(--sun-deep)",
-    bg: "rgba(185,126,16,0.1)",
+    color: "#d97706",
+    bg: "rgba(251,191,36,0.18)",
   },
   available: {
     label: "Available",
