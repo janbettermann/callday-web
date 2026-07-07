@@ -56,7 +56,7 @@ export default async function AffiliateDashboardPage() {
 
   const { data: affiliate } = await sb
     .from("affiliates")
-    .select("slug, name, status, founder_tier")
+    .select("slug, status")
     .eq("id", affiliateId)
     .maybeSingle();
 
@@ -66,9 +66,7 @@ export default async function AffiliateDashboardPage() {
 
   const aff = affiliate as {
     slug: string;
-    name: string;
     status: "active" | "paused" | "removed";
-    founder_tier: boolean;
   };
 
   // Views + Sign-ups + abgeleiteter Activity-Feed kommen aus dem geteilten
@@ -91,7 +89,6 @@ export default async function AffiliateDashboardPage() {
   const baseUrl =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://callday.io";
   const affiliateLink = `${baseUrl}/a/${aff.slug}`;
-  const firstName = aff.name?.trim().split(/\s+/)[0] || "there";
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
@@ -102,19 +99,7 @@ export default async function AffiliateDashboardPage() {
         style={{ paddingTop: 80, paddingBottom: 80, maxWidth: 800 }}
       >
         {/* === Header === */}
-        <header style={{ marginBottom: 40 }}>
-          <div
-            style={{
-              fontFamily: "var(--font-mono), monospace",
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "1.5px",
-              color: "var(--ink-faint)",
-              marginBottom: 8,
-            }}
-          >
-            {aff.founder_tier ? "Founding affiliate" : "Affiliate"}
-          </div>
+        <header style={{ marginBottom: 20 }}>
           <h1
             style={{
               fontSize: 36,
@@ -125,7 +110,7 @@ export default async function AffiliateDashboardPage() {
               color: "var(--ink)",
             }}
           >
-            Hi {firstName}.
+            Affiliate dashboard
           </h1>
         </header>
 
