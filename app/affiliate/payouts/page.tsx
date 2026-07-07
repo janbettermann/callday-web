@@ -168,11 +168,12 @@ export default async function AffiliatePayoutsPage({
           </div>
         ))}
 
-        {/* === How it works === */}
+        {/* === How it works — „You're in"-Card-Stil (blauer Tint + Border) === */}
         <section
           style={{
-            background: "#ffffff",
-            border: "0.5px solid var(--line)",
+            background:
+              "linear-gradient(180deg, rgba(37,99,232,0.06) 0%, rgba(255,255,255,1) 100%)",
+            border: "0.5px solid rgba(37,99,232,0.3)",
             borderRadius: 24,
             padding: 28,
             marginBottom: 24,
