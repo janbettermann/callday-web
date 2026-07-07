@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -8,6 +9,7 @@ import {
 } from "@/lib/affiliate-auth";
 import {
   getAffiliateEarnings,
+  getDemoEarnings,
   formatMoney,
   type CommissionStatus,
   type CommissionRow,
@@ -31,7 +33,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function AffiliatePayoutsPage() {
+export default async function AffiliatePayoutsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ demo?: string }>;
+}) {
   const jar = await cookies();
   const affiliateId = await verifyAffiliateSession(
     jar.get(AFFILIATE_SESSION_COOKIE)?.value,
@@ -41,7 +47,11 @@ export default async function AffiliatePayoutsPage() {
     redirect("/affiliate/login");
   }
 
-  const earnings = await getAffiliateEarnings(affiliateId);
+  // Beta-Demo: `?demo=1` zeigt illustrative Zahlen (rein Anzeige, keine DB).
+  const demo = (await searchParams).demo === "1";
+  const earnings = demo
+    ? getDemoEarnings()
+    : await getAffiliateEarnings(affiliateId);
 
   // Ohne Daten: eine Null-Zeile in EUR, damit die Karten sinnvoll rendern.
   const buckets =
@@ -72,6 +82,50 @@ export default async function AffiliatePayoutsPage() {
         >
           Your commission earnings and how they&apos;re paid out.
         </p>
+
+        {demo ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+              background: "rgba(185,126,16,0.1)",
+              border: "0.5px solid rgba(185,126,16,0.3)",
+              borderRadius: 16,
+              padding: "12px 16px",
+              marginBottom: 24,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                color: "var(--sun-deep)",
+                lineHeight: 1.4,
+              }}
+            >
+              Demo mode — illustrative numbers, not your real earnings.
+            </span>
+            <Link
+              href="/affiliate/payouts"
+              style={{
+                flexShrink: 0,
+                fontSize: 13,
+                fontWeight: 500,
+                color: "#ffffff",
+                background: "var(--sun-deep)",
+                borderRadius: 100,
+                padding: "6px 14px",
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Exit demo
+            </Link>
+          </div>
+        ) : null}
 
         {buckets.map((b) => (
           <div key={b.currency} style={{ marginBottom: 24 }}>
@@ -210,6 +264,28 @@ export default async function AffiliatePayoutsPage() {
             </p>
           )}
         </section>
+
+        {!demo && !earnings.hasAny ? (
+          <div style={{ textAlign: "center", marginTop: 20 }}>
+            <Link
+              href="/affiliate/payouts?demo=1"
+              style={{
+                display: "inline-block",
+                fontSize: 13,
+                fontWeight: 500,
+                color: "var(--ink-dim)",
+                background: "#ffffff",
+                border: "0.5px solid var(--line)",
+                borderRadius: 100,
+                padding: "8px 16px",
+                textDecoration: "none",
+                boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
+              }}
+            >
+              Preview with demo data
+            </Link>
+          </div>
+        ) : null}
       </main>
 
       <AffiliateFooter />
