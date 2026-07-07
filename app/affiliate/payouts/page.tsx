@@ -11,12 +11,11 @@ import {
   getAffiliateEarnings,
   getDemoEarnings,
   formatMoney,
-  type CommissionStatus,
-  type CommissionRow,
 } from "@/lib/affiliate-commissions";
 import { AffiliateNav } from "../AffiliateNav";
 import { AffiliateFooter } from "../AffiliateFooter";
 import { affiliateMainStyle } from "../layout-styles";
+import { EarningsFeed } from "./EarningsFeed";
 
 /**
  * /affiliate/payouts — die Earnings-Sicht des Affiliates. Zeigt Pending /
@@ -27,9 +26,6 @@ import { affiliateMainStyle } from "../layout-styles";
  */
 
 export const dynamic = "force-dynamic";
-
-// Earnings-Liste kappen (bei vielen Referrals sonst hunderte Rows).
-const EARNINGS_CAP = 12;
 
 export const metadata: Metadata = {
   title: "Payouts · Callday Affiliates",
@@ -247,34 +243,7 @@ export default async function AffiliatePayoutsPage({
           </div>
 
           {earnings.hasAny ? (
-            <>
-              <ul
-                style={{
-                  margin: 0,
-                  padding: 0,
-                  listStyle: "none",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 0,
-                }}
-              >
-                {earnings.rows.slice(0, EARNINGS_CAP).map((r, i) => (
-                  <EarningRow key={r.id} row={r} first={i === 0} />
-                ))}
-              </ul>
-              {earnings.rows.length > EARNINGS_CAP ? (
-                <p
-                  style={{
-                    margin: "16px 0 0",
-                    fontSize: 13,
-                    color: "var(--ink-faint)",
-                    textAlign: "center",
-                  }}
-                >
-                  + {earnings.rows.length - EARNINGS_CAP} more commissions
-                </p>
-              ) : null}
-            </>
+            <EarningsFeed rows={earnings.rows} />
           ) : (
             <p style={{ margin: 0, color: "var(--ink-dim)", fontSize: 14 }}>
               Your earnings will show here once your referrals subscribe.
@@ -363,75 +332,5 @@ function MoneyCard({
         {hint}
       </div>
     </div>
-  );
-}
-
-const STATUS_STYLE: Record<
-  CommissionStatus,
-  { label: string; color: string; bg: string }
-> = {
-  pending: { label: "Pending", color: "var(--sun-deep)", bg: "rgba(185,126,16,0.1)" },
-  available: { label: "Available", color: "var(--blue-deep)", bg: "rgba(53,100,224,0.1)" },
-  paid: { label: "Paid", color: "#0f766e", bg: "rgba(15,118,110,0.1)" },
-  clawback: { label: "Reversed", color: "#b91c1c", bg: "rgba(185,28,28,0.1)" },
-};
-
-function EarningRow({ row, first }: { row: CommissionRow; first: boolean }) {
-  const s = STATUS_STYLE[row.status];
-  const date = new Date(row.charged_at).toISOString().slice(0, 10);
-  return (
-    <li
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "12px 0",
-        borderTop: first ? "none" : "0.5px solid var(--line)",
-        gap: 12,
-      }}
-    >
-      <span
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          minWidth: 0,
-        }}
-      >
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 500,
-            color: s.color,
-            background: s.bg,
-            borderRadius: 6,
-            padding: "3px 8px",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {s.label}
-        </span>
-        <span
-          style={{
-            fontSize: 13,
-            color: "var(--ink-faint)",
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {date}
-        </span>
-      </span>
-      <span
-        style={{
-          fontSize: 14,
-          fontWeight: 600,
-          color: "var(--ink)",
-          fontVariantNumeric: "tabular-nums",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {formatMoney(row.commission_cents, row.charge_currency)}
-      </span>
-    </li>
   );
 }
