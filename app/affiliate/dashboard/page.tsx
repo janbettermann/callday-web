@@ -21,7 +21,7 @@ import { ActivityList } from "../ActivityList";
 import { PostList } from "../PostList";
 
 import { CopyLinkButton } from "./CopyLinkButton";
-import { AddPostForm } from "./AddPostForm";
+import { PostComposer } from "./PostComposer";
 
 /**
  * /affiliate/dashboard — Affiliate's eigene Mini-Page.
@@ -249,34 +249,27 @@ export default async function AffiliateDashboardPage() {
         >
           <div
             style={{
-              fontFamily: "var(--font-mono), monospace",
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "1.5px",
-              color: "var(--ink-faint)",
-              marginBottom: 8,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 16,
             }}
           >
-            Posts
+            <div
+              style={{
+                fontFamily: "var(--font-mono), monospace",
+                fontSize: 11,
+                textTransform: "uppercase",
+                letterSpacing: "1.5px",
+                color: "var(--ink-faint)",
+              }}
+            >
+              Today&apos;s posts
+            </div>
+            <PostComposer windowHours={POST_WINDOW_HOURS} />
           </div>
-          <p
-            style={{
-              margin: "0 0 20px",
-              fontSize: 13,
-              color: "var(--ink-dim)",
-              lineHeight: 1.5,
-            }}
-          >
-            Log a post to see how many visitors and sign-ups came in the{" "}
-            {POST_WINDOW_HOURS} h after it. Today&apos;s posts show here — your
-            full log lives under Posts.
-          </p>
 
-          <AddPostForm />
-
-          <div style={{ marginTop: 24 }}>
-            <PostList posts={postStats} todayOnly />
-          </div>
+          <PostList posts={postStats} todayOnly />
           {postStats.length > 0 ? (
             <ViewAllLink href="/affiliate/posts" label="View all posts" />
           ) : null}

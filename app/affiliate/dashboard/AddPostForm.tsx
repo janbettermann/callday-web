@@ -36,7 +36,7 @@ const fieldStyle: CSSProperties = {
  * das als `posted_at`. Auf dem Server (UTC) waere `new Date(local)` sonst um
  * den User-Offset verschoben.
  */
-export function AddPostForm() {
+export function AddPostForm({ onSuccess }: { onSuccess?: () => void } = {}) {
   const [state, formAction, pending] = useActionState<AddPostState, FormData>(
     addAffiliatePostAction,
     null,
@@ -45,13 +45,15 @@ export function AddPostForm() {
   const postedIso = postedLocal ? new Date(postedLocal).toISOString() : "";
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Nach erfolgreichem Anlegen Felder leeren (revalidate rendert die Liste neu).
+  // Nach erfolgreichem Anlegen Felder leeren (revalidate rendert die Liste neu)
+  // und den Aufrufer informieren (der Composer schliesst dann das Overlay).
   useEffect(() => {
     if (state?.ok) {
       formRef.current?.reset();
       setPostedLocal("");
+      onSuccess?.();
     }
-  }, [state]);
+  }, [state, onSuccess]);
 
   return (
     <form
@@ -124,14 +126,14 @@ export function AddPostForm() {
         type="submit"
         disabled={pending}
         style={{
-          alignSelf: "flex-start",
+          alignSelf: "stretch",
           background:
             "linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%)",
           color: "#ffffff",
           border: "none",
-          borderRadius: 10,
-          padding: "10px 20px",
-          fontSize: 14,
+          borderRadius: 12,
+          padding: "13px 20px",
+          fontSize: 15,
           fontWeight: 600,
           cursor: pending ? "wait" : "pointer",
           opacity: pending ? 0.7 : 1,
