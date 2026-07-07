@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
+import { createPortal } from "react-dom";
 
 import { AddPostForm } from "./AddPostForm";
 
@@ -60,73 +61,76 @@ export function PostComposer({ windowHours }: { windowHours: number }) {
         +
       </button>
 
-      {open ? (
-        <div
-          className="pc-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Add a post"
-          onClick={() => setOpen(false)}
-        >
-          <div className="pc-panel" onClick={(e) => e.stopPropagation()}>
+      {open
+        ? createPortal(
             <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 6,
-              }}
+              className="pc-backdrop"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Add a post"
+              onClick={() => setOpen(false)}
             >
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: 18,
-                  fontWeight: 600,
-                  letterSpacing: "-0.3px",
-                  color: "var(--ink)",
-                }}
-              >
-                Add a post
-              </h2>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Close"
-                style={{
-                  width: 30,
-                  height: 30,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: "none",
-                  border: "none",
-                  color: "var(--ink-faint)",
-                  fontSize: 22,
-                  lineHeight: 1,
-                  cursor: "pointer",
-                  padding: 0,
-                }}
-              >
-                ×
-              </button>
-            </div>
+              <div className="pc-panel" onClick={(e) => e.stopPropagation()}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 6,
+                  }}
+                >
+                  <h2
+                    style={{
+                      margin: 0,
+                      fontSize: 18,
+                      fontWeight: 600,
+                      letterSpacing: "-0.3px",
+                      color: "var(--ink)",
+                    }}
+                  >
+                    Add a post
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    aria-label="Close"
+                    style={{
+                      width: 30,
+                      height: 30,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "none",
+                      border: "none",
+                      color: "var(--ink-faint)",
+                      fontSize: 22,
+                      lineHeight: 1,
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
 
-            <p
-              style={{
-                margin: "0 0 20px",
-                fontSize: 13,
-                color: "var(--ink-dim)",
-                lineHeight: 1.5,
-              }}
-            >
-              Log a post to see how many visitors and sign-ups came in the{" "}
-              {windowHours} h after it.
-            </p>
+                <p
+                  style={{
+                    margin: "0 0 20px",
+                    fontSize: 13,
+                    color: "var(--ink-dim)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Log a post to see how many visitors and sign-ups came in the{" "}
+                  {windowHours} h after it.
+                </p>
 
-            <AddPostForm onSuccess={() => setOpen(false)} />
-          </div>
-        </div>
-      ) : null}
+                <AddPostForm onSuccess={() => setOpen(false)} />
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

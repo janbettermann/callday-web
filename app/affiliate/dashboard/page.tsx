@@ -206,34 +206,6 @@ export default async function AffiliateDashboardPage() {
           />
         </section>
 
-        {/* === Recent activity === */}
-        <section
-          style={{
-            background: "#ffffff",
-            border: "0.5px solid var(--line)",
-            borderRadius: 24,
-            padding: 28,
-            marginBottom: 24,
-            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "var(--font-mono), monospace",
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "1.5px",
-              color: "var(--ink-faint)",
-              marginBottom: 14,
-            }}
-          >
-            Recent link activity
-          </div>
-
-          <ActivityList activity={activity.slice(0, 5)} />
-          <ViewAllLink href="/affiliate/activity" label="View all activity" />
-        </section>
-
         {/* === Posts === */}
         <section
           style={{
@@ -269,6 +241,34 @@ export default async function AffiliateDashboardPage() {
 
           <PostList posts={postStats} todayOnly />
           <ViewAllLink href="/affiliate/posts" label="View all posts" />
+        </section>
+
+        {/* === Recent activity === */}
+        <section
+          style={{
+            background: "#ffffff",
+            border: "0.5px solid var(--line)",
+            borderRadius: 24,
+            padding: 28,
+            marginBottom: 24,
+            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "var(--font-mono), monospace",
+              fontSize: 11,
+              textTransform: "uppercase",
+              letterSpacing: "1.5px",
+              color: "var(--ink-faint)",
+              marginBottom: 14,
+            }}
+          >
+            Recent link activity
+          </div>
+
+          <ActivityList activity={activity.slice(0, 5)} />
+          <ViewAllLink href="/affiliate/activity" label="View all activity" />
         </section>
 
         {/* === Payouts hint === */}

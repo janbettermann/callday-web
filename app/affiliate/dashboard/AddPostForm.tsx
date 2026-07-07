@@ -75,8 +75,8 @@ export function AddPostForm({ onSuccess }: { onSuccess?: () => void } = {}) {
         />
       </div>
 
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ flex: "1 1 170px", minWidth: 0 }}>
+      <div className="pc-fields">
+        <div style={{ flex: 1, minWidth: 0 }}>
           <label style={labelStyle} htmlFor="post-when">
             Posted at
           </label>
@@ -90,7 +90,7 @@ export function AddPostForm({ onSuccess }: { onSuccess?: () => void } = {}) {
           />
           <input type="hidden" name="posted_at" value={postedIso} />
         </div>
-        <div style={{ flex: "1 1 140px", minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <label style={labelStyle} htmlFor="post-platform">
             Platform
           </label>
