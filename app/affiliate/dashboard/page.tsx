@@ -231,9 +231,7 @@ export default async function AffiliateDashboardPage() {
           </div>
 
           <ActivityList activity={activity.slice(0, 5)} />
-          {activity.length > 0 ? (
-            <ViewAllLink href="/affiliate/activity" label="View all activity" />
-          ) : null}
+          <ViewAllLink href="/affiliate/activity" label="View all activity" />
         </section>
 
         {/* === Posts === */}
@@ -270,9 +268,7 @@ export default async function AffiliateDashboardPage() {
           </div>
 
           <PostList posts={postStats} todayOnly />
-          {postStats.length > 0 ? (
-            <ViewAllLink href="/affiliate/posts" label="View all posts" />
-          ) : null}
+          <ViewAllLink href="/affiliate/posts" label="View all posts" />
         </section>
 
         {/* === Payouts hint === */}
