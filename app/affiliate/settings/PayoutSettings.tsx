@@ -207,37 +207,38 @@ function CardFooter({
     startAct(async () => setMsg(await setActivePayoutMethodAction(method)));
   }
 
-  // Nach Änderung (dirty) ist Speichern der einzige sinnvolle Schritt — die
-  // Verify-Buttons beziehen sich auf die GESPEICHERTE Methode.
-  const showConfirm = !dirty && state === "test_sent";
-  const showMakeActive = !dirty && state === "verified" && !isActive;
+  // „Editing" = Details eingeben/ändern → nur dann ist Speichern relevant. Sonst
+  // beziehen sich die Verify-Buttons auf die GESPEICHERTE Methode. Der Confirm-
+  // Button ist schon im `pending`-State sichtbar (ausgegraut), damit der nächste
+  // Schritt klar ist — er schaltet frei, sobald die Testüberweisung raus ist.
+  const editing = dirty || state === "unset";
+  const canConfirm = state === "test_sent";
+  const showConfirm =
+    !editing && (state === "pending" || state === "test_sent");
+  const showMakeActive = !editing && state === "verified" && !isActive;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={busy || !canSave || (!dirty && state !== "unset")}
-          style={primaryBtn(busy || !canSave || (!dirty && state !== "unset"))}
-        >
-          {pending
-            ? "Saving…"
-            : state === "unset"
-              ? "Save"
-              : dirty
-                ? "Save changes"
-                : "Saved"}
-        </button>
+        {editing ? (
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={busy || !canSave}
+            style={primaryBtn(busy || !canSave)}
+          >
+            {pending ? "Saving…" : state === "unset" ? "Save" : "Save changes"}
+          </button>
+        ) : null}
 
         {showConfirm ? (
           <button
             type="button"
             onClick={confirm}
-            disabled={busy}
-            style={confirmBtn(busy)}
+            disabled={!canConfirm || busy}
+            style={canConfirm ? confirmBtn(busy) : disabledConfirmBtn}
           >
-            {actPending ? "Confirming…" : "I received the test transfer"}
+            {actPending ? "Confirming…" : "Confirm test transfer"}
           </button>
         ) : null}
 
@@ -253,18 +254,21 @@ function CardFooter({
         ) : null}
       </div>
 
-      {state === "pending" && !dirty ? (
+      {!editing && state === "pending" ? (
         <p style={hintLine}>
-          Saved. We&apos;ll send a small test transfer to confirm it works —
-          you&apos;ll confirm it here.
+          Saved. Once we send a small test transfer to this method, this button
+          unlocks — confirm it and your payout method is verified.
+        </p>
+      ) : null}
+      {!editing && state === "test_sent" ? (
+        <p style={hintLine}>
+          We&apos;ve sent a small test transfer. Confirm it once it lands and
+          your payout method is verified.
         </p>
       ) : null}
 
       {msg?.error ? (
         <p style={{ ...hintLine, color: "#b91c1c" }}>{msg.error}</p>
-      ) : null}
-      {msg?.ok && !dirty ? (
-        <p style={{ ...hintLine, color: "#15803d" }}>Saved.</p>
       ) : null}
     </div>
   );
@@ -453,6 +457,19 @@ function primaryBtn(disabled: boolean): React.CSSProperties {
     boxShadow: disabled ? "none" : "0 6px 18px rgba(37,99,232,0.22)",
   };
 }
+
+// Ausgegrauter Confirm-Button im `pending`-State: sichtbar, aber gesperrt bis
+// die Testüberweisung raus ist. Kommuniziert den nächsten Schritt visuell.
+const disabledConfirmBtn: React.CSSProperties = {
+  background: "rgba(26,29,38,0.05)",
+  color: "var(--ink-faint)",
+  border: "1px solid var(--line)",
+  borderRadius: 10,
+  padding: "10px 18px",
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: "not-allowed",
+};
 
 function confirmBtn(disabled: boolean): React.CSSProperties {
   return {
