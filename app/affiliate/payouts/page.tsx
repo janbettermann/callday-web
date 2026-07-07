@@ -229,19 +229,6 @@ export default async function AffiliatePayoutsPage({
             boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
           }}
         >
-          <div
-            style={{
-              fontFamily: "var(--font-mono), monospace",
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "1.5px",
-              color: "var(--ink-faint)",
-              marginBottom: 14,
-            }}
-          >
-            Earnings
-          </div>
-
           {earnings.hasAny ? (
             <EarningsFeed rows={earnings.rows} />
           ) : (
