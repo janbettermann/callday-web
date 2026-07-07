@@ -67,18 +67,41 @@ export default async function AffiliatePayoutsPage({
       <AffiliateNav />
 
       <main className="container" style={affiliateMainStyle}>
-        <h1
+        <div
           style={{
-            fontSize: 32,
-            fontWeight: 700,
-            letterSpacing: "-0.8px",
-            lineHeight: 1.1,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
             margin: "0 0 6px",
-            color: "var(--ink)",
           }}
         >
-          Payouts
-        </h1>
+          <h1
+            style={{
+              fontSize: 32,
+              fontWeight: 700,
+              letterSpacing: "-0.8px",
+              lineHeight: 1.1,
+              margin: 0,
+              color: "var(--ink)",
+            }}
+          >
+            Payouts
+          </h1>
+          <span
+            role="img"
+            aria-label="Payouts via PayPal"
+            style={{
+              flexShrink: 0,
+              width: 68,
+              height: 18,
+              backgroundImage: "url(/paypal.svg)",
+              backgroundSize: "contain",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right center",
+            }}
+          />
+        </div>
         <p
           style={{ margin: "0 0 32px", fontSize: 14, color: "var(--ink-dim)" }}
         >
