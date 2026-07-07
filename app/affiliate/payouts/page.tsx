@@ -157,6 +157,7 @@ export default async function AffiliatePayoutsPage({
                   label="Active referrals"
                   value={String(activeReferrals)}
                   hint="Subscribed and paying"
+                  dot
                 />
               ) : null}
               <MoneyCard
@@ -281,10 +282,12 @@ function MoneyCard({
   label,
   value,
   hint,
+  dot,
 }: {
   label: string;
   value: string;
   hint: string;
+  dot?: boolean;
 }) {
   return (
     <div
@@ -298,6 +301,9 @@ function MoneyCard({
     >
       <div
         style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
           fontFamily: "var(--font-mono), monospace",
           fontSize: 10,
           textTransform: "uppercase",
@@ -305,6 +311,20 @@ function MoneyCard({
           color: "var(--ink-faint)",
         }}
       >
+        {dot ? (
+          <span
+            aria-hidden
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: "#22c55e",
+              boxShadow: "0 0 8px rgba(34,197,94,0.55)",
+              animation: "pulse 2.4s ease-in-out infinite",
+              flexShrink: 0,
+            }}
+          />
+        ) : null}
         {label}
       </div>
       <div
