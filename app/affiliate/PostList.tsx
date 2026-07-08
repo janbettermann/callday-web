@@ -10,6 +10,26 @@ import {
 import { deleteAffiliatePostAction } from "./dashboard/actions";
 
 /**
+ * Plattform-Markenfarben fuer die Post-Pillen — Hintergrund pro Plattform,
+ * Text immer weiss. Werte nach offiziellen Brand-Guidelines: Instagram als
+ * Original-Gradient (orange->pink->violett), TikTok + X/Twitter im aktuellen
+ * Brand-Schwarz (per Label unterscheidbar), YouTube-Rot, LinkedIn-Blau,
+ * Other neutral. Unbekannte/Legacy-Werte fallen auf das Neutral zurueck.
+ */
+const PLATFORM_PILL_BG: Record<string, string> = {
+  Instagram: "linear-gradient(45deg, #F58529 0%, #DD2A7B 55%, #8134AF 100%)",
+  TikTok: "#010101",
+  YouTube: "#FF0000",
+  "X / Twitter": "#000000",
+  LinkedIn: "#0A66C2",
+  Other: "#64748B",
+};
+
+function platformBg(platform: string): string {
+  return PLATFORM_PILL_BG[platform] ?? "#64748B";
+}
+
+/**
  * Post-Liste — geteilt vom Dashboard (`todayOnly`, nur heutige Posts) und
  * /affiliate/posts (alle). Client-Component, weil `todayOnly` auf dem LOKALEN
  * Kalendertag filtert (Browser-Zeitzone).
@@ -94,12 +114,12 @@ export function PostList({
               {post.platform ? (
                 <span
                   style={{
-                    background: "rgba(26,29,38,0.06)",
+                    background: platformBg(post.platform),
                     borderRadius: 6,
                     padding: "2px 8px",
                     fontSize: 11,
-                    fontWeight: 500,
-                    color: "var(--ink-dim)",
+                    fontWeight: 600,
+                    color: "#ffffff",
                     whiteSpace: "nowrap",
                   }}
                 >
