@@ -25,7 +25,7 @@ export function CopyLinkButton({ link }: { link: string }) {
       ? "Copied ✓"
       : state === "error"
         ? "Copy failed"
-        : "Copy link";
+        : "Copy your link";
 
   return (
     <button
@@ -39,6 +39,7 @@ export function CopyLinkButton({ link }: { link: string }) {
         color: state === "copied" ? "#047857" : "#ffffff",
         border: "none",
         borderRadius: 10,
+        width: "100%",
         padding: "10px 20px",
         fontSize: 14,
         fontWeight: 600,
