@@ -294,7 +294,12 @@ EUR-Charges tolerierbar; dokumentieren.
 
 ## 8. Offene Entscheidungen vor Umsetzung
 
-1. **Währungs-Policy** für Payouts (pro Währung vs. EUR-Normalisierung).
+1. ✅ **Währungs-Policy** — ENTSCHIEDEN 2026-07-08: single-currency **USD**-Ledger
+   (alle Summen / Netting / Payout-Rechnung in USD), Anzeige kosmetisch, reale
+   Landeswährung nur bei der Auszahlung via Wise/PayPal. Nicht die hier ehemals
+   gelistete „pro Währung vs. EUR-Normalisierung"-Alternative, sondern ein
+   USD-Ledger. Volle Architektur + Zukunfts-Feature (per-Affiliate-Anzeigewährung):
+   `affiliate-currency.md`.
 2. **RC-Refund-Signal** exakt gegen aktuelle RevenueCat-Webhook-Doku verifizieren.
 3. **Commission auf Brutto vs. Netto** — Spec nimmt 50 % vom **Bruttopreis**
    (= €7 auf €14), bestätigen.
