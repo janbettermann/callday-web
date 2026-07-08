@@ -44,10 +44,6 @@ export function CopyLinkButton({ link }: { link: string }) {
         fontSize: 14,
         fontWeight: 600,
         cursor: "pointer",
-        boxShadow:
-          state === "copied"
-            ? "none"
-            : "0 6px 18px rgba(37,99,232,0.22)",
         transition: "background 0.15s",
       }}
     >

@@ -21,7 +21,6 @@ const triggerStyle: CSSProperties = {
   lineHeight: 1,
   cursor: "pointer",
   padding: 0,
-  boxShadow: "0 2px 8px rgba(37, 99, 232, 0.25)",
 };
 
 /**
