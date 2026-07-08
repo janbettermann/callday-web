@@ -169,7 +169,7 @@ export function PostList({
             style={{
               fontSize: 13,
               color: "var(--ink-dim)",
-              background: "rgba(37,99,232,0.06)",
+              background: "rgba(26,29,38,0.045)",
               borderRadius: 10,
               padding: "8px 12px",
             }}
