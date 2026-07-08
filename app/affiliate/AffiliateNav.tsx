@@ -12,7 +12,6 @@ const LINKS = [
   { href: "/affiliate/activity", label: "Activity" },
   { href: "/affiliate/payouts", label: "Payouts" },
   { href: "/affiliate/settings", label: "Settings" },
-  { href: "/affiliate/agreement", label: "Agreement" },
 ];
 
 const itemStyle: React.CSSProperties = {
@@ -54,9 +53,10 @@ const pillStyle: React.CSSProperties = {
 
 /**
  * Globale Affiliate-Navigation (Hamburger). Auf allen /affiliate/*-Seiten.
- * Bei 4 Zielen (Dashboard/Posts/Activity/Agreement) waeren sichtbare Tabs auf
- * Mobile zu eng — ein Menue ist die saubere Wahl und skaliert. Sign out liegt
- * hier (eine Stelle), nicht mehr im Dashboard-Header.
+ * Bei mehreren Zielen waeren sichtbare Tabs auf Mobile zu eng — ein Menue ist
+ * die saubere Wahl und skaliert. Agreement liegt bewusst NICHT hier, sondern
+ * unten in den Settings (Account-Section). Sign out liegt hier (eine Stelle),
+ * nicht mehr im Dashboard-Header.
  */
 export function AffiliateNav() {
   const [open, setOpen] = useState(false);
