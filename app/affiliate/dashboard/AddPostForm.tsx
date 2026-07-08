@@ -93,6 +93,7 @@ export function AddPostForm({ onSuccess }: { onSuccess?: () => void } = {}) {
             required
             value={postedLocal}
             onChange={(e) => setPostedLocal(e.target.value)}
+            className="pc-datetime"
             style={fieldStyle}
           />
           <input type="hidden" name="posted_at" value={postedIso} />
