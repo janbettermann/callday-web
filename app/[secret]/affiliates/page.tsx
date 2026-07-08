@@ -202,7 +202,7 @@ export default async function AffiliatesAdminPage({
           >
             <div
               style={{
-                fontFamily: "var(--font-mono), monospace",
+                fontFamily: "var(--font-label)",
                 fontSize: 11,
                 textTransform: "uppercase",
                 letterSpacing: "1.5px",
@@ -260,7 +260,7 @@ export default async function AffiliatesAdminPage({
             borderTop: "0.5px solid var(--line)",
             display: "flex",
             justifyContent: "space-between",
-            fontFamily: "var(--font-mono), monospace",
+            fontFamily: "var(--font-label)",
             fontSize: 11,
             textTransform: "uppercase",
             letterSpacing: "1.5px",
@@ -294,7 +294,7 @@ function StatCard({
     >
       <div
         style={{
-          fontFamily: "var(--font-mono), monospace",
+          fontFamily: "var(--font-label)",
           fontSize: 10,
           textTransform: "uppercase",
           letterSpacing: "1.2px",
@@ -323,7 +323,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        fontFamily: "var(--font-mono), monospace",
+        fontFamily: "var(--font-label)",
         fontSize: 11,
         textTransform: "uppercase",
         letterSpacing: "1.5px",

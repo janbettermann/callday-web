@@ -182,7 +182,7 @@ function Th({
       style={{
         padding: "14px 18px",
         background: "var(--bg)",
-        fontFamily: "var(--font-mono), monospace",
+        fontFamily: "var(--font-label)",
         fontSize: 10,
         textTransform: "uppercase",
         letterSpacing: "1.2px",

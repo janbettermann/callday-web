@@ -44,7 +44,7 @@ const pillStyle: React.CSSProperties = {
   background: "rgba(53, 100, 224, 0.1)",
   border: "0.5px solid rgba(53, 100, 224, 0.22)",
   color: "var(--blue-deep)",
-  fontFamily: "var(--font-mono), monospace",
+  fontFamily: "var(--font-label)",
   fontSize: 10,
   fontWeight: 600,
   letterSpacing: "0.8px",

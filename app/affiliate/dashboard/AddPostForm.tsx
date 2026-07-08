@@ -6,7 +6,7 @@ import type { CSSProperties } from "react";
 import { addAffiliatePostAction, type AddPostState } from "./actions";
 
 const labelStyle: CSSProperties = {
-  fontFamily: "var(--font-mono), monospace",
+  fontFamily: "var(--font-label)",
   fontSize: 10,
   textTransform: "uppercase",
   letterSpacing: "1.2px",

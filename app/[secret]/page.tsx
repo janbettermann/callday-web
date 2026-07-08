@@ -199,7 +199,7 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
           >
             <div
               style={{
-                fontFamily: "var(--font-mono), monospace",
+                fontFamily: "var(--font-label)",
                 fontSize: 11,
                 textTransform: "uppercase",
                 letterSpacing: "1.5px",
@@ -265,7 +265,7 @@ export default async function AdminPage({ params, searchParams }: PageProps) {
             borderTop: "0.5px solid var(--line)",
             display: "flex",
             justifyContent: "space-between",
-            fontFamily: "var(--font-mono), monospace",
+            fontFamily: "var(--font-label)",
             fontSize: 11,
             textTransform: "uppercase",
             letterSpacing: "1.5px",
@@ -348,7 +348,7 @@ function Section({
       <div style={{ marginBottom: 16 }}>
         <div
           style={{
-            fontFamily: "var(--font-mono), monospace",
+            fontFamily: "var(--font-label)",
             fontSize: 11,
             textTransform: "uppercase",
             letterSpacing: "1.5px",

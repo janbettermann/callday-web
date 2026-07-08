@@ -155,7 +155,7 @@ export default async function AffiliatePayoutsPage({
             {showCurrency ? (
               <div
                 style={{
-                  fontFamily: "var(--font-mono), monospace",
+                  fontFamily: "var(--font-label)",
                   fontSize: 11,
                   textTransform: "uppercase",
                   letterSpacing: "1.5px",
@@ -217,7 +217,7 @@ export default async function AffiliatePayoutsPage({
         >
           <div
             style={{
-              fontFamily: "var(--font-mono), monospace",
+              fontFamily: "var(--font-label)",
               fontSize: 11,
               textTransform: "uppercase",
               letterSpacing: "1.5px",
@@ -338,7 +338,7 @@ function PayoutDestination({ summary }: { summary: PayoutSummary }) {
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             <span
               style={{
-                fontFamily: "var(--font-mono), monospace",
+                fontFamily: "var(--font-label)",
                 fontSize: 10,
                 textTransform: "uppercase",
                 letterSpacing: "1.2px",
@@ -416,7 +416,7 @@ function MoneyCard({
           display: "flex",
           alignItems: "center",
           gap: 6,
-          fontFamily: "var(--font-mono), monospace",
+          fontFamily: "var(--font-label)",
           fontSize: 10,
           textTransform: "uppercase",
           letterSpacing: "1.2px",

@@ -158,7 +158,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        fontFamily: "var(--font-mono), monospace",
+        fontFamily: "var(--font-label)",
         fontSize: 11,
         textTransform: "uppercase",
         letterSpacing: "1.5px",

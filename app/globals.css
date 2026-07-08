@@ -60,6 +60,13 @@
   --line: rgba(26, 29, 38, 0.06);
   --line-strong: rgba(26, 29, 38, 0.12);
 
+  /* Card-/Section-Labels (die kleinen Uppercase-Eyebrows in den Dashboards).
+     Bewusst NICHT --font-mono — der Mono-Uppercase-Look schrie zu sehr nach
+     KI-Dashboard. Zeigt auf die Display-Font; hier zentral umstellbar.
+     --font-mono bleibt fuer echte Monospace: URLs, IBANs, Slugs, Code,
+     tabellarische Zahlen. */
+  --font-label: var(--font-geist-sans);
+
   /* Sticky-nav height — single source of truth.
      Used by .site-nav (visual height), the dark .hero (negative
      margin-top + padding-top so the hero extends edge-to-edge behind

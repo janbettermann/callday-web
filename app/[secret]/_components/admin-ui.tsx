@@ -15,7 +15,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 
 export const monoLabelStyle: React.CSSProperties = {
-  fontFamily: "var(--font-mono), monospace",
+  fontFamily: "var(--font-label)",
   fontSize: 10,
   textTransform: "uppercase",
   letterSpacing: "1.2px",

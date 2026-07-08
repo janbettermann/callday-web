@@ -163,7 +163,7 @@ function DrawerBody({
           <div>
             <div
               style={{
-                fontFamily: "var(--font-mono), monospace",
+                fontFamily: "var(--font-label)",
                 fontSize: 10,
                 textTransform: "uppercase",
                 letterSpacing: "1.2px",
@@ -491,7 +491,7 @@ function Stat({ label, value }: { label: string; value: string | number }) {
     >
       <div
         style={{
-          fontFamily: "var(--font-mono), monospace",
+          fontFamily: "var(--font-label)",
           fontSize: 10,
           textTransform: "uppercase",
           letterSpacing: "1.2px",
@@ -527,7 +527,7 @@ function Section({
     <div>
       <div
         style={{
-          fontFamily: "var(--font-mono), monospace",
+          fontFamily: "var(--font-label)",
           fontSize: 10,
           textTransform: "uppercase",
           letterSpacing: "1.2px",
