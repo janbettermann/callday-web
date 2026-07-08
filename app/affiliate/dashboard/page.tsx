@@ -11,7 +11,6 @@ import { getServerSupabase } from "@/lib/supabase-server";
 import {
   getAffiliateActivity,
   computePostStats,
-  computeDailySeries,
   POST_WINDOW_HOURS,
   type PostRow,
 } from "@/lib/affiliate-activity";
@@ -20,7 +19,6 @@ import { AffiliateFooter } from "../AffiliateFooter";
 import { affiliateMainStyle } from "../layout-styles";
 import { ActivityList } from "../ActivityList";
 import { PostList } from "../PostList";
-import { DailyAreaChart } from "../DailyAreaChart";
 
 import { CopyLinkButton } from "./CopyLinkButton";
 import { PostComposer } from "./PostComposer";
@@ -86,7 +84,6 @@ export default async function AffiliateDashboardPage() {
   ]);
 
   const { uniqueVisitors, signupCount, activity } = act;
-  const daily = computeDailySeries(act.allViews, act.allSignups);
   const posts = (postsRes.data ?? []) as PostRow[];
   const postStats = computePostStats(posts, act.allViews, act.allSignups);
 
@@ -204,24 +201,6 @@ export default async function AffiliateDashboardPage() {
           />
         </section>
 
-        {/* === Trends (letzte 30 Tage) === */}
-        <TrendCard label="Visitors" subtitle="Unique visitors, last 30 days">
-          <DailyAreaChart
-            data={daily}
-            dataKey="visitors"
-            color="#3564e0"
-            name="Visitors"
-          />
-        </TrendCard>
-        <TrendCard label="Sign-ups" subtitle="New sign-ups, last 30 days">
-          <DailyAreaChart
-            data={daily}
-            dataKey="signups"
-            color="#059669"
-            name="Sign-ups"
-          />
-        </TrendCard>
-
         {/* === Posts === */}
         <section
           style={{
@@ -338,46 +317,6 @@ function ViewAllLink({ href, label }: { href: string; label: string }) {
         {label}
       </Link>
     </div>
-  );
-}
-
-function TrendCard({
-  label,
-  subtitle,
-  children,
-}: {
-  label: string;
-  subtitle: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      style={{
-        background: "#ffffff",
-        border: "0.5px solid var(--line)",
-        borderRadius: 24,
-        padding: 28,
-        marginBottom: 24,
-        boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-      }}
-    >
-      <div
-        style={{
-          fontFamily: "var(--font-label)",
-          fontSize: 11,
-          textTransform: "uppercase",
-          letterSpacing: "1.5px",
-          color: "var(--ink-faint)",
-          marginBottom: 4,
-        }}
-      >
-        {label}
-      </div>
-      <div style={{ fontSize: 13, color: "var(--ink-dim)", marginBottom: 16 }}>
-        {subtitle}
-      </div>
-      {children}
-    </section>
   );
 }
 
