@@ -25,7 +25,7 @@ export function LoginForm({ error }: { error: boolean }) {
           autoFocus
           required
           autoComplete="off"
-          className="w-full rounded-lg border border-[#1a1d26]/12 bg-[#faf9f5] px-3 py-2.5 text-sm outline-none focus:border-[#4a7af7] focus:bg-white"
+          className="w-full rounded-lg border border-[#1a1d26]/12 bg-[#faf9f5] px-3 py-2.5 text-base outline-none focus:border-[#4a7af7] focus:bg-white"
         />
 
         {error ? (

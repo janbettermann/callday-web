@@ -22,7 +22,9 @@ const fieldStyle: CSSProperties = {
   border: "1px solid transparent",
   borderRadius: 12,
   padding: "12px 14px",
-  fontSize: 15,
+  // 16px verhindert iOS-Safari-Auto-Zoom beim Fokussieren (Felder <16px
+  // zoomen sonst rein). NICHT ueber user-scalable=no loesen (Accessibility).
+  fontSize: 16,
   fontFamily: "inherit",
   color: "var(--ink)",
 };

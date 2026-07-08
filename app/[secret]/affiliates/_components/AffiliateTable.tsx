@@ -44,7 +44,7 @@ export function AffiliateTable({ rows, search: initialSearch }: Props) {
             border: "1px solid transparent",
             borderRadius: 12,
             padding: "10px 14px",
-            fontSize: 14,
+            fontSize: 16,
             color: "var(--ink)",
             outline: "none",
             fontFamily: "inherit",
