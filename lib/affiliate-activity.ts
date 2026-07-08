@@ -147,6 +147,59 @@ export function computePostStats(
   });
 }
 
+export interface DailyPoint {
+  date: string; // YYYY-MM-DD (UTC)
+  visitors: number;
+  signups: number;
+}
+
+const ONE_DAY_MS = 86_400_000;
+
+/**
+ * Tages-Serie (letzte `days` Tage, UTC-Buckets) fuer Visitors + Sign-ups —
+ * fuer die Trend-Charts im Affiliate-Dashboard. Nutzt die schon geladenen
+ * allViews/allSignups (kein Extra-Fetch). Visitors = distinct visitor_hash pro
+ * Tag, Sign-ups = count. Luecken mit 0 gefuellt, sonst rutscht die
+ * Recharts-Flaeche zusammen. UTC-Tag wie beim Admin-Chart (1 Tag Drift optisch
+ * egal, spart eine TZ-Lib).
+ */
+export function computeDailySeries(
+  allViews: AffiliateActivity["allViews"],
+  allSignups: AffiliateActivity["allSignups"],
+  days: number = 30,
+): DailyPoint[] {
+  const dayKey = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+  const visitorsByDay = new Map<string, Set<string>>();
+  for (const v of allViews) {
+    const d = dayKey(new Date(v.created_at).getTime());
+    let set = visitorsByDay.get(d);
+    if (!set) {
+      set = new Set();
+      visitorsByDay.set(d, set);
+    }
+    set.add(v.visitor_hash);
+  }
+
+  const signupsByDay = new Map<string, number>();
+  for (const s of allSignups) {
+    const d = dayKey(new Date(s.created_at).getTime());
+    signupsByDay.set(d, (signupsByDay.get(d) ?? 0) + 1);
+  }
+
+  const out: DailyPoint[] = [];
+  const now = Date.now();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = dayKey(now - i * ONE_DAY_MS);
+    out.push({
+      date: d,
+      visitors: visitorsByDay.get(d)?.size ?? 0,
+      signups: signupsByDay.get(d) ?? 0,
+    });
+  }
+  return out;
+}
+
 /** Relative-Zeit-Formatter (TZ-agnostisch — nur Dauer). */
 export function fmtRelative(iso: string): string {
   const d = new Date(iso);
