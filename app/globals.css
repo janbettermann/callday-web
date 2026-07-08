@@ -2947,12 +2947,8 @@ h2 .accent {
 }
 .pc-fields {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-}
-@media (max-width: 600px) {
-  .pc-fields {
-    flex-direction: column;
-  }
 }
 .pc-panel {
   width: 100%;

@@ -17,6 +17,11 @@ const labelStyle: CSSProperties = {
 
 const fieldStyle: CSSProperties = {
   width: "100%",
+  // datetime-local ignoriert width:100% auf iOS/WebKit sonst und laeuft aus
+  // dem Slide-up raus — minWidth:0 + maxWidth:100% baendigt die intrinsische
+  // Feldbreite. Gilt fuer alle Felder (harmlos fuer url/select).
+  maxWidth: "100%",
+  minWidth: 0,
   boxSizing: "border-box",
   background: "rgba(26,29,38,0.045)",
   border: "1px solid transparent",
