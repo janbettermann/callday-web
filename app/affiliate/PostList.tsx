@@ -126,6 +126,21 @@ export function PostList({
                   {post.platform}
                 </span>
               ) : null}
+              {post.type === "story" ? (
+                <span
+                  style={{
+                    background: "rgba(26,29,38,0.06)",
+                    borderRadius: 6,
+                    padding: "2px 8px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "var(--ink-dim)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Story
+                </span>
+              ) : null}
               <span style={{ whiteSpace: "nowrap" }}>
                 posted {fmtRelative(post.posted_at)}
               </span>
@@ -149,21 +164,23 @@ export function PostList({
             </form>
           </div>
 
-          <a
-            href={post.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              fontSize: 14,
-              color: "var(--blue-deep, #2563e8)",
-              textDecoration: "none",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {post.url}
-          </a>
+          {post.url ? (
+            <a
+              href={post.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: 14,
+                color: "var(--blue-deep, #2563e8)",
+                textDecoration: "none",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {post.url}
+            </a>
+          ) : null}
 
           <div
             style={{

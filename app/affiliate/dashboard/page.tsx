@@ -78,7 +78,7 @@ export default async function AffiliateDashboardPage() {
     getAffiliateActivity(affiliateId),
     sb
       .from("affiliate_posts")
-      .select("id, url, platform, posted_at, note")
+      .select("id, url, platform, posted_at, note, type")
       .eq("affiliate_id", affiliateId)
       .order("posted_at", { ascending: false }),
   ]);

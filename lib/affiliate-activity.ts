@@ -100,10 +100,11 @@ export async function getAffiliateActivity(
 
 export interface PostRow {
   id: string;
-  url: string;
+  url: string | null;
   platform: string | null;
   posted_at: string;
   note: string | null;
+  type: "post" | "story";
 }
 
 export interface PostStat {

@@ -38,18 +38,28 @@ export async function addAffiliatePostAction(
 ): Promise<AddPostState> {
   const affiliateId = await requireAffiliateId();
 
-  const url = String(formData.get("url") ?? "").trim();
+  const rawUrl = String(formData.get("url") ?? "").trim();
   const postedAtIso = String(formData.get("posted_at") ?? "").trim();
   const platform = String(formData.get("platform") ?? "").trim() || null;
+  const type =
+    String(formData.get("type") ?? "post").trim() === "story"
+      ? "story"
+      : "post";
 
-  if (!url) return { error: "Add the post link." };
-  let normalizedUrl: string;
-  try {
-    const u = new URL(url);
-    if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error();
-    normalizedUrl = u.toString();
-  } catch {
-    return { error: "That doesn't look like a link — include https://" };
+  // Link ist Pflicht bei einem Post, optional bei einer Story (die hat keinen
+  // dauerhaften Permalink, verfaellt nach 24h). Leer + Story → url = null; die
+  // Stats haengen ohnehin an posted_at, nicht am Link.
+  let normalizedUrl: string | null = null;
+  if (rawUrl) {
+    try {
+      const u = new URL(rawUrl);
+      if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error();
+      normalizedUrl = u.toString();
+    } catch {
+      return { error: "That doesn't look like a link — include https://" };
+    }
+  } else if (type === "post") {
+    return { error: "Add the post link." };
   }
 
   if (!postedAtIso) return { error: "Pick when you posted it." };
@@ -64,6 +74,7 @@ export async function addAffiliatePostAction(
     url: normalizedUrl,
     platform,
     posted_at: postedAt.toISOString(),
+    type,
   });
   if (error) return { error: "Couldn't save the post. Try again." };
 

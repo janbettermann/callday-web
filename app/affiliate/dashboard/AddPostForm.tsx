@@ -49,6 +49,7 @@ export function AddPostForm({ onSuccess }: { onSuccess?: () => void } = {}) {
     null,
   );
   const [postedLocal, setPostedLocal] = useState("");
+  const [type, setType] = useState<"post" | "story">("post");
   const postedIso = postedLocal ? new Date(postedLocal).toISOString() : "";
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -68,16 +69,57 @@ export function AddPostForm({ onSuccess }: { onSuccess?: () => void } = {}) {
       action={formAction}
       style={{ display: "flex", flexDirection: "column", gap: 14 }}
     >
+      <input type="hidden" name="type" value={type} />
+      <div>
+        <label style={labelStyle}>Type</label>
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            background: "rgba(26,29,38,0.045)",
+            borderRadius: 12,
+            padding: 4,
+          }}
+        >
+          {(["post", "story"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setType(t)}
+              aria-pressed={type === t}
+              style={{
+                flex: 1,
+                borderRadius: 9,
+                border: "none",
+                padding: "8px 0",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+                background: type === t ? "#ffffff" : "transparent",
+                color: type === t ? "var(--ink)" : "var(--ink-dim)",
+                boxShadow:
+                  type === t ? "0 1px 2px rgba(26,29,38,0.12)" : "none",
+              }}
+            >
+              {t === "post" ? "Post" : "Story"}
+            </button>
+          ))}
+        </div>
+      </div>
       <div>
         <label style={labelStyle} htmlFor="post-url">
-          Post link
+          {type === "story" ? "Post link (optional)" : "Post link"}
         </label>
         <input
           id="post-url"
           type="url"
           name="url"
-          required
-          placeholder="https://instagram.com/p/…"
+          required={type === "post"}
+          placeholder={
+            type === "story"
+              ? "Optional — story links expire anyway"
+              : "https://instagram.com/p/…"
+          }
           style={fieldStyle}
         />
       </div>
