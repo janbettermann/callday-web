@@ -32,6 +32,11 @@ interface CommissionRaw {
   product_id: string | null;
   clawback_at: string | null;
   paid_at: string | null;
+  /** Nur für Recovery-Buchungen: charged_at der Ur-Provision, die diese Zeile
+   *  zurückverrechnet (für den "reverses your Apr 5 commission"-Hinweis). Real
+   *  via `reverses_commission_id`-Join (Phase B); aktuell nur von der Demo
+   *  gesetzt, bei echten Rows undefined. */
+  reverses_charged_at?: string | null;
 }
 
 export interface CommissionRow extends CommissionRaw {
@@ -256,6 +261,9 @@ export function getDemoEarnings(): AffiliateEarnings {
     ...batch("r", 2, 0, 1, (ms) => ({
       commission_cents: -750,
       hold_until: new Date(ms).toISOString(),
+      // Ur-Provision, die zurückverrechnet wird (~65 Tage vor dem Refund) →
+      // "reverses your <date> commission"-Hinweis.
+      reverses_charged_at: new Date(ms - 65 * DAY).toISOString(),
     })),
   ];
 

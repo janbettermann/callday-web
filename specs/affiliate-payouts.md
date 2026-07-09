@@ -372,12 +372,22 @@ es darf kein Payout entstehen und die Negativen sollen CARRYen. Nötig:
 3. Wenn `net ≤ 0`: nichts stempeln, nichts auszahlen — Negative bleiben
    available und carryen gegen künftige Positive.
 
-### 9.7 Display (affiliate-facing)
-- Post-Payout-Refund erzeugt eine **separate rote „Refund adjustment −$X.XX"-Zeile**
-  (Datum = Refund), Helper „A previously paid commission was refunded and
-  recovered from your balance." Original-Paid-Row bleibt „Paid".
+### 9.7 Display (affiliate-facing) — Entscheidungen 2026-07-09
+Branchen-Recherche (FirstPromoter, UpPromote, Tolt) bestätigt das Modell:
+separate Negativ-Buchung (nicht Original umflaggen), verlinkt zur Ur-Provision
+(„same Order ID, whole trail stays visible"), abgezogen vom nächsten Payout mit
+Carry. Konkret umgesetzt:
+- Post-Payout-Refund = **separate rote „Reversed"-Zeile** (Label branchenüblich;
+  war „Refund adjustment"), Betrag negativ, Datum = Refund-Datum.
+- **Referenz-Hinweis** unter dem Badge: „reverses your \<Ur-Datum\> commission" —
+  löst die Zuordnung. Real via `reverses_commission_id`-Join (Phase B), im Demo
+  gemockt über `reverses_charged_at`.
+- **Bleibt unter dem „Available"-Filter** (Jan-Decision): der Betrag betrifft die
+  Available-Rechnung, also dort gelistet — nicht in „Refunded" verschoben. Der
+  Badge kennzeichnet sie trotzdem klar als Reversal.
+- Original-Paid-Row bleibt **„Paid"** (Auszahlung ist historischer Fakt).
 - „Available"-Card zeigt Netto; bei Carry-Negativ `$0.00` + Subline
-  „−$X.XX to recover from upcoming earnings".
+  „$X.XX to recover from upcoming earnings".
 - In-Hold-Refund bleibt wie jetzt (Row → „Refunded", kein Negativ-Row).
 
 ### 9.8 Scoping (Sanity-Check-Empfehlung) — was JETZT vs. mit Phase B

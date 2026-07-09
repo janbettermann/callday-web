@@ -112,14 +112,24 @@ const STATUS_STYLE: Record<
 };
 
 const RECOVERY_BADGE = {
-  label: "Refund adjustment",
+  label: "Reversed",
   color: "#b91c1c",
   bg: "rgba(185,28,28,0.1)",
 };
 
+/** Kurzdatum "Apr 5" für den Reverses-Hinweis. */
+function fmtShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function EarningRow({ row, first }: { row: CommissionRow; first: boolean }) {
   // Recovery-Buchungen (Post-Payout-Refund, negativer Betrag) rendern als rote
-  // "Refund adjustment"-Zeile statt mit ihrem technischen Status ("available").
+  // "Reversed"-Zeile statt mit ihrem technischen Status ("available"). Der
+  // Betrag zählt weiter in die Available-Rechnung (bewusst — bleibt unter dem
+  // Available-Filter, siehe specs/affiliate-payouts.md §9).
   const s = row.isRecovery ? RECOVERY_BADGE : STATUS_STYLE[row.status];
   const date = new Date(row.charged_at).toISOString().slice(0, 10);
   return (
@@ -134,30 +144,42 @@ function EarningRow({ row, first }: { row: CommissionRow; first: boolean }) {
       }}
     >
       <span
-        style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+          minWidth: 0,
+        }}
       >
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 500,
-            color: s.color,
-            background: s.bg,
-            borderRadius: 6,
-            padding: "3px 8px",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {s.label}
+        <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 500,
+              color: s.color,
+              background: s.bg,
+              borderRadius: 6,
+              padding: "3px 8px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {s.label}
+          </span>
+          <span
+            style={{
+              fontSize: 13,
+              color: "var(--ink-faint)",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {date}
+          </span>
         </span>
-        <span
-          style={{
-            fontSize: 13,
-            color: "var(--ink-faint)",
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {date}
-        </span>
+        {row.isRecovery && row.reverses_charged_at ? (
+          <span style={{ fontSize: 12, color: "var(--ink-faint)" }}>
+            reverses your {fmtShortDate(row.reverses_charged_at)} commission
+          </span>
+        ) : null}
       </span>
       <span
         style={{
