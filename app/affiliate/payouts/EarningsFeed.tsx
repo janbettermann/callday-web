@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   formatMoney,
@@ -253,9 +254,12 @@ function InfoIcon() {
 }
 
 /**
- * Bottom-Sheet, das erklärt was "Reversed" bedeutet. Slide-up via
- * transform-transition (Two-Step über rAF), self-contained — kein CSS-File.
- * Schließt bei Backdrop-Klick, "Got it" und Escape.
+ * Info-Modal, das erklärt was "Reversed" bedeutet. Nutzt das geteilte Overlay-
+ * Muster des Affiliate-Dashboards (analog PostComposer): `createPortal` auf
+ * `document.body` + `.pc-backdrop` / `.pc-panel` aus globals.css → Desktop
+ * zentriertes Modal, Mobile Bottom-Sheet, z-index 10000 ÜBER dem Footer. Der
+ * Portal löst zudem die Stacking-Context-Falle (kein `position:fixed` mehr tief
+ * im Baum). Body-Scroll gesperrt; schließt bei Backdrop-Klick, "Got it", Escape.
  */
 function ReversalInfoSheet({
   open,
@@ -264,105 +268,90 @@ function ReversalInfoSheet({
   open: boolean;
   onClose: () => void;
 }) {
-  const [shown, setShown] = useState(false);
-
   useEffect(() => {
-    if (!open) {
-      setShown(false);
-      return;
-    }
-    const raf = requestAnimationFrame(() => setShown(true));
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    window.addEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
     };
   }, [open, onClose]);
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
+      className="pc-backdrop"
       role="dialog"
       aria-modal="true"
       aria-label="What Reversed means"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 60,
-        display: "flex",
-        alignItems: "flex-end",
-        justifyContent: "center",
-      }}
+      onClick={onClose}
     >
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close"
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "rgba(26,29,38,0.35)",
-          backdropFilter: "blur(2px)",
-          border: "none",
-          cursor: "pointer",
-          opacity: shown ? 1 : 0,
-          transition: "opacity 0.2s ease",
-        }}
-      />
-      <div
-        style={{
-          position: "relative",
-          width: "100%",
-          maxWidth: 460,
-          background: "var(--bg)",
-          borderRadius: "20px 20px 0 0",
-          padding: "16px 28px 32px",
-          boxShadow: "0 -16px 48px rgba(0,0,0,0.18)",
-          transform: shown ? "translateY(0)" : "translateY(100%)",
-          transition: "transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)",
-        }}
-      >
-        <div
-          aria-hidden
-          style={{
-            width: 36,
-            height: 4,
-            borderRadius: 100,
-            background: "var(--line)",
-            margin: "0 auto 18px",
-          }}
-        />
+      <div className="pc-panel" onClick={(e) => e.stopPropagation()}>
         <div
           style={{
-            fontFamily: "var(--font-label)",
-            fontSize: 11,
-            textTransform: "uppercase",
-            letterSpacing: "1.2px",
-            color: "#b91c1c",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
             marginBottom: 8,
           }}
         >
-          Reversed
+          <div
+            style={{
+              fontFamily: "var(--font-label)",
+              fontSize: 11,
+              textTransform: "uppercase",
+              letterSpacing: "1.2px",
+              color: "#b91c1c",
+            }}
+          >
+            Reversed
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              width: 30,
+              height: 30,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "none",
+              border: "none",
+              color: "var(--ink-faint)",
+              fontSize: 22,
+              lineHeight: 1,
+              cursor: "pointer",
+              padding: 0,
+              marginTop: -4,
+              marginRight: -6,
+            }}
+          >
+            ×
+          </button>
         </div>
-        <h3
+
+        <h2
           style={{
             margin: "0 0 12px",
-            fontSize: 20,
+            fontSize: 19,
             fontWeight: 700,
-            letterSpacing: "-0.4px",
+            letterSpacing: "-0.3px",
             color: "var(--ink)",
           }}
         >
           A paid commission was refunded
-        </h3>
+        </h2>
         <p
           style={{
             margin: "0 0 12px",
-            fontSize: 15,
+            fontSize: 14,
             lineHeight: 1.55,
             color: "var(--ink-dim)",
           }}
@@ -376,7 +365,7 @@ function ReversalInfoSheet({
         <p
           style={{
             margin: "0 0 20px",
-            fontSize: 15,
+            fontSize: 14,
             lineHeight: 1.55,
             color: "var(--ink-dim)",
           }}
@@ -404,6 +393,7 @@ function ReversalInfoSheet({
           Got it
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
