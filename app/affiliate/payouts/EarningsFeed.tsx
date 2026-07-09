@@ -31,7 +31,7 @@ export function EarningsFeed({ rows }: { rows: CommissionRow[] }) {
   const [status, setStatus] = useState<StatusFilter>("all");
 
   // Nur Status-Filter — kein Zeitraum: der Status ist auf Earnings quasi schon
-  // die Zeit-Achse (pending = <90d, available/paid = >=90d), ein Zeit-Filter
+  // die Zeit-Achse (pending = innerhalb Hold, available/paid = nach Hold), ein Zeit-Filter
   // erzeugt v.a. verwirrende Immer-leer-Kombinationen (z.B. „diese Woche" +
   // „Available"). Zeit-Filter lebt weiter auf /affiliate/activity (dort ist
   // Zeit eine unabhängige Achse).

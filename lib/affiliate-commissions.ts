@@ -10,6 +10,17 @@ import { getServerSupabase } from "./supabase-server";
  * die Tabelle leer und die Page zeigt ehrliche Nullen.
  */
 
+/**
+ * Hold-Periode in Tagen — die Single Source of Truth. Provisionen sind bis
+ * `charged_at + COMMISSION_HOLD_DAYS` im Hold (pending), danach available.
+ * Genutzt von der Demo hier, der affiliate-facing Copy (payouts/page.tsx) und
+ * — sobald gebaut — dem Accrual im RC-Webhook (Phase B: `hold_until =
+ * charged_at + COMMISSION_HOLD_DAYS`). `hold_until` bleibt pro Row gespeichert;
+ * eine Änderung hier wirkt nur auf NEUE Accruals. Spec:
+ * specs/affiliate-payouts.md §9.
+ */
+export const COMMISSION_HOLD_DAYS = 30;
+
 export type CommissionStatus = "pending" | "available" | "paid" | "clawback";
 
 interface CommissionRaw {
@@ -182,13 +193,14 @@ export async function getPayableByAffiliate(
 export function getDemoEarnings(): AffiliateEarnings {
   const now = Date.now();
   const DAY = 86_400_000;
-  const HOLD = 90 * DAY;
+  const H = COMMISSION_HOLD_DAYS;
+  const HOLD = H * DAY;
   const monthly = "com.dealswipe.app.pro.monthly";
 
-  // Szenario: ~100 zahlende Referrals, ~6 Monate ~stabil → ~100 $7.50-Provisionen
-  // (50% von $14.99) pro Monat. Der 90-Tage-Hold sperrt die letzten 3 Monate der
-  // Charges (pending); was danach reift, ist available bzw. schon paid. Ergibt
-  // eine ~3:1-Relation pending:available, die direkt das 90-Tage-Fenster spiegelt.
+  // Szenario: ~stabil zahlende Referrals → ~$7.50-Provisionen (50% von $14.99).
+  // Die Charge-Fenster sind RELATIV zur Hold-Periode (H) gewählt, damit das
+  // Demo automatisch korrekt bleibt, egal ob H = 30 oder 90: alles jünger als H
+  // ist pending, das nächste Fenster available, das älteste bereits paid.
   const batch = (
     prefix: string,
     count: number,
@@ -214,16 +226,16 @@ export function getDemoEarnings(): AffiliateEarnings {
     });
 
   const raw: CommissionRaw[] = [
-    // Pending: letzte 3 Monate im Hold → 300 × $7.50 = $2,250
-    ...batch("p", 300, 1, 89),
-    // Available: Hold vorbei, noch nicht ausgezahlt → 100 × $7.50 = $750
-    ...batch("a", 100, 91, 120),
-    // Paid: früher ausgezahlt → 200 × $7.50 = $1,500
-    ...batch("d", 200, 121, 180, (ms) => ({
+    // Pending: jünger als der Hold (1 .. H-1 Tage) → im Hold.
+    ...batch("p", 100, 1, Math.max(2, H - 1)),
+    // Available: Hold vorbei, noch nicht ausgezahlt (H+1 .. H+30).
+    ...batch("a", 100, H + 1, H + 30),
+    // Paid: älter, bereits ausgezahlt (H+31 .. H+120).
+    ...batch("d", 200, H + 31, H + 120, (ms) => ({
       paid_at: new Date(ms + HOLD + 5 * DAY).toISOString(),
     })),
-    // Ein paar Reversed (Refunds) für Realismus — zählen in keinen Bucket
-    ...batch("c", 5, 4, 40, (ms) => ({
+    // Ein paar Reversed (Refunds) für Realismus — zählen in keinen Bucket.
+    ...batch("c", 5, 4, Math.max(5, H), (ms) => ({
       clawback_at: new Date(ms + 3 * DAY).toISOString(),
     })),
   ];

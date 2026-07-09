@@ -313,3 +313,85 @@ EUR-Charges tolerierbar; dokumentieren.
 *(Erledigt: Hold-Release braucht keinen Cron — Status wird abgeleitet, siehe §5.
 Bucket-Query summiert nicht mehr über Währungen. Webhook-Fehler-Semantik +
 userIds→ein-Profil ergänzt. `affiliate_payouts` von optional auf empfohlen.)*
+
+---
+
+## 9. Hold-Verkürzung 90 → 30 Tage + Clawback-Netting (2026-07-09)
+
+**Entscheidung (Jan):** Hold von 90 auf **30 Tage** — Affiliates schneller
+auszahlen. Direkte Folge: mehr Refunds/Chargebacks landen NACH der Auszahlung
+(Apple-Refund-Fenster ~90d, Chargebacks später), also wird „paid-then-refunded"
+vom seltenen Edge-Case zu regelmäßig. Deshalb kommt das Clawback-Netting mit
+rein — die zwei Entscheidungen sind **gekoppelt**.
+
+### 9.1 Hold als Single-Source-Konstante
+`COMMISSION_HOLD_DAYS = 30` in `lib/affiliate-commissions.ts`. Genutzt von:
+Demo-Earnings, affiliate-facing Copy, und (Phase B) der Accrual
+`hold_until = charged_at + COMMISSION_HOLD_DAYS`. `hold_until` bleibt PRO ROW
+gespeichert (kein Read-Time-Compute) → Bestands-Rows behalten ihren Hold; die
+Änderung wirkt nur auf neue Accruals. **Keine Migration.** — ✅ umgesetzt 2026-07-09.
+
+### 9.2 Zwei Refund-Fälle (bewusst unterschiedlich)
+| Fall | Bedingung | Verhalten |
+|---|---|---|
+| **In-Hold-Refund** | Refund bevor ausgezahlt (`paid_at IS NULL`) | Bestehend: `clawback_at` auf DERSELBEN Row → Status „Refunded", fällt aus allen Summen. Kein Geld geflossen, nichts zu verrechnen. |
+| **Post-Payout-Refund** | Refund nachdem ausgezahlt (`paid_at IS NOT NULL`) | **Recovery nötig:** Affiliate wurde überzahlt → kompensierende Negativ-Buchung recovert den Betrag aus künftigen Earnings. |
+
+### 9.3 Recovery-Datenmodell (Negativ-Buchung)
+Eine Recovery = neue `affiliate_commissions`-Row:
+- `commission_cents` **negativ** (z.B. −640).
+- `hold_until = charged_at` (KEIN Hold — die Schuld steht sofort fest → sofort
+  „available", reduziert den Payout-Topf).
+- `paid_at = NULL`, `clawback_at = NULL` → derived-Status „available" (negativ).
+- Referenz auf die Ursprungs-Row (neue Spalte `reverses_commission_id uuid`).
+- Der ursprüngliche Paid-Row bleibt **`paid`** (die Auszahlung ist historischer
+  Fakt) — NICHT umflaggen. Die Recovery-Row ist die Korrektur.
+
+### 9.4 Verrechnung: von AVAILABLE, nicht pending
+`net available = Σ(available commission_cents inkl. Negativen)`. Carry-forward:
+wird net < 0, ist auszahlbar = $0 und der Negativ-Saldo bleibt stehen; künftige
+positive Available-Rows zahlen ihn zuerst ab. **Pending bleibt brutto**
+(unangetastet) — reift nur später in available, wo das Netting greift.
+Begründung: nur available wird ausgezahlt; eine feststehende Schuld gegen
+unsicheres Pending zu rechnen wäre falsch.
+
+### 9.5 Read-Side
+`computeEarnings` nettet Negative automatisch (available += negativer Betrag).
+Zusatz: Carry-Display (net<0 → „$0.00 available · −$X.XX to recover from
+upcoming earnings"). `getPayableByAffiliate` (Admin) = `max(0, net)` als
+auszahlbar + Carry-Indikator.
+
+### 9.6 Admin-RPC `mark_commissions_paid` — Netting-Redesign (⚠️ money-critical)
+**Sanity-Check-Fund:** der aktuelle „UPDATE-claim → dann summieren"-Aufbau
+BRICHT bei Netting. Wenn net ≤ 0, sind die Rows schon als paid gestempelt, aber
+es darf kein Payout entstehen und die Negativen sollen CARRYen. Nötig:
+1. Netto ZUERST berechnen (available inkl. Negative), OHNE zu claimen — mit
+   `FOR UPDATE`-Lock auf den available-Rows (Concurrency).
+2. Nur wenn `net > 0`: claimen (positive UND negative available Rows als paid
+   stempeln — Negative werden im Payout „verbraucht") + Beleg mit `total = net`.
+3. Wenn `net ≤ 0`: nichts stempeln, nichts auszahlen — Negative bleiben
+   available und carryen gegen künftige Positive.
+
+### 9.7 Display (affiliate-facing)
+- Post-Payout-Refund erzeugt eine **separate rote „Refund adjustment −$X.XX"-Zeile**
+  (Datum = Refund), Helper „A previously paid commission was refunded and
+  recovered from your balance." Original-Paid-Row bleibt „Paid".
+- „Available"-Card zeigt Netto; bei Carry-Negativ `$0.00` + Subline
+  „−$X.XX to recover from upcoming earnings".
+- In-Hold-Refund bleibt wie jetzt (Row → „Refunded", kein Negativ-Row).
+
+### 9.8 Scoping (Sanity-Check-Empfehlung) — was JETZT vs. mit Phase B
+- **✅ JETZT umgesetzt:** Hold-Wechsel (9.1) — Konstante + Copy + Demo.
+- **⏸ Mit Phase B:** das Netting (9.2–9.7). Warum nicht spekulativ jetzt:
+  1. Write-Side (Refund-Event → Recovery-Row) lebt im RC-Webhook (Phase B, ungebaut).
+  2. Ohne Write-Side + echten Refund-Flow ist das Netting nicht E2E-testbar.
+  3. Der `mark_commissions_paid`-Redesign (9.6) fasst gerade-verifizierten
+     Geld-Code an — nicht gegen nicht-existente Daten umbauen.
+  → Netting MIT Phase B bauen + End-to-End testen (Accrual → Payout → Refund →
+  Recovery). Migration dann: Spalte `reverses_commission_id` auf
+  `affiliate_commissions` + Negativ-Betrag erlauben.
+
+### 9.9 Offene Policy
+Offener Negativ-Saldo bei Programm-Austritt: erlassen (Kleinbeträge) oder
+einfordern? Default-Empfehlung: erlassen unter einem Schwellwert (z.B. <$10),
+sonst dokumentieren. Vor Launch mit Jan final.

@@ -12,6 +12,7 @@ import {
   getActiveReferralCount,
   getDemoEarnings,
   formatMoney,
+  COMMISSION_HOLD_DAYS,
 } from "@/lib/affiliate-commissions";
 import { getServerSupabase } from "@/lib/supabase-server";
 import {
@@ -184,7 +185,7 @@ export default async function AffiliatePayoutsPage({
               <MoneyCard
                 label="Pending"
                 value={formatMoney(b.pendingCents, b.currency)}
-                hint="In the 90-day hold"
+                hint={`In the ${COMMISSION_HOLD_DAYS}-day hold`}
               />
               <MoneyCard
                 label="Available"
@@ -246,8 +247,10 @@ export default async function AffiliatePayoutsPage({
             </li>
             <li>
               Each commission is held for{" "}
-              <strong style={{ color: "var(--ink)" }}>90 days</strong> to cover
-              refunds, then moves to <em>Available</em>.
+              <strong style={{ color: "var(--ink)" }}>
+                {COMMISSION_HOLD_DAYS} days
+              </strong>{" "}
+              to cover refunds, then moves to <em>Available</em>.
             </li>
             <li>
               Available earnings are paid out via{" "}
