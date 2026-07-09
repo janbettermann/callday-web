@@ -36,6 +36,11 @@ interface CommissionRaw {
 
 export interface CommissionRow extends CommissionRaw {
   status: CommissionStatus;
+  /** True für Recovery-Buchungen (`commission_cents < 0`): eine bereits
+   *  ausgezahlte Provision wurde nach einem Post-Payout-Refund aus dem Saldo
+   *  zurückverrechnet. Die UI rendert sie als "Refund adjustment" statt als
+   *  normale Provisions-Zeile. Siehe specs/affiliate-payouts.md §9. */
+  isRecovery: boolean;
 }
 
 export interface CurrencyEarnings {
@@ -93,12 +98,16 @@ function computeEarnings(raw: CommissionRaw[]): AffiliateEarnings {
         availableCents: 0,
         paidCents: 0,
       } satisfies CurrencyEarnings);
+    // Negative Recovery-Beträge netten hier automatisch in ihren Bucket
+    // (available += negativ → reduziert den auszahlbaren Saldo). availableCents
+    // kann dadurch < 0 werden (Carry — der Affiliate schuldet zurück); die
+    // Anzeige-Schicht clamped auf 0 und zeigt den Rest als "to recover".
     if (status === "pending") bucket.pendingCents += r.commission_cents;
     else if (status === "available") bucket.availableCents += r.commission_cents;
     else if (status === "paid") bucket.paidCents += r.commission_cents;
     // 'clawback' zählt in keinen Bucket.
     byCurrency.set(r.charge_currency, bucket);
-    return { ...r, status };
+    return { ...r, status, isRecovery: r.commission_cents < 0 };
   });
 
   return {
@@ -234,9 +243,19 @@ export function getDemoEarnings(): AffiliateEarnings {
     ...batch("d", 200, H + 31, H + 120, (ms) => ({
       paid_at: new Date(ms + HOLD + 5 * DAY).toISOString(),
     })),
-    // Ein paar Reversed (Refunds) für Realismus — zählen in keinen Bucket.
+    // In-Hold-Refunds (Reversed) für Realismus — zählen in keinen Bucket.
     ...batch("c", 5, 4, Math.max(5, H), (ms) => ({
       clawback_at: new Date(ms + 3 * DAY).toISOString(),
+    })),
+    // Refund adjustments (Post-Payout-Refund): 2 bereits ausgezahlte Provisionen
+    // wurden vom Kunden zurückerstattet → Negativ-Buchung, sofort available
+    // (kein Hold), reduziert den auszahlbaren Saldo. Rendert als rote
+    // "Refund adjustment"-Zeile (isRecovery). Bewusst die NEUESTEN Rows (0–1 d),
+    // damit sie in der auf 12 gekappten Liste oben sichtbar sind.
+    // Siehe specs/affiliate-payouts.md §9.
+    ...batch("r", 2, 0, 1, (ms) => ({
+      commission_cents: -750,
+      hold_until: new Date(ms).toISOString(),
     })),
   ];
 

@@ -189,8 +189,12 @@ export default async function AffiliatePayoutsPage({
               />
               <MoneyCard
                 label="Available"
-                value={formatMoney(b.availableCents, b.currency)}
-                hint="Ready for payout"
+                value={formatMoney(Math.max(0, b.availableCents), b.currency)}
+                hint={
+                  b.availableCents < 0
+                    ? `${formatMoney(-b.availableCents, b.currency)} to recover from upcoming earnings`
+                    : "Ready for payout"
+                }
               />
               <MoneyCard
                 label="Paid out"

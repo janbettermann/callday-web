@@ -111,8 +111,16 @@ const STATUS_STYLE: Record<
   clawback: { label: "Refunded", color: "#b91c1c", bg: "rgba(185,28,28,0.1)" },
 };
 
+const RECOVERY_BADGE = {
+  label: "Refund adjustment",
+  color: "#b91c1c",
+  bg: "rgba(185,28,28,0.1)",
+};
+
 function EarningRow({ row, first }: { row: CommissionRow; first: boolean }) {
-  const s = STATUS_STYLE[row.status];
+  // Recovery-Buchungen (Post-Payout-Refund, negativer Betrag) rendern als rote
+  // "Refund adjustment"-Zeile statt mit ihrem technischen Status ("available").
+  const s = row.isRecovery ? RECOVERY_BADGE : STATUS_STYLE[row.status];
   const date = new Date(row.charged_at).toISOString().slice(0, 10);
   return (
     <li
@@ -155,7 +163,7 @@ function EarningRow({ row, first }: { row: CommissionRow; first: boolean }) {
         style={{
           fontSize: 14,
           fontWeight: 600,
-          color: "var(--ink)",
+          color: row.isRecovery ? "#b91c1c" : "var(--ink)",
           fontVariantNumeric: "tabular-nums",
           whiteSpace: "nowrap",
         }}
