@@ -72,9 +72,41 @@ treffen ist. Zwei gangbare Wege:
   Braucht eine FX-Quelle + einen gespeicherten Kurs auf der Zeile. Genauer, aber
   ein beweglicher Teil mehr.
 
-Empfehlung: **(A)**. Zur Selbstdokumentation kann eine Spalte
-`commission_currency` (Default `'USD'`) ergänzt werden, damit die Basis
-self-describing ist statt „per Konvention USD".
+### ENTSCHIEDEN 2026-07-09 (Jan): Basis **C — 50 % der USD-Proceeds**
+
+Die Recherche (RevenueCat-Primärdocs, verifiziert) hat die Abwägung geklärt und
+Option A **verworfen** — A (flat 50 % vom USD-Anker) wird in Low-Price-Regionen
+(Türkei/Indien: realer Charge ≪ Anker) **negativ**, weil die Provision nicht mit
+dem echten Umsatz skaliert.
+
+**Kernfund: RevenueCat liefert den Betrag schon in USD — wir machen NIE eigene
+FX-Umrechnung.**
+- Webhook-Feld `price` = *„USD price of the transaction"* (RC rechnet zum
+  eingefrorenen Kauftag-Kurs um). `price_in_purchased_currency` = lokaler Betrag
+  (Audit).
+- RC liefert `tax_percentage` + `commission_percentage` und dokumentiert
+  **`proceeds = price × (1 − tax_percentage − commission_percentage)`** — die
+  echten Netto-Proceeds (nach Apple-Cut + VAT), in USD, ohne dass wir Apples Cut
+  selbst rechnen. Quelle: revenuecat.com/docs/dashboard-and-metrics/taxes-and-commissions.
+
+**Provisionsformel (Phase B, Accrual im RC-Webhook):**
+```
+commission_cents = round(price × (1 − tax_percentage − commission_percentage) × 0.5 × 100)
+```
+= 50 % dessen, was Jan real behält → Jan & Affiliate teilen das Netto exakt
+hälftig, kann strukturell nie negativ werden, VAT-/Region-sicher.
+
+**Reversibilität B↔C:** Phase B speichert die Roh-Zutaten auf jeder
+`affiliate_commissions`-Zeile — `price_usd_cents`, `tax_percentage`,
+`commission_percentage` (+ `commission_currency` default `'USD'` als
+Selbstdoku). Damit ist ein späterer Wechsel auf B (50 % vom Brutto-`price`) ein
+Einzeiler in der Accrual + ein SQL-Recompute der unbezahlten Zeilen. Diese
+Spalten werden in der **Phase-B-Migration** ergänzt (Phase E / 0043 braucht sie
+nicht — E liest nur `commission_cents`).
+
+*(Die frühere Empfehlung „(A) flat, am simpelsten" ist damit überholt — sie ist
+nur simpler, weil sie den Margin-Trap ignoriert; da RC ohnehin USD + Proceeds
+liefert, kostet C nichts extra.)*
 
 ## 4. Was jetzt schon richtig ist (die Tür bleibt offen)
 

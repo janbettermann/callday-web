@@ -17,6 +17,7 @@ import type {
 import { MethodMark } from "@/app/affiliate/MethodMark";
 import {
   changeAffiliateStatusAction,
+  markCommissionsPaidAction,
   markPayoutTestSentAction,
   resendInviteAction,
   updateAffiliateAction,
@@ -107,6 +108,31 @@ function DrawerBody({
       else
         setActionInfo(
           `Marked ${method === "paypal" ? "PayPal" : "Wise"} test transfer as sent.`,
+        );
+    });
+  }
+
+  // Geld-Action: alle aktuell auszahlbaren Provisionen als bezahlt buchen +
+  // Payout-Beleg anlegen (DB-Funktion mark_commissions_paid, atomar). window
+  // .confirm davor, weil irreversibel + echtes Geld. Erfolg zeigt den REAL
+  // gebuchten Betrag (result.paidCents, aus der DB) — nicht die Seiten-Zahl.
+  function handleMarkPaid(formData: FormData) {
+    clearMessages();
+    if (affiliate.available_cents <= 0) return;
+    const confirmed = window.confirm(
+      `Record a payout of ${fmtUsd(affiliate.available_cents)} to ${affiliate.slug}?\n\n` +
+        "This marks all currently available commissions as paid and can't be undone.",
+    );
+    if (!confirmed) return;
+    formData.set("id", affiliate.id);
+    startTransition(async () => {
+      const result = await markCommissionsPaidAction(formData);
+      if (!result.ok) setActionError(result.error);
+      else
+        setActionInfo(
+          `Paid ${fmtUsd(result.paidCents)} — ${result.count} commission${
+            result.count === 1 ? "" : "s"
+          } marked.`,
         );
     });
   }
@@ -321,6 +347,132 @@ function DrawerBody({
                   Cannot send to removed affiliates. Set Active first.
                 </p>
               ) : null}
+            </div>
+          </Section>
+
+          <Section label="Balance">
+            <div
+              style={{
+                background: "#ffffff",
+                border: "0.5px solid var(--line)",
+                borderRadius: 16,
+                padding: 18,
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontFamily: "var(--font-label)",
+                    fontSize: 10,
+                    textTransform: "uppercase",
+                    letterSpacing: "1.2px",
+                    color: "var(--ink-faint)",
+                  }}
+                >
+                  Available to pay out
+                </div>
+                <div
+                  style={{
+                    marginTop: 4,
+                    fontSize: 30,
+                    fontWeight: 700,
+                    letterSpacing: "-0.6px",
+                    fontVariantNumeric: "tabular-nums",
+                    color:
+                      affiliate.available_cents > 0
+                        ? "var(--ink)"
+                        : "var(--ink-faint)",
+                  }}
+                >
+                  {fmtUsd(affiliate.available_cents)}
+                </div>
+              </div>
+
+              {affiliate.available_cents > 0 ? (
+                <form
+                  action={handleMarkPaid}
+                  style={{ display: "flex", flexDirection: "column", gap: 12 }}
+                >
+                  <Field label="Method (optional)">
+                    <select
+                      name="method"
+                      defaultValue={affiliate.payout.activeMethod ?? ""}
+                      style={{
+                        width: "100%",
+                        background: "rgba(26,29,38,0.045)",
+                        border: "1px solid transparent",
+                        borderRadius: 12,
+                        padding: "10px 14px",
+                        fontSize: 16,
+                        color: "var(--ink)",
+                        outline: "none",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <option value="">—</option>
+                      <option value="paypal">PayPal</option>
+                      <option value="wise">Wise</option>
+                    </select>
+                  </Field>
+                  <Field label="Transaction ref (optional)">
+                    <DrawerInput
+                      name="external_ref"
+                      placeholder="PayPal / Wise transaction id"
+                    />
+                  </Field>
+                  <Field label="Note (optional)">
+                    <DrawerInput name="note" />
+                  </Field>
+                  <button
+                    type="submit"
+                    disabled={isPending}
+                    aria-busy={isPending}
+                    style={{
+                      alignSelf: "flex-start",
+                      background:
+                        "linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%)",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "10px 18px",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: isPending ? "wait" : "pointer",
+                      opacity: isPending ? 0.7 : 1,
+                      boxShadow: "0 6px 18px rgba(37,99,232,0.22)",
+                    }}
+                  >
+                    {isPending
+                      ? "Recording…"
+                      : `Mark ${fmtUsd(affiliate.available_cents)} paid`}
+                  </button>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 12,
+                      color: "var(--ink-faint)",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Send the real money via the method below first, then log it
+                    here. Records a payout receipt grouping the paid commissions.
+                  </p>
+                </form>
+              ) : (
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "var(--ink-dim)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Nothing available yet. Commissions become payable after the
+                  90-day hold.
+                </div>
+              )}
             </div>
           </Section>
 
@@ -704,6 +856,15 @@ function fmtDateTime(iso: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+/** USD-Cents → "$12.34". Ledger ist USD (siehe specs/affiliate-currency.md);
+ *  client-safe (kein Server-Import). */
+function fmtUsd(cents: number): string {
+  return new Intl.NumberFormat("en", {
+    style: "currency",
+    currency: "USD",
+  }).format(cents / 100);
 }
 
 /**

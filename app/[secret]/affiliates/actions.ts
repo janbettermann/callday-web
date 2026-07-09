@@ -39,6 +39,15 @@ export type ActionResult =
   | { ok: true }
   | { ok: false; error: string };
 
+/**
+ * Payout-Run-Result — trägt den TATSÄCHLICH gebuchten Betrag + Row-Count aus
+ * der DB-Funktion zurück (Klick-Zeit-Wahrheit), damit die UI die authoritative
+ * Zahl bestätigt statt der evtl. veralteten Seiten-Anzeige.
+ */
+export type PayoutActionResult =
+  | { ok: true; paidCents: number; count: number }
+  | { ok: false; error: string };
+
 async function requireAdmin(): Promise<string | null> {
   const adminPath = getAdminPath();
   if (!adminPath) return null;
@@ -316,4 +325,66 @@ export async function markPayoutTestSentAction(
   if (error) return { ok: false, error: error.message };
   revalidateAffiliates(adminPath);
   return { ok: true };
+}
+
+// =============================================================
+// markCommissionsPaid — atomarer Payout-Run fuer EINEN Affiliate.
+// Ruft die DB-Funktion mark_commissions_paid (Migration 0043): bucht
+// die aktuell AUSZAHLBAREN (available) Provisionen als bezahlt +
+// legt EINEN affiliate_payouts-Beleg an. Atomar, concurrency-sicher
+// (UPDATE-claim + Row-Locks) und idempotent — die ganze Geld-Logik
+// lebt in der DB-Funktion, hier nur Auth + Input + RPC-Call.
+//
+// method/external_ref/note sind fuer den Audit-Beleg (wie/womit real
+// gezahlt wurde), alle optional.
+// =============================================================
+
+export async function markCommissionsPaidAction(
+  formData: FormData,
+): Promise<PayoutActionResult> {
+  const adminPath = await requireAdmin();
+  if (!adminPath) return { ok: false, error: "Not authenticated." };
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { ok: false, error: "Affiliate id missing." };
+
+  const methodRaw = String(formData.get("method") ?? "").trim();
+  const method = methodRaw === "" ? null : methodRaw;
+  if (method !== null && method !== "paypal" && method !== "wise") {
+    return { ok: false, error: "Invalid method." };
+  }
+  const externalRef = String(formData.get("external_ref") ?? "").trim() || null;
+  const note = String(formData.get("note") ?? "").trim() || null;
+
+  const sb = getServerSupabase();
+  const { data, error } = await sb.rpc("mark_commissions_paid", {
+    p_affiliate_id: id,
+    p_method: method,
+    p_external_ref: externalRef,
+    p_note: note,
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  const result = data as {
+    ok: boolean;
+    error?: string;
+    total_cents?: number;
+    count?: number;
+  } | null;
+
+  if (!result?.ok) {
+    const msg =
+      result?.error === "nothing_available"
+        ? "Nothing available to pay out (commissions are still in hold, already paid, or clawed back)."
+        : (result?.error ?? "Payout failed.");
+    return { ok: false, error: msg };
+  }
+
+  revalidateAffiliates(adminPath);
+  return {
+    ok: true,
+    paidCents: result.total_cents ?? 0,
+    count: result.count ?? 0,
+  };
 }

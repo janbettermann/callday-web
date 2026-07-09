@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServerSupabase } from "../supabase-server";
+import { getPayableByAffiliate } from "../affiliate-commissions";
 import {
   PAYOUT_COLUMNS,
   mapPayout,
@@ -45,6 +46,9 @@ export interface AffiliateRow {
   view_count: number;
   signup_count: number;
   activated_count: number;
+  /** Auszahlbare Provisionssumme in USD-Cents (available, siehe
+   *  getPayableByAffiliate). Über Migration 0043 / Phase E. */
+  available_cents: number;
   payout: AffiliatePayout;
 }
 
@@ -88,17 +92,20 @@ export async function fetchAffiliates(): Promise<AffiliateRow[]> {
 
   // View-, Sign-up- und Activated-Counts pro Affiliate-ID parallel laden.
   const ids = affiliates.map((a) => a.id);
-  const [viewCounts, signupCounts, activatedCounts] = await Promise.all([
-    fetchViewCounts(ids),
-    fetchSignupCounts(ids),
-    fetchActivatedCounts(ids),
-  ]);
+  const [viewCounts, signupCounts, activatedCounts, payableCents] =
+    await Promise.all([
+      fetchViewCounts(ids),
+      fetchSignupCounts(ids),
+      fetchActivatedCounts(ids),
+      getPayableByAffiliate(ids),
+    ]);
 
   return affiliates.map((a) => ({
     ...a,
     view_count: viewCounts.get(a.id) ?? 0,
     signup_count: signupCounts.get(a.id) ?? 0,
     activated_count: activatedCounts.get(a.id) ?? 0,
+    available_cents: payableCents.get(a.id) ?? 0,
     payout: mapPayout(a),
   }));
 }
@@ -119,17 +126,20 @@ export async function fetchAffiliateById(
   if (!data) return null;
 
   const raw = data as unknown as RawAffiliate;
-  const [viewCounts, signupCounts, activatedCounts] = await Promise.all([
-    fetchViewCounts([id]),
-    fetchSignupCounts([id]),
-    fetchActivatedCounts([id]),
-  ]);
+  const [viewCounts, signupCounts, activatedCounts, payableCents] =
+    await Promise.all([
+      fetchViewCounts([id]),
+      fetchSignupCounts([id]),
+      fetchActivatedCounts([id]),
+      getPayableByAffiliate([id]),
+    ]);
 
   return {
     ...raw,
     view_count: viewCounts.get(id) ?? 0,
     signup_count: signupCounts.get(id) ?? 0,
     activated_count: activatedCounts.get(id) ?? 0,
+    available_cents: payableCents.get(id) ?? 0,
     payout: mapPayout(raw),
   };
 }

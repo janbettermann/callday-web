@@ -130,6 +130,51 @@ export async function getActiveReferralCount(
 }
 
 /**
+ * Available-USD-Summe (auszahlbar) pro Affiliate — für den Admin-Payout-View.
+ *
+ * "available" nutzt EXAKT denselben abgeleiteten Filter wie
+ * `mark_commissions_paid` (0043) und die affiliate-facing Earnings-Page:
+ * unbezahlt, nicht storniert, Hold vorbei. Kritisch, dass hier dieselbe
+ * Ableitung (`deriveCommissionStatus`) läuft — die im Admin ANGEZEIGTE Zahl
+ * muss das sein, was der Payout-Run tatsächlich bucht.
+ *
+ * `commission_cents` ist kanonisch USD (Single-USD-Ledger, siehe
+ * specs/affiliate-currency.md) → über alle Rows summierbar, kein
+ * Währungs-Split. Ein Row zählt in genau einen Affiliate-Bucket.
+ *
+ * Anmerkung Zeit: hier `Date.now()` (Render-Zeit), in der Funktion SQL
+ * `now()` (Klick-Zeit). Minimaler Drift möglich (eine Provision reift zwischen
+ * Anzeige und Klick) — bewusst: der Payout-Run zahlt die Klick-Zeit-Wahrheit
+ * und gibt den echten Betrag zurück; die UI zeigt DEN, nicht die Seiten-Zahl.
+ */
+export async function getPayableByAffiliate(
+  affiliateIds: string[],
+): Promise<Map<string, number>> {
+  if (affiliateIds.length === 0) return new Map();
+  const sb = getServerSupabase();
+  const { data, error } = await sb
+    .from("affiliate_commissions")
+    .select("affiliate_id, commission_cents, hold_until, paid_at, clawback_at")
+    .in("affiliate_id", affiliateIds);
+  if (error) throw error;
+
+  const nowMs = Date.now();
+  const out = new Map<string, number>();
+  for (const row of data ?? []) {
+    const r = row as {
+      affiliate_id: string;
+      commission_cents: number;
+      hold_until: string;
+      paid_at: string | null;
+      clawback_at: string | null;
+    };
+    if (deriveCommissionStatus(r, nowMs) !== "available") continue;
+    out.set(r.affiliate_id, (out.get(r.affiliate_id) ?? 0) + r.commission_cents);
+  }
+  return out;
+}
+
+/**
  * Illustrative Demo-Earnings für den Beta-Demo-Mode (`?demo=1`). REIN Anzeige —
  * schreibt NICHTS in die DB. Realistische Rows in verschiedenen Zuständen,
  * durch dieselbe `computeEarnings`-Ableitung gejagt wie echte Daten.

@@ -100,6 +100,17 @@ export default async function AffiliatesAdminPage({
     (sum, a) => sum + a.activated_count,
     0,
   );
+  // Auszahlbare Provisionen über alle Affiliates (USD-Ledger, siehe
+  // specs/affiliate-currency.md). Summierbar, weil commission_cents kanonisch
+  // USD ist.
+  const totalPayableCents = affiliates.reduce(
+    (sum, a) => sum + a.available_cents,
+    0,
+  );
+  const totalPayable = new Intl.NumberFormat("en", {
+    style: "currency",
+    currency: "USD",
+  }).format(totalPayableCents / 100);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
@@ -188,6 +199,7 @@ export default async function AffiliatesAdminPage({
                 : `${Math.round((totalActivated / totalSignups) * 100)}%`
             }
           />
+          <StatCard label="Payable" value={totalPayable} />
         </div>
 
         {loadError ? (
