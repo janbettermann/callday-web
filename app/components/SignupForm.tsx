@@ -75,9 +75,18 @@ function isUserAlreadyRegistered(error: {
 
 type Status = "idle" | "submitting" | "error";
 
+const DEFAULT_NEXT_PATH = "/account?welcome=signup";
+
 interface Props {
   /** Affiliate-Slug fuer Attribution — nur auf /a/[slug] gesetzt. */
   slug?: string;
+  /**
+   * Interner Pfad nach abgeschlossenem Sign-Up (OAuth via login_next-
+   * Cookie, Email/PW via /confirm-Handoff). Einstiege mit eigenem
+   * Funnel (z. B. /lists) setzen das, damit der User dorthin
+   * zurueckkommt; Default ist die Account-Welcome-Card.
+   */
+  nextPath?: string;
 }
 
 // 5 Minuten = OAuth-Round-Trip-Realismus. Vorher waren das 10 Min,
@@ -92,7 +101,7 @@ function setSignupCookie(name: string, value: string) {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${SIGNUP_COOKIE_MAX_AGE_S}; samesite=lax`;
 }
 
-export function SignupForm({ slug }: Props) {
+export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -114,7 +123,7 @@ export function SignupForm({ slug }: Props) {
     // Markiert den PKCE-Exchange als Sign-Up-Form-Ursprung — /auth/callback
     // schickt dann die TestFlight-Mail fuer frische Profile.
     setSignupCookie("signup_flow", "1");
-    setSignupCookie("login_next", "/account?welcome=signup");
+    setSignupCookie("login_next", nextPath);
 
     const supabase = createSupabaseBrowser();
     const origin = window.location.origin;
@@ -178,6 +187,7 @@ export function SignupForm({ slug }: Props) {
         writeSignupConfirmHandoff({
           email: cleanEmail,
           variant: "welcome-back",
+          next: nextPath,
         });
         router.push("/confirm");
         return;
@@ -194,15 +204,19 @@ export function SignupForm({ slug }: Props) {
     // TestFlight) was verwirrend ist + Typo-Emails kriegen unnoetig
     // TestFlight-Links.
     if (!data.session) {
-      writeSignupConfirmHandoff({ email: cleanEmail, variant: "fresh" });
+      writeSignupConfirmHandoff({
+        email: cleanEmail,
+        variant: "fresh",
+        next: nextPath,
+      });
       router.push("/confirm");
       return;
     }
 
     // Auto-confirmed (z.B. dev-Env oder Confirmation off) → TestFlight-Mail
-    // jetzt senden, dann zu /account.
+    // jetzt senden, dann weiter zum Ziel-Pfad.
     void sendTestflightInviteMail("SignupForm");
-    router.push("/account?welcome=signup");
+    router.push(nextPath);
   }
 
   // === Render: Sign-Up ===

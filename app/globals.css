@@ -543,6 +543,7 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
 .login-page,
 .checkout-page,
 .account-page,
+.lists-page,
 .pricing-section {
   position: relative;
   z-index: 1;
@@ -3012,5 +3013,196 @@ h2 .accent {
   }
   to {
     transform: translateY(0);
+  }
+}
+
+/* === LISTS PAGE (Callday Lists — Lead-Generator, /lists) ===
+   Layout-Gerippe wie .account-page (Nav-Offset, 560px-Spalte); die
+   Form-Elemente reusen .login-card/.beta-field/.beta-submit, die
+   CTAs .account-btn. Hier leben nur die Lists-spezifischen Teile:
+   kompakter Hero, Branchen-Chips, Progress, Ergebnis-Preview. */
+.lists-page {
+  padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 56px) 32px
+    120px;
+  min-height: 100dvh;
+}
+.lists-inner {
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+}
+.lists-hero {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.lists-headline {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: clamp(32px, 4.5vw, 44px);
+  font-weight: 600;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  margin: 0 0 12px;
+  color: var(--ink);
+}
+.lists-sub {
+  font-size: 15px;
+  color: var(--ink-dim);
+  line-height: 1.55;
+  max-width: 460px;
+  margin: 0 auto;
+}
+.lists-card {
+  margin: 0 auto;
+}
+.lists-loading {
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink-faint);
+  padding: 80px 0;
+}
+.lists-meta {
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-faint);
+  margin: 20px auto 0;
+  max-width: 420px;
+  line-height: 1.5;
+}
+.lists-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: -6px;
+}
+.lists-chip {
+  background: var(--bg-page);
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--ink-dim);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+.lists-chip:hover:not(:disabled) {
+  border-color: rgba(74, 122, 247, 0.5);
+  color: var(--blue-deep);
+}
+/* Country-Select im Stil der .beta-field-Inputs; 16px verhindert den
+   iOS-Safari-Focus-Zoom (siehe ios-input-16px-Regel). */
+.lists-select {
+  width: 100%;
+  background: rgba(26, 29, 38, 0.045);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 15px 16px;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--ink);
+  outline: none;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s,
+    background 0.18s;
+}
+.lists-select:focus {
+  background: var(--bg-page);
+  border-color: rgba(74, 122, 247, 0.5);
+  box-shadow: 0 0 0 3px rgba(74, 122, 247, 0.14);
+}
+/* Indeterminate-Progress: laufender Balken auf blauer Track-Spur. */
+.lists-progress-track {
+  height: 6px;
+  background: var(--blue-soft);
+  border-radius: 100px;
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+.lists-progress-fill {
+  height: 100%;
+  width: 35%;
+  border-radius: 100px;
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
+  animation: lists-progress-slide 1.6s ease-in-out infinite;
+}
+@keyframes lists-progress-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+.lists-app-card .account-btn {
+  margin-top: 12px;
+}
+.lists-app-benefits {
+  margin-bottom: 4px;
+}
+.lists-ready-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--green-deep);
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.lists-preview {
+  background: var(--bg-page);
+  border: 0.5px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px rgba(26, 29, 38, 0.04);
+}
+.lists-preview-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 18px;
+  border-bottom: 0.5px solid var(--line);
+  font-size: 14px;
+}
+.lists-preview-name {
+  color: var(--ink);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lists-preview-phone {
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.lists-preview-more {
+  padding: 11px 18px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+.lists-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.lists-actions .account-btn {
+  margin-top: 0;
+}
+
+@media (max-width: 600px) {
+  .lists-page {
+    padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 40px) 24px
+      80px;
   }
 }

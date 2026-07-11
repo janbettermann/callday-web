@@ -1,9 +1,16 @@
 # Callday Lists — Web-Lead-Generator + Funnel — Spec
 
-> Status: **Planungs-Spec (2026-07-09), noch nicht implementiert.**
-> **Post-Launch Fast-Follow** — nicht launch-blockierend (die App launcht mit dem
-> jetzigen CSV-Import wie sie ist; den kritischen Launch-Pfad Gate → RC-E2E →
-> Native-Build → Submission nicht anfassen).
+> Status: **v1 GEBAUT (2026-07-12) auf Branch `lists-generator`, E2E-verifiziert
+> gegen echte Outscraper-API + Prod-DB.** Merge in `main` = bewusste
+> Go-Live-Entscheidung **nach dem App-Launch** (Post-Launch Fast-Follow,
+> nicht launch-blockierend — den kritischen Launch-Pfad nicht anfassen).
+>
+> Gebaut: `/lists` (3 Zustaende, auth-aware), `/api/lists/{generate,webhook,
+> status,download}`, `lib/lists/*` (Outscraper-Client, Callable-Pipeline,
+> Job-Verarbeitung), `emails/list-ready.tsx`, Migration `0048_lead_gen_jobs`
+> (App-Repo, deployed), SignupForm `nextPath`-Prop. Offen vor Merge:
+> `OUTSCRAPER_API_KEY` in Vercel, App-CTA von /account auf App-Store-Link
+> umstellen, SignupForm-Card-Copy (TestFlight-Text) fuer Launch pruefen.
 
 ## 1. Was + Warum (Strategie)
 
@@ -153,15 +160,28 @@ Insert als neue `lead_list` (Name = Query, z. B. „Zahnärzte Köln") + zugehö
   4. UI zeigt **Pending-State** („Liste wird gebaut, ~1–3 Min") und pollt/lauscht
      (Supabase Realtime), bis „ready".
 
-## 9. Sync — WATCH-POINT #1 (technisch entscheidend)
+## 9. Sync — ✅ VERIFIZIERT (2026-07-11): Pull existiert bereits
 
-Die Mobile-App ist **offline-first (lokale SQLite) ← Supabase-Sync**. Eine im
-Web erzeugte Liste liegt zunächst nur in Supabase → **die App muss
-server-erzeugte Listen RUNTERZIEHEN.** Wenn der aktuelle Sync push-dominant ist
-(Device → Supabase), ist **das Pull-für-server-erzeugte-Listen genau das Stück,
-das gebaut werden muss.** Vor allem anderen im Sync-Pfad verifizieren — sonst
-generiert der User im Web, aber am Handy kommt nichts an. (Related Memory:
-`feedback_local_db_single_tenant`.)
+Die Mobile-App ist **offline-first (lokale SQLite) ← Supabase-Sync**. Der
+ursprüngliche Watch-Point („wenn der Sync push-dominant ist, muss der Pull erst
+gebaut werden") ist **im App-Code verifiziert und erledigt**:
+`utils/sync/pull-from-cloud.ts` läuft bei jedem Boot + Foreground-Wechsel und
+zieht `lead_lists`, `leads`, `call_outcomes`, `notes` vollständig per
+`INSERT OR REPLACE` in die lokale DB (paginiert, orphan-defensiv). Eine
+server-erzeugte Liste landet also **ohne Sync-Neubau** beim nächsten
+App-Öffnen auf dem Gerät.
+
+Was der Web-Insert dafür korrekt setzen muss:
+
+- richtige `user_id` (RLS + Pull-Scope) und `is_sample = false`
+- Legacy-Batch-Defaults wie beim App-Import: `batch_size = total_leads`,
+  `current_batch = 1`, `total_batches = 1`, `batch_number = 1`
+- `position_in_batch` = Import-Reihenfolge (Sort-Order in Stack + Listview)
+
+**Timing-Erwartung:** „gesynct" = beim nächsten App-Start/Foreground, kein
+Live-Push aufs Gerät. Für den Funnel reicht das (Install → Open → Liste da);
+Live-Erscheinen bei offener App bräuchte einen Extra-Trigger (Realtime oder
+Push-Notification → Pull). (Related Memory: `feedback_local_db_single_tenant`.)
 
 ## 10. Monetarisierung / Billing
 
@@ -202,7 +222,37 @@ mit Listen (breites Publikum zahlt für Listen, unabhängig von Callday) wäre e
 wirklich *zahlen* (Instinkt: die meisten nehmen gratis und gehen). Für v1 nicht
 chasen; Fokus = qualifizierter Cold-Calling-Traffic.
 
-## 12. Recht / Compliance
+## 12. Affiliate-Synergie
+
+Der Funnel upgradet das Affiliate-Programm — Affiliates bekommen einen viel
+bewerbbareren Haken.
+
+- **Lead-Magnet statt App-Pitch:** „kostenlose Cold-Calling-Leads in 2 Minuten"
+  ist im Social-Content (dem Affiliate-Kanal) massiv teilbarer/klickbarer als
+  „lad die Calling-App". Besserer Content-Angle („so zieh ich mir gratis Leads")
+  und zieht die qualifizierte (Cold-Calling-)Zielgruppe = genau die, die
+  konvertiert.
+- **Ganzer-Funnel-Monetarisierung:** Affiliate-Link → Listen-Tool → Signup setzt
+  `referred_by_affiliate_id` (geteilte Auth) → der Affiliate verdient 50 %
+  recurring, sobald der User zum zahlenden Callday-Abo wird. Der einfache
+  Gratis-Haken zahlt auf die bestehende Provision ein.
+
+**Zwei Dinge, die dafür sitzen müssen:**
+
+1. **Attribution muss durch den `/lists`-Signup fließen.** Die Zuordnung wird
+   beim Web-Signup über `/a/[slug]` gesetzt (siehe App-Repo-Spec-Kontext /
+   `affiliate-payouts.md` §3) — der Listen-Tool-Signup muss den Referral-Cookie/
+   -Param genauso respektieren, sonst kriegt der Affiliate den Signup nicht
+   gutgeschrieben. **Konkreter Integrationspunkt.**
+2. **Free-Listen-Kosten × Affiliate-Volumen (Watch-Point-Interaktion):**
+   Affiliate-getriebene Gratis-Listen kosten *dich* Outscraper-Geld pro Signup,
+   und Affiliates sind auf Volumen incentiviert. Die Provision zahlt nur bei
+   Conversion (kein Bleed für Nicht-Konvertierer), aber die Free-Listen-Kosten
+   fallen bei *jedem* Affiliate-Signup an. Der 1er-Cap (§5) + Per-Affiliate-
+   Monitoring (Dashboard zeigt Sign-ups vs. Activated) fangen das ab — beobachten,
+   falls ein Affiliate viel Low-Quality-Volumen reindrückt.
+
+## 13. Recht / Compliance
 
 - **Cold-Calling-Regeln (DE §7 UWG):** B2B braucht mutmaßliche Einwilligung, B2C
   praktisch verboten. Leads liefern verschiebt die Pflicht nicht — sie bleibt
@@ -212,7 +262,7 @@ chasen; Fokus = qualifizierter Cold-Calling-Traffic.
   B2B-Geschäftsdaten — sauber dokumentieren; AGB-Anwalt drüber (ohnehin für das
   Affiliate-Onboarding im Loop).
 
-## 13. Bewusst NICHT v1 / offen
+## 14. Bewusst NICHT v1 / offen
 
 - **Kein volles zweites Marketing-Site-Ding** — das ist die Spin-out-Phase
   (eigene Subdomain/Brand).
@@ -221,7 +271,7 @@ chasen; Fokus = qualifizierter Cold-Calling-Traffic.
 - **Email-Enrichment** (`leads_n_contacts`) optional + teurer — später zuschaltbar.
 - **Raw-CSV bei bezahlten Listen** ist Standard; bei der Gratis-Liste auch (§5).
 
-## 14. Verweise
+## 15. Verweise
 
 - Pricing/Paywall-Kette: Memory `project_pricing_strategy`, App-Repo
   `specs/paywall-first-call-gate.md`.
