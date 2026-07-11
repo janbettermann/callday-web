@@ -3114,6 +3114,75 @@ h2 .accent {
   border-color: rgba(74, 122, 247, 0.5);
   box-shadow: 0 0 0 3px rgba(74, 122, 247, 0.14);
 }
+/* Staedte-Autocomplete (CityAutocomplete): Google-Places-Vorschlaege
+   unter dem City-Input. Haekchen im Feld = Vorschlag eingerastet. */
+.lists-city-wrap {
+  position: relative;
+}
+.lists-city-wrap input {
+  width: 100%;
+}
+.lists-city-check {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  color: var(--green-deep);
+  font-size: 15px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.lists-city-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: var(--bg-page);
+  border: 0.5px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(26, 29, 38, 0.12);
+  padding: 6px;
+}
+.lists-city-option {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 12px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+.lists-city-option:hover,
+.lists-city-option.is-active {
+  background: var(--blue-tint);
+}
+.lists-city-option-name {
+  color: var(--ink);
+  font-weight: 500;
+}
+.lists-city-option-region {
+  color: var(--ink-faint);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Google-Attribution — Pflicht bei Places-Daten ausserhalb einer Map. */
+.lists-city-attribution {
+  padding: 6px 12px 4px;
+  text-align: right;
+  font-size: 10px;
+  letter-spacing: 0.2px;
+  color: var(--ink-mute);
+}
+
 /* Indeterminate-Progress: laufender Balken auf blauer Track-Spur. */
 .lists-progress-track {
   height: 6px;

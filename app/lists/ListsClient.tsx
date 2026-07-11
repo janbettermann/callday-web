@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import { CalldayLogo } from "../components/CalldayLogo";
 import { SignupForm } from "../components/SignupForm";
+import { CityAutocomplete } from "./CityAutocomplete";
 import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 import {
   APP_DOWNLOAD_PATH,
@@ -326,18 +327,6 @@ function GeneratorForm({
           </div>
 
           <label className="beta-field">
-            <span className="beta-field-label">City</span>
-            <input
-              type="text"
-              value={city}
-              onChange={(e) => onCityChange(e.target.value)}
-              placeholder="Cologne"
-              maxLength={60}
-              disabled={submitting}
-            />
-          </label>
-
-          <label className="beta-field">
             <span className="beta-field-label">Country</span>
             <select
               className="lists-select"
@@ -352,6 +341,13 @@ function GeneratorForm({
               ))}
             </select>
           </label>
+
+          <CityAutocomplete
+            value={city}
+            country={country}
+            disabled={submitting}
+            onChange={onCityChange}
+          />
 
           <button
             type="submit"
