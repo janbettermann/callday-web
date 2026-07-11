@@ -1,11 +1,11 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import {
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+  SuggestDropdown,
+  handleSuggestKeys,
+  type SuggestOption,
+} from "./suggest";
 
 /**
  * Staedte-Eingabe mit Google-Places-Vorschlaegen (via Proxy-Route
@@ -19,14 +19,9 @@ import {
  * Generator trotzdem — dann ohne Haekchen.
  */
 
-interface CitySuggestion {
-  city: string;
-  region: string;
-}
-
 interface Props {
   value: string;
-  country: string;
+  country: string | null;
   disabled?: boolean;
   onChange: (value: string) => void;
 }
@@ -34,7 +29,7 @@ interface Props {
 const DEBOUNCE_MS = 300;
 
 export function CityAutocomplete({ value, country, disabled, onChange }: Props) {
-  const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
+  const [options, setOptions] = useState<SuggestOption[]>([]);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [selected, setSelected] = useState(false);
@@ -51,8 +46,8 @@ export function CityAutocomplete({ value, country, disabled, onChange }: Props) 
       return;
     }
     const query = value.trim();
-    if (query.length < 2) {
-      setSuggestions([]);
+    if (query.length < 2 || !country) {
+      setOptions([]);
       setOpen(false);
       return;
     }
@@ -68,10 +63,15 @@ export function CityAutocomplete({ value, country, disabled, onChange }: Props) 
         );
         if (!response.ok) return;
         const data = (await response.json()) as {
-          suggestions: CitySuggestion[];
+          suggestions: Array<{ city: string; region: string }>;
         };
-        setSuggestions(data.suggestions);
-        setOpen(data.suggestions.length > 0);
+        const mapped = data.suggestions.map((s) => ({
+          value: s.city,
+          label: s.city,
+          sublabel: s.region,
+        }));
+        setOptions(mapped);
+        setOpen(mapped.length > 0);
         setActiveIndex(-1);
       } catch {
         // Abort oder Netzfehler — Feld bleibt als Freitext nutzbar.
@@ -86,47 +86,40 @@ export function CityAutocomplete({ value, country, disabled, onChange }: Props) 
     setSelected(false);
   }, [country]);
 
-  function handleSelect(suggestion: CitySuggestion) {
+  function handlePick(option: SuggestOption) {
     skipNextFetch.current = true;
-    onChange(suggestion.city);
+    onChange(option.value);
     setSelected(true);
     setOpen(false);
-    setSuggestions([]);
+    setOptions([]);
   }
 
-  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Escape") {
-      setOpen(false);
-      return;
-    }
-    if (!open || suggestions.length === 0) return;
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setActiveIndex((i) => Math.min(i + 1, suggestions.length - 1));
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setActiveIndex((i) => Math.max(i - 1, 0));
-    } else if (event.key === "Enter") {
-      // Enter uebernimmt den markierten (sonst obersten) Vorschlag,
-      // statt das Formular abzuschicken.
-      event.preventDefault();
-      handleSelect(suggestions[activeIndex >= 0 ? activeIndex : 0]);
-    }
-  }
-
+  // KEIN umschliessendes <label> — Begruendung siehe CountryAutocomplete
+  // (Label-Aktivierung beim Klick auf Dropdown-Vorschlaege).
   return (
-    <label className="beta-field">
-      <span className="beta-field-label">City</span>
-      <div className="lists-city-wrap">
+    <div className="beta-field">
+      <label className="beta-field-label" htmlFor="lists-city-input">
+        City
+      </label>
+      <div className="lists-suggest-wrap">
         <input
+          id="lists-city-input"
           type="text"
           value={value}
           onChange={(e) => {
             setSelected(false);
             onChange(e.target.value);
           }}
-          onKeyDown={handleKeyDown}
+          onKeyDown={(e) =>
+            handleSuggestKeys(e, {
+              open,
+              options,
+              activeIndex,
+              setActiveIndex,
+              onPick: handlePick,
+              onClose: () => setOpen(false),
+            })
+          }
           onBlur={() => setOpen(false)}
           placeholder="Cologne"
           maxLength={60}
@@ -139,40 +132,19 @@ export function CityAutocomplete({ value, country, disabled, onChange }: Props) 
           style={selected ? { paddingRight: 44 } : undefined}
         />
         {selected && (
-          <span className="lists-city-check" aria-hidden="true">
+          <span className="lists-suggest-check" aria-hidden="true">
             ✓
           </span>
         )}
         {open && (
-          <div className="lists-city-dropdown" role="listbox">
-            {suggestions.map((suggestion, index) => (
-              <button
-                key={`${suggestion.city}-${suggestion.region}`}
-                type="button"
-                role="option"
-                aria-selected={index === activeIndex}
-                className={
-                  "lists-city-option" +
-                  (index === activeIndex ? " is-active" : "")
-                }
-                // preventDefault auf mousedown, damit der Input-Blur den
-                // Klick nicht wegschnappt (Dropdown schloesse sonst vor
-                // dem onClick).
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => handleSelect(suggestion)}
-              >
-                <span className="lists-city-option-name">
-                  {suggestion.city}
-                </span>
-                <span className="lists-city-option-region">
-                  {suggestion.region}
-                </span>
-              </button>
-            ))}
-            <div className="lists-city-attribution">powered by Google</div>
-          </div>
+          <SuggestDropdown
+            options={options}
+            activeIndex={activeIndex}
+            attribution="powered by Google"
+            onPick={handlePick}
+          />
         )}
       </div>
-    </label>
+    </div>
   );
 }

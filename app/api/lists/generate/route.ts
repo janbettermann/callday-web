@@ -14,10 +14,8 @@ import { NextRequest } from "next/server";
 import { randomBytes } from "crypto";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
-import {
-  OUTSCRAPER_FETCH_LIMIT,
-  findCountry,
-} from "@/lib/lists/config";
+import { OUTSCRAPER_FETCH_LIMIT } from "@/lib/lists/config";
+import { findCountry } from "@/lib/lists/countries";
 import { startGoogleMapsSearch } from "@/lib/lists/outscraper";
 
 export const dynamic = "force-dynamic";

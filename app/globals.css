@@ -3092,37 +3092,15 @@ h2 .accent {
   border-color: rgba(74, 122, 247, 0.5);
   color: var(--blue-deep);
 }
-/* Country-Select im Stil der .beta-field-Inputs; 16px verhindert den
-   iOS-Safari-Focus-Zoom (siehe ios-input-16px-Regel). */
-.lists-select {
-  width: 100%;
-  background: rgba(26, 29, 38, 0.045);
-  border: 1px solid transparent;
-  border-radius: 12px;
-  padding: 15px 16px;
-  font-size: 16px;
-  font-family: inherit;
-  color: var(--ink);
-  outline: none;
-  transition:
-    border-color 0.18s,
-    box-shadow 0.18s,
-    background 0.18s;
-}
-.lists-select:focus {
-  background: var(--bg-page);
-  border-color: rgba(74, 122, 247, 0.5);
-  box-shadow: 0 0 0 3px rgba(74, 122, 247, 0.14);
-}
-/* Staedte-Autocomplete (CityAutocomplete): Google-Places-Vorschlaege
-   unter dem City-Input. Haekchen im Feld = Vorschlag eingerastet. */
-.lists-city-wrap {
+/* Vorschlags-Felder (SuggestDropdown — City via Google Places, Country
+   aus lokaler Liste). Haekchen im Feld = Vorschlag eingerastet. */
+.lists-suggest-wrap {
   position: relative;
 }
-.lists-city-wrap input {
+.lists-suggest-wrap input {
   width: 100%;
 }
-.lists-city-check {
+.lists-suggest-check {
   position: absolute;
   top: 50%;
   right: 16px;
@@ -3132,7 +3110,7 @@ h2 .accent {
   font-weight: 600;
   pointer-events: none;
 }
-.lists-city-dropdown {
+.lists-suggest-dropdown {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
@@ -3144,7 +3122,7 @@ h2 .accent {
   box-shadow: 0 12px 32px rgba(26, 29, 38, 0.12);
   padding: 6px;
 }
-.lists-city-option {
+.lists-suggest-option {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -3159,15 +3137,15 @@ h2 .accent {
   cursor: pointer;
   text-align: left;
 }
-.lists-city-option:hover,
-.lists-city-option.is-active {
+.lists-suggest-option:hover,
+.lists-suggest-option.is-active {
   background: var(--blue-tint);
 }
-.lists-city-option-name {
+.lists-suggest-option-name {
   color: var(--ink);
   font-weight: 500;
 }
-.lists-city-option-region {
+.lists-suggest-option-sub {
   color: var(--ink-faint);
   font-size: 12px;
   overflow: hidden;
@@ -3175,7 +3153,7 @@ h2 .accent {
   white-space: nowrap;
 }
 /* Google-Attribution — Pflicht bei Places-Daten ausserhalb einer Map. */
-.lists-city-attribution {
+.lists-suggest-attribution {
   padding: 6px 12px 4px;
   text-align: right;
   font-size: 10px;

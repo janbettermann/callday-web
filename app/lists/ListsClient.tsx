@@ -11,10 +11,10 @@ import Link from "next/link";
 import { CalldayLogo } from "../components/CalldayLogo";
 import { SignupForm } from "../components/SignupForm";
 import { CityAutocomplete } from "./CityAutocomplete";
+import { CountryAutocomplete } from "./CountryAutocomplete";
 import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 import {
   APP_DOWNLOAD_PATH,
-  COUNTRIES,
   FREE_LIST_SIZE,
   INDUSTRY_SUGGESTIONS,
 } from "@/lib/lists/config";
@@ -81,7 +81,9 @@ export function ListsClient() {
 
   const [industry, setIndustry] = useState("");
   const [city, setCity] = useState("");
-  const [country, setCountry] = useState("DE");
+  // null = kein Land eingerastet (Freitext im Country-Feld) — der
+  // Generator braucht einen ISO-Code, das prueft die Submit-Validation.
+  const [country, setCountry] = useState<string | null>("DE");
 
   const fetchStatus = useCallback(
     async (jobId?: string): Promise<StatusResponse> => {
@@ -130,6 +132,10 @@ export function ListsClient() {
 
     if (!industry.trim() || !city.trim()) {
       setFormError("Add an industry and a city — that's all we need.");
+      return;
+    }
+    if (!country) {
+      setFormError("Pick a country from the suggestions.");
       return;
     }
 
@@ -267,13 +273,13 @@ function SignedOutView() {
 interface GeneratorFormProps {
   industry: string;
   city: string;
-  country: string;
+  country: string | null;
   submitting: boolean;
   formError: string | null;
   failedJob: JobView | null;
   onIndustryChange: (value: string) => void;
   onCityChange: (value: string) => void;
-  onCountryChange: (value: string) => void;
+  onCountryChange: (value: string | null) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }
 
@@ -326,21 +332,11 @@ function GeneratorForm({
             ))}
           </div>
 
-          <label className="beta-field">
-            <span className="beta-field-label">Country</span>
-            <select
-              className="lists-select"
-              value={country}
-              onChange={(e) => onCountryChange(e.target.value)}
-              disabled={submitting}
-            >
-              {COUNTRIES.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <CountryAutocomplete
+            code={country}
+            disabled={submitting}
+            onChange={onCountryChange}
+          />
 
           <CityAutocomplete
             value={city}

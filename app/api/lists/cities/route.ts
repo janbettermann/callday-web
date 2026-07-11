@@ -11,7 +11,7 @@
 
 import { NextRequest } from "next/server";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
-import { findCountry } from "@/lib/lists/config";
+import { findCountry } from "@/lib/lists/countries";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

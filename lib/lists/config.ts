@@ -13,25 +13,6 @@ export const FREE_LIST_SIZE = 250;
 /** Outscraper-Limit pro Query (Hard-Cap der API: 500). */
 export const OUTSCRAPER_FETCH_LIMIT = 400;
 
-export interface CountryConfig {
-  code: string;
-  label: string;
-  /** Outscraper `language`-Param — Sprache der Google-Maps-Ergebnisse. */
-  language: string;
-}
-
-export const COUNTRIES: CountryConfig[] = [
-  { code: "DE", label: "Germany", language: "de" },
-  { code: "AT", label: "Austria", language: "de" },
-  { code: "CH", label: "Switzerland", language: "de" },
-  { code: "US", label: "United States", language: "en" },
-];
-
-export function findCountry(code: unknown): CountryConfig | null {
-  if (typeof code !== "string") return null;
-  return COUNTRIES.find((c) => c.code === code.toUpperCase()) ?? null;
-}
-
 /**
  * Kuratierte Branchen-Vorschlaege fuer die Chips unter dem Industry-Feld.
  * Scharf auf Cold-Calling-taugliche B2B-Branchen (Spec §11) — Freitext
