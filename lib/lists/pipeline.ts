@@ -228,18 +228,16 @@ interface InsertListOptions {
 }
 
 /**
- * Legt lead_lists-Row + leads-Rows an (service_role, auf den User
- * gescoped). Batch-Spalten wie beim App-Import: eine Liste = ein Pool,
- * position_in_batch traegt die Reihenfolge.
+ * Reine Row-Builder — getrennt vom Insert, damit der Shape-Contract-
+ * Test (app-shape-contract.test.ts) die exakten Payloads gegen das
+ * Import-Shape der App validieren kann, ohne eine DB zu brauchen.
  */
-export async function insertGeneratedList(
-  admin: SupabaseClient,
+export function buildListRow(
+  listId: string,
   options: InsertListOptions,
-): Promise<string> {
-  const listId = randomUUID();
+): Record<string, unknown> {
   const total = options.leads.length;
-
-  const { error: listError } = await admin.from("lead_lists").insert({
+  return {
     id: listId,
     user_id: options.userId,
     name: options.name,
@@ -251,12 +249,14 @@ export async function insertGeneratedList(
     is_sample: false,
     custom_field_defs: options.customFieldDefs,
     schema_field_sources: GENERATED_SCHEMA_SOURCES,
-  });
-  if (listError) {
-    throw new Error(`lead_lists insert failed: ${listError.message}`);
-  }
+  };
+}
 
-  const rows = options.leads.map((lead, index) => ({
+export function buildLeadRows(
+  listId: string,
+  options: InsertListOptions,
+): Array<Record<string, unknown>> {
+  return options.leads.map((lead, index) => ({
     id: randomUUID(),
     list_id: listId,
     user_id: options.userId,
@@ -264,6 +264,27 @@ export async function insertGeneratedList(
     position_in_batch: index,
     ...lead,
   }));
+}
+
+/**
+ * Legt lead_lists-Row + leads-Rows an (service_role, auf den User
+ * gescoped). Batch-Spalten wie beim App-Import: eine Liste = ein Pool,
+ * position_in_batch traegt die Reihenfolge.
+ */
+export async function insertGeneratedList(
+  admin: SupabaseClient,
+  options: InsertListOptions,
+): Promise<string> {
+  const listId = randomUUID();
+
+  const { error: listError } = await admin
+    .from("lead_lists")
+    .insert(buildListRow(listId, options));
+  if (listError) {
+    throw new Error(`lead_lists insert failed: ${listError.message}`);
+  }
+
+  const rows = buildLeadRows(listId, options);
 
   for (let offset = 0; offset < rows.length; offset += LEADS_INSERT_CHUNK) {
     const { error } = await admin
