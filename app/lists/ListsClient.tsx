@@ -18,6 +18,7 @@ import {
   FREE_LIST_SIZE,
   INDUSTRY_SUGGESTIONS,
 } from "@/lib/lists/config";
+import type { WebsiteFilterMode } from "@/lib/lists/pipeline";
 
 /**
  * /lists — eine Seite, drei Zustaende (Spec: specs/lists-generator.md):
@@ -45,7 +46,12 @@ interface JobView {
   leadCount: number | null;
   listId: string | null;
   listName: string | null;
-  params: { industry?: string; city?: string; country?: string };
+  params: {
+    industry?: string;
+    city?: string;
+    country?: string;
+    website?: WebsiteFilterMode;
+  };
   createdAt: string;
 }
 
@@ -53,7 +59,18 @@ interface PreviewLead {
   company_name: string;
   phone: string;
   location: string | null;
+  industry: string | null;
+  custom_fields?: Record<string, string>;
 }
+
+const WEBSITE_FILTER_OPTIONS: Array<{
+  value: WebsiteFilterMode;
+  label: string;
+}> = [
+  { value: "any", label: "All businesses" },
+  { value: "without", label: "Without a website" },
+  { value: "with", label: "With a website" },
+];
 
 interface StatusResponse {
   job: JobView | null;
@@ -62,9 +79,11 @@ interface StatusResponse {
 
 const POLL_INTERVAL_MS = 5000;
 
-function failureMessage(error: string | null): string {
-  if (error === "no_results") {
-    return "We couldn't find enough callable leads for that search. Try a broader industry or a nearby bigger city.";
+function failureMessage(job: JobView): string {
+  if (job.error === "no_results") {
+    return job.params.website && job.params.website !== "any"
+      ? "We couldn't find callable leads matching that website filter. Try a bigger city, or set the filter back to all businesses."
+      : "We couldn't find enough callable leads for that search. Try a broader industry or a nearby bigger city.";
   }
   return "Something went wrong while building your list. Please try again.";
 }
@@ -84,6 +103,17 @@ export function ListsClient() {
   // null = kein Land eingerastet (Freitext im Country-Feld) — der
   // Generator braucht einen ISO-Code, das prueft die Submit-Validation.
   const [country, setCountry] = useState<string | null>("DE");
+  const [websiteFilter, setWebsiteFilter] = useState<WebsiteFilterMode>("any");
+
+  // Link-Preset fuer Affiliate-Content: /lists?website=without waehlt
+  // den Filter vor. Nach Mount statt im Initializer, damit SSR-HTML und
+  // erste Client-Render identisch bleiben (kein Hydration-Mismatch).
+  useEffect(() => {
+    const preset = new URLSearchParams(window.location.search).get("website");
+    if (preset === "without" || preset === "with") {
+      setWebsiteFilter(preset);
+    }
+  }, []);
 
   const fetchStatus = useCallback(
     async (jobId?: string): Promise<StatusResponse> => {
@@ -144,7 +174,7 @@ export function ListsClient() {
       const response = await fetch("/api/lists/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ industry, city, country }),
+        body: JSON.stringify({ industry, city, country, website: websiteFilter }),
       });
 
       if (response.status === 409) {
@@ -189,12 +219,14 @@ export function ListsClient() {
               industry={industry}
               city={city}
               country={country}
+              websiteFilter={websiteFilter}
               submitting={submitting}
               formError={formError}
               failedJob={job?.status === "failed" ? job : null}
               onIndustryChange={setIndustry}
               onCityChange={setCity}
               onCountryChange={setCountry}
+              onWebsiteFilterChange={setWebsiteFilter}
               onSubmit={handleGenerate}
             />
           )}
@@ -274,12 +306,14 @@ interface GeneratorFormProps {
   industry: string;
   city: string;
   country: string | null;
+  websiteFilter: WebsiteFilterMode;
   submitting: boolean;
   formError: string | null;
   failedJob: JobView | null;
   onIndustryChange: (value: string) => void;
   onCityChange: (value: string) => void;
   onCountryChange: (value: string | null) => void;
+  onWebsiteFilterChange: (value: WebsiteFilterMode) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }
 
@@ -287,12 +321,14 @@ function GeneratorForm({
   industry,
   city,
   country,
+  websiteFilter,
   submitting,
   formError,
   failedJob,
   onIndustryChange,
   onCityChange,
   onCountryChange,
+  onWebsiteFilterChange,
   onSubmit,
 }: GeneratorFormProps) {
   return (
@@ -301,7 +337,7 @@ function GeneratorForm({
 
       {failedJob && (
         <p className="beta-submit-error" role="alert">
-          {failureMessage(failedJob.error)}
+          {failureMessage(failedJob)}
         </p>
       )}
 
@@ -345,6 +381,32 @@ function GeneratorForm({
             onChange={onCityChange}
           />
 
+          <div className="beta-field">
+            <span className="beta-field-label">Website</span>
+            <div
+              className="lists-chip-row lists-filter-row"
+              role="radiogroup"
+              aria-label="Website filter"
+            >
+              {WEBSITE_FILTER_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={websiteFilter === option.value}
+                  className={
+                    "lists-chip" +
+                    (websiteFilter === option.value ? " is-active" : "")
+                  }
+                  onClick={() => onWebsiteFilterChange(option.value)}
+                  disabled={submitting}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
             type="submit"
             className="beta-submit"
@@ -369,6 +431,12 @@ function GeneratorForm({
   );
 }
 
+function websiteFilterNote(mode: WebsiteFilterMode | undefined): string {
+  if (mode === "without") return " Businesses without a website only.";
+  if (mode === "with") return " Businesses with a website only.";
+  return "";
+}
+
 function BuildingView({ job }: { job: JobView }) {
   const industry = job.params.industry ?? "your industry";
   const city = job.params.city ?? "your city";
@@ -378,8 +446,9 @@ function BuildingView({ job }: { job: JobView }) {
       <header className="lists-hero">
         <h1 className="lists-headline">Building your list…</h1>
         <p className="lists-sub">
-          Scanning Google Maps for {industry} in {city}. This usually takes 1
-          to 3 minutes.
+          Scanning Google Maps for {industry} in {city}.
+          {websiteFilterNote(job.params.website)} This usually takes 1 to 3
+          minutes.
         </p>
       </header>
 
@@ -416,6 +485,37 @@ function BuildingView({ job }: { job: JobView }) {
   );
 }
 
+/**
+ * Stilisierte Callday-Pre-Call-Karte mit dem ersten echten Lead —
+ * verkauft das Erlebnis ("so sieht dein erster Call aus"), nicht nur
+ * die Daten. Bewusst vereinfacht statt pixelgenau (kein Pflege-Zwilling
+ * der App-Karte) und nicht interaktiv (Vorschau, kein kaputtes UI).
+ */
+function LeadPreviewCard({ lead }: { lead: PreviewLead }) {
+  const rating = lead.custom_fields?.google_rating;
+  const meta = [lead.industry, lead.location].filter(Boolean).join(" — ");
+
+  return (
+    <div className="lists-precall-stack" aria-label="Preview of your first lead as a Callday call card">
+      <div className="lists-precall-shadow lists-precall-shadow-2" aria-hidden="true" />
+      <div className="lists-precall-shadow lists-precall-shadow-1" aria-hidden="true" />
+      <div className="lists-precall-card">
+        <p className="lists-precall-label">Your first call</p>
+        <p className="lists-precall-name">{lead.company_name}</p>
+        {meta && <p className="lists-precall-meta">{meta}</p>}
+        {rating && <p className="lists-precall-rating">{rating}</p>}
+        <div className="lists-precall-callbtn" aria-hidden="true">
+          Call {lead.phone}
+        </div>
+        <div className="lists-precall-ghost-row" aria-hidden="true">
+          <span className="lists-precall-ghost">Skip</span>
+          <span className="lists-precall-ghost">Called</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ReadyView({
   job,
   preview,
@@ -424,6 +524,7 @@ function ReadyView({
   preview: PreviewLead[];
 }) {
   const leadCount = job.leadCount ?? 0;
+  const [firstLead, ...restPreview] = preview;
 
   return (
     <>
@@ -436,12 +537,24 @@ function ReadyView({
         </h1>
         <p className="lists-sub">
           {job.listName} — deduped, phone numbers only.
+          {websiteFilterNote(job.params.website)}
         </p>
       </header>
 
-      {preview.length > 0 && (
+      {firstLead && (
+        <>
+          <LeadPreviewCard lead={firstLead} />
+          {leadCount > 1 && (
+            <p className="lists-stack-note">
+              + {leadCount - 1} more waiting in your stack
+            </p>
+          )}
+        </>
+      )}
+
+      {restPreview.length > 0 && (
         <div className="lists-preview">
-          {preview.map((lead) => (
+          {restPreview.slice(0, 3).map((lead) => (
             <div
               key={`${lead.company_name}-${lead.phone}`}
               className="lists-preview-row"
@@ -450,11 +563,6 @@ function ReadyView({
               <span className="lists-preview-phone">{lead.phone}</span>
             </div>
           ))}
-          {leadCount > preview.length && (
-            <div className="lists-preview-more">
-              + {leadCount - preview.length} more in your list
-            </div>
-          )}
         </div>
       )}
 

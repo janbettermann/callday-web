@@ -15,9 +15,12 @@ import { ListReady } from "@/emails/list-ready";
 import { FREE_LIST_SIZE } from "./config";
 import { getRequestResults } from "./outscraper";
 import {
+  buildCustomFieldDefs,
+  filterByWebsite,
   insertGeneratedList,
   sortByCityMatch,
   toCallableLeads,
+  type WebsiteFilterMode,
 } from "./pipeline";
 
 export type LeadGenJobStatus = "pending" | "processing" | "ready" | "failed";
@@ -26,6 +29,8 @@ export interface LeadGenJobParams {
   industry?: string;
   city?: string;
   country?: string;
+  /** Website-Filter der Anfrage — "without" ist der Agentur-Use-Case. */
+  website?: WebsiteFilterMode;
 }
 
 export interface LeadGenJob {
@@ -123,7 +128,8 @@ export async function processJobIfFinished(
   }
 
   const callable = toCallableLeads(results.places, job.params.industry ?? null);
-  const leads = sortByCityMatch(callable, job.params.city ?? null).slice(
+  const filtered = filterByWebsite(callable, job.params.website ?? "any");
+  const leads = sortByCityMatch(filtered, job.params.city ?? null).slice(
     0,
     FREE_LIST_SIZE,
   );
@@ -138,6 +144,7 @@ export async function processJobIfFinished(
       userId: job.user_id,
       name: listName,
       leads,
+      customFieldDefs: buildCustomFieldDefs(leads),
     });
   } catch (err) {
     console.error("[lists] list insert failed", err);

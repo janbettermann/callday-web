@@ -23,6 +23,81 @@ export interface CallableLead {
   contact_name: string | null;
   industry: string | null;
   location: string | null;
+  /** Zusatzdaten aus dem Basis-Response (Rating, Oeffnungszeiten,
+   *  Verified) — landen als Custom Fields am Lead, Shape wie beim
+   *  CSV-Import (App-Repo types/lead.ts). */
+  custom_fields: Record<string, string>;
+}
+
+export type WebsiteFilterMode = "any" | "without" | "with";
+
+export const WEBSITE_FILTER_MODES: WebsiteFilterMode[] = [
+  "any",
+  "without",
+  "with",
+];
+
+/**
+ * Custom-Field-Definitionen im Shape der App (types/lead-list.ts):
+ * enabled === true zeigt das Feld auf der Pre-Call-Card. Nur das
+ * Rating kommt auf die Karte (Icebreaker-Wert, eine Zeile) — alles
+ * andere bleibt leise verfuegbar, die Karte soll Call ausloesen,
+ * nicht Recherche.
+ */
+const CUSTOM_FIELD_CATALOG = [
+  { key: "google_rating", label: "Google rating", enabled: true },
+  { key: "opening_hours", label: "Opening hours", enabled: false },
+  { key: "google_profile_claimed", label: "Google profile claimed", enabled: false },
+];
+
+export interface GeneratedCustomFieldDef {
+  key: string;
+  label: string;
+  order: number;
+  enabled: boolean;
+}
+
+export function buildCustomFieldDefs(
+  leads: CallableLead[],
+): GeneratedCustomFieldDef[] {
+  return CUSTOM_FIELD_CATALOG.filter((def) =>
+    leads.some((lead) => def.key in lead.custom_fields),
+  ).map((def, index) => ({ ...def, order: index }));
+}
+
+function formatRating(place: OutscraperPlace): string | null {
+  if (place.rating === undefined || place.rating === null || place.rating === "") {
+    return null;
+  }
+  const reviews = typeof place.reviews === "number" ? place.reviews : null;
+  return reviews !== null
+    ? `${place.rating} ★ (${reviews} reviews)`
+    : `${place.rating} ★`;
+}
+
+/** { "Montag": ["08:00-16:00"], ... } → "Montag: 08:00-16:00; ..." */
+function formatWorkingHours(
+  hours: OutscraperPlace["working_hours"],
+): string | null {
+  if (!hours || typeof hours !== "object" || Array.isArray(hours)) return null;
+  const parts: string[] = [];
+  for (const [day, ranges] of Object.entries(hours)) {
+    const value = Array.isArray(ranges) ? ranges.join(", ") : String(ranges);
+    if (value) parts.push(`${day}: ${value}`);
+  }
+  return parts.length > 0 ? parts.join("; ") : null;
+}
+
+function toCustomFields(place: OutscraperPlace): Record<string, string> {
+  const fields: Record<string, string> = {};
+  const rating = formatRating(place);
+  if (rating) fields.google_rating = rating;
+  const hours = formatWorkingHours(place.working_hours);
+  if (hours) fields.opening_hours = hours;
+  if (typeof place.verified === "boolean") {
+    fields.google_profile_claimed = place.verified ? "Yes" : "No";
+  }
+  return fields;
 }
 
 /**
@@ -57,9 +132,26 @@ export function toCallableLeads(
       contact_name: null,
       industry: place.category?.trim() || fallbackIndustry,
       location: (place.address ?? place.full_address)?.trim() || null,
+      custom_fields: toCustomFields(place),
     });
   }
 
+  return leads;
+}
+
+/**
+ * Website-Filter — der Ziel-Filter fuer die Web-Agentur-Zielgruppe
+ * ("Betriebe ohne Website anrufen"). Outscrapers Quick-Filter sind
+ * UI-only (API unterstuetzt sie nicht, Staff-bestaetigt), deshalb
+ * filtert diese Stufe client-seitig; das website-Feld kommt im
+ * Basis-Preis mit.
+ */
+export function filterByWebsite(
+  leads: CallableLead[],
+  mode: WebsiteFilterMode,
+): CallableLead[] {
+  if (mode === "without") return leads.filter((lead) => !lead.website);
+  if (mode === "with") return leads.filter((lead) => lead.website);
   return leads;
 }
 
@@ -94,6 +186,7 @@ interface InsertListOptions {
   userId: string;
   name: string;
   leads: CallableLead[];
+  customFieldDefs: GeneratedCustomFieldDef[];
 }
 
 /**
@@ -118,6 +211,7 @@ export async function insertGeneratedList(
     total_batches: 1,
     status: "active",
     is_sample: false,
+    custom_field_defs: options.customFieldDefs,
   });
   if (listError) {
     throw new Error(`lead_lists insert failed: ${listError.message}`);

@@ -83,11 +83,13 @@ export async function GET(request: NextRequest) {
     company_name: string;
     phone: string;
     location: string | null;
+    industry: string | null;
+    custom_fields: Record<string, string>;
   }> = [];
   if (job.status === "ready" && job.list_id) {
     const { data: previewRows, error: previewError } = await admin
       .from("leads")
-      .select("company_name, phone, location")
+      .select("company_name, phone, location, industry, custom_fields")
       .eq("list_id", job.list_id)
       .order("position_in_batch", { ascending: true })
       .limit(PREVIEW_SIZE);

@@ -17,6 +17,10 @@ import { getServerSupabase } from "@/lib/supabase-server";
 import { OUTSCRAPER_FETCH_LIMIT } from "@/lib/lists/config";
 import { findCountry } from "@/lib/lists/countries";
 import { startGoogleMapsSearch } from "@/lib/lists/outscraper";
+import {
+  WEBSITE_FILTER_MODES,
+  type WebsiteFilterMode,
+} from "@/lib/lists/pipeline";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -54,13 +58,21 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "invalid_payload" }, { status: 400 });
   }
 
-  const { industry, city, country } = (body ?? {}) as Record<string, unknown>;
+  const { industry, city, country, website } = (body ?? {}) as Record<
+    string,
+    unknown
+  >;
   const cleanIndustry = cleanField(industry);
   const cleanCity = cleanField(city);
   const countryConfig = findCountry(country);
   if (!cleanIndustry || !cleanCity || !countryConfig) {
     return Response.json({ error: "invalid_input" }, { status: 400 });
   }
+  const websiteFilter: WebsiteFilterMode = WEBSITE_FILTER_MODES.includes(
+    website as WebsiteFilterMode,
+  )
+    ? (website as WebsiteFilterMode)
+    : "any";
 
   const admin = getServerSupabase();
   const webhookSecret = randomBytes(24).toString("base64url");
@@ -74,6 +86,7 @@ export async function POST(request: NextRequest) {
         industry: cleanIndustry,
         city: cleanCity,
         country: countryConfig.code,
+        website: websiteFilter,
       },
       query,
       webhook_secret: webhookSecret,

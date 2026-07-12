@@ -262,6 +262,29 @@ bewerbbareren Haken.
   B2B-Geschäftsdaten — sauber dokumentieren; AGB-Anwalt drüber (ohnehin für das
   Affiliate-Onboarding im Loop).
 
+## 13b. Website-Filter + Anreicherung (gebaut 2026-07-12)
+
+- **Website-Filter** („All / Without a website / With a website") im
+  Generator-Form — der Ziel-Filter fuer die KI-Website-Builder- und
+  Agentur-Zielgruppe. Client-seitig in der Pipeline (Outscrapers
+  Quick-Filter sind UI-only, API unterstuetzt sie nicht —
+  Staff-bestaetigt im Outscraper-Forum). Affiliate-Link-Preset:
+  `/lists?website=without` waehlt den Filter vor.
+- **Gratis-Anreicherung aus dem Basis-Response:** `google_rating`
+  (auf der Pre-Call-Card via custom_field_defs enabled=true),
+  `opening_hours` + `google_profile_claimed` (leise als Custom Fields).
+  Shape identisch zum CSV-Import (App types/lead-list.ts).
+- **Leadcard-Preview im Ready-State:** erster echter Lead als
+  stilisierte Callday-Karte (Stack-Optik, Rating-Zeile) — verkauft das
+  Erlebnis, nicht nur die Daten. Bewusst vereinfacht, kein
+  pixelgenauer App-Zwilling.
+- **Backlog (App-Seite, Post-Launch):** „No website"-Filter als
+  zusaetzliche FilterPill in der Listen-Ansicht der App (Jan-Idee
+  2026-07-12) — Filter gehoeren in den Browse-Modus, NICHT in den
+  Karten-Stack (Anti-Prokrastination). Daten liegen lokal
+  (leads.website), kein Sync-Thema. Bei groesseren Maerkten +
+  Filter-Undershoot: `skipPlaces`-Pagination als Tiefenscan-Ausbau.
+
 ## 14. Bewusst NICHT v1 / offen
 
 - **Kein volles zweites Marketing-Site-Ding** — das ist die Spin-out-Phase

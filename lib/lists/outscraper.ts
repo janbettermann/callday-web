@@ -27,6 +27,14 @@ export interface OutscraperPlace {
   full_address?: string;
   category?: string;
   business_status?: string;
+  /** Google-Rating, z. B. 4.7 (live verifiziert: number). */
+  rating?: number | string;
+  /** Anzahl Google-Reviews. */
+  reviews?: number;
+  /** Oeffnungszeiten, Tage lokalisiert: { "Montag": ["08:00-16:00"], ... } */
+  working_hours?: Record<string, string[] | string>;
+  /** Google-Business-Profil beansprucht/verifiziert. */
+  verified?: boolean;
 }
 
 export type OutscraperResultStatus = "pending" | "success" | "failed";
@@ -36,9 +44,11 @@ export interface OutscraperResults {
   places: OutscraperPlace[];
 }
 
-/** Felder eingrenzen — kleinerer Payload, schnellere Antwort. */
+/** Felder eingrenzen — kleinerer Payload, schnellere Antwort. Rating/
+ *  Reviews/Hours/Verified sind im Basis-Preis enthalten und werden als
+ *  Custom Fields an die Leads gehaengt (Icebreaker + Call-Timing). */
 const RESULT_FIELDS =
-  "query,name,phone,website,site,address,full_address,category,business_status";
+  "query,name,phone,website,site,address,full_address,category,business_status,rating,reviews,working_hours,verified";
 
 function getApiKey(): string {
   const key = process.env.OUTSCRAPER_API_KEY;
