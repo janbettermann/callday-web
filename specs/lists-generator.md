@@ -252,6 +252,32 @@ bewerbbareren Haken.
    Monitoring (Dashboard zeigt Sign-ups vs. Activated) fangen das ab — beobachten,
    falls ein Affiliate viel Low-Quality-Volumen reindrückt.
 
+## 12b. Meta-Ads-Experiment (Post-Launch, Jan-Decision 2026-07-12)
+
+Der Lead-Magnet taugt fuer Paid Social (demobarer Sofort-Wert,
+Screen-Recording-Creatives, Preset-Link `/lists?website=without` + UTM
+als Landing). **Ads ergaenzen die Affiliates, ersetzen sie nicht** —
+entgegengesetzte Risikoprofile: Affiliate = 0 € bis zur Conversion
+(50 % recurring pro Erfolg), Meta = Kosten pro Versuch. Owned-Acquisition
+wird erst bei bewiesenen Funnel-Zahlen strukturell guenstiger.
+
+**Voraussetzungen bevor Budget fliesst:**
+1. App-Launch (gleiche Gate wie Affiliate-Bewerbung).
+2. **Arbeitspaket Tracking:** Meta-Pixel/CAPI auf callday.io mit
+   Conversion-Events (Signup, Liste generiert). Achtung: Site ist
+   bisher bewusst cookieless — Pixel braucht in DACH ein
+   Consent-Banner (eigenes Paket). Ad→App-Store→Abo-Attribution ist
+   auf iOS strukturell loechrig → auf Web-Events optimieren,
+   Abo-Conversion als Kohorten-Wert in RevenueCat gegenpruefen.
+3. **Klein testen statt Kampagne:** 10–20 €/Tag, 3–4 Creatives
+   („ohne Website"-Hook vs. generischer Listen-Hook), 2 Wochen.
+   Skalieren erst bei Payback < ~3 Monaten
+   (CPL × Signup→Install × Trial→Paid gegen 14,99 $/mo).
+
+**Synergie:** Affiliate-Content ist das Creative-Labor — organisch
+funktionierende Creator-Videos per Whitelisting/Spark-Ads zur Anzeige
+machen (schlaegt selbstgebaute Ads fast immer).
+
 ## 13. Recht / Compliance
 
 - **Cold-Calling-Regeln (DE §7 UWG):** B2B braucht mutmaßliche Einwilligung, B2C
