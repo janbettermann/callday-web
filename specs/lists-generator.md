@@ -327,6 +327,34 @@ machen (schlaegt selbstgebaute Ads fast immer).
   berechnet IMMER das Gelieferte, nie das Scan-Limit — die
   Zwei-Phasen-Oekonomie rechnet exakt wie geplant.
 
+## 13c. Email-Enrichment — Testlauf-Erkenntnisse (2026-07-12)
+
+Live-Test `enrichment=leads_n_contacts` (10 Fahrschulen Koeln, echte
+API). Ergebnis: funktioniert, gehoert als **bezahltes Add-on** auf
+Folge-Listen — mit vier Erkenntnissen fuer die Umsetzung:
+
+1. **Preis verifiziert:** $3/1.000 **Domains** (Abrechnungseinheit ist
+   die gecrawlte Website, nicht der Lead). Leads ohne Website kosten
+   nichts und liefern nichts — fuer „ohne Website"-Listen ist das
+   Add-on strukturell wertlos (dort ist Telefon der einzige Kanal =
+   Callday-Verkaufsargument). Voll angereicherter Lead inkl.
+   Verifikation (~$3/1k Mails extra): unter 1 Cent.
+2. **Zeilen-Explosion:** Mit Enrichment liefert Outscraper EINE ZEILE
+   PRO GEFUNDENER E-MAIL (10 Firmen → 19 Zeilen). Pipeline muss auf
+   einen Lead zurueckfalten: primaere Mail waehlen, weitere Mails in
+   ein Custom Field.
+3. **Domain-Rauschen:** Der Crawler sammelt ALLE Adressen einer Domain
+   und ordnet sie jedem Eintrag auf dieser Domain zu (Filial-Mails
+   landen bei der falschen Filiale; Webagentur-/Partner-Adressen aus
+   dem Footer tauchen auf). Noetig: Plausibilitaets-Stufe — Adressen
+   bevorzugen, deren Domain zur Lead-Website passt.
+4. **Copy-Vorsicht:** Personen-Namen mit Rolle kamen NICHT mit
+   (`name_for_emails` = bereinigter Firmenname). Dafuer tauchen echte
+   private Inhaber-Postfaecher auf (GMX-Fund im Test). Versprechen
+   fuers Add-on: „E-Mails direkt von der Firmen-Website, inkl.
+   persoenlicher Postfaecher wo vorhanden" — NICHT „Decision-Maker-
+   Namen", bis ein groesserer Test Namens-Ausbeute belegt.
+
 ## 14. Bewusst NICHT v1 / offen
 
 - **Kein volles zweites Marketing-Site-Ding** — das ist die Spin-out-Phase
