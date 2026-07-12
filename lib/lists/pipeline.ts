@@ -55,14 +55,35 @@ export interface GeneratedCustomFieldDef {
   label: string;
   order: number;
   enabled: boolean;
+  /**
+   * Pflicht fuers "Configure lead card"-Sheet der App: es baut sein
+   * Spalten-Universum aus schema_field_sources + def.header — Defs ohne
+   * header sind dort unsichtbar und wuerden beim Speichern entfernt.
+   */
+  header: string;
 }
+
+/**
+ * Quell-Spalten-Mapping fuer das Re-Mapping-Sheet der App
+ * (lead_lists.schema_field_sources) — als "Quelle" dienen die
+ * Spaltennamen des Generator-Exports (identisch zu XLSX/CSV-Headern).
+ * email/contact_name fehlen bewusst: der Generator liefert sie nicht,
+ * "No source" ist dort die korrekte Anzeige (beide optional).
+ */
+const GENERATED_SCHEMA_SOURCES: Record<string, string> = {
+  company_name: "Company",
+  phone: "Phone",
+  website: "Website",
+  industry: "Industry",
+  location: "Location",
+};
 
 export function buildCustomFieldDefs(
   leads: CallableLead[],
 ): GeneratedCustomFieldDef[] {
   return CUSTOM_FIELD_CATALOG.filter((def) =>
     leads.some((lead) => def.key in lead.custom_fields),
-  ).map((def, index) => ({ ...def, order: index }));
+  ).map((def, index) => ({ ...def, header: def.label, order: index }));
 }
 
 function formatRating(place: OutscraperPlace): string | null {
@@ -229,6 +250,7 @@ export async function insertGeneratedList(
     status: "active",
     is_sample: false,
     custom_field_defs: options.customFieldDefs,
+    schema_field_sources: GENERATED_SCHEMA_SOURCES,
   });
   if (listError) {
     throw new Error(`lead_lists insert failed: ${listError.message}`);
