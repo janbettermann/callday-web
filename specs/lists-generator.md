@@ -50,6 +50,27 @@ zweierlei:
     Einbahnstraße** (auch ein voll-neutraler Brand bleibt offen, falls Daten je
     zeigen, dass der Callday-Name Cold-Call-Sucher abschreckt — unwahrscheinlich).
 
+## 2b. Architektur-Update 2026-07-13: EIN Logged-in-Zuhause (/account)
+
+**Der Generator lebt eingeloggt in der Account-Sektion**
+(`app/account/LeadListsSection.tsx`), nicht mehr auf /lists — Folge der
+Credits-Entscheidung (§10): der Generator ist kein Standalone-Produkt,
+sondern ein Konto-Feature, das im Web beginnt.
+
+- **/lists bleibt als Logged-out-Akquise-Tuer** (Message-Match fuer
+  Affiliate-/SEO-Traffic mit Listen-Intent; Preset-Links). Eingeloggt →
+  Redirect auf /account, Query-Presets reisen mit (auch durch den
+  Signup via nextPath).
+- **/account ist zustandsgesteuert, nicht herkunftsgesteuert** — beide
+  Funnel (App-Landing-Signup + Listen-Signup) landen auf derselben
+  Seite, der beobachtbare Zustand ordnet die Bausteine: keine Liste →
+  Generator-Card prominent („Get your first lead list — free", loest
+  fuer App-Signups das Leere-App-Problem); Job laeuft → Building-Card;
+  Liste fertig → Listen-Card mit Preview + Download. TestFlight-Card
+  direkt darunter = Schritt 2 (App).
+- Offen (bewusst nach hinten gestellt): „first list free"-Kommunikation
+  auf der App-Landing (Jan macht Copy/Platzierung separat).
+
 ## 3. Front-Door (auth-aware, ein Konto)
 
 `/lists` rendert je nach Zustand (wie die Landing per `useIsLoggedIn`):

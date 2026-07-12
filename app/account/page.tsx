@@ -11,6 +11,7 @@ import {
   signOutAction,
 } from "./actions";
 import { ResendTestFlightButton } from "./ResendTestFlightButton";
+import { LeadListsSection } from "./LeadListsSection";
 
 export const metadata: Metadata = {
   title: "Your account · Callday",
@@ -165,6 +166,12 @@ export default async function AccountPage() {
               : "Welcome to the beta"}
           </h1>
           <p className="account-sub">You call. Callday handles the rest.</p>
+
+          {/* Lead-Listen: Generator/Building/Ready, zustandsgesteuert —
+              das Logged-in-Zuhause des Listen-Generators (beide Funnel
+              landen hier, siehe LeadListsSection). Bewusst VOR der
+              TestFlight-Card: Schritt 1 Liste, Schritt 2 App. */}
+          <LeadListsSection />
 
           {/* Install-/Onboarding-Card — immer sichtbar: direkt nach dem Signup
               UND wenn ein Rueckkehrer (neues Handy) die App neu laden muss. */}
