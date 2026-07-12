@@ -320,10 +320,12 @@ machen (schlaegt selbstgebaute Ads fast immer).
   Queries/Request) → deutsche Labels, City-Sort intakt. Extremfall
   $0,12 statt $1,20. Preis: zweite Async-Stufe im Job (Latenz +
   State). **Trigger:** vor DACH-Meta-Kampagne ODER >~200 gefilterte
-  DACH-Listen/Monat in lead_gen_jobs. **Vorab-Validierung (Jan):** im
-  Outscraper-Usage-Dashboard pruefen, ob der El-Paso-Filter-Lauf
-  (2026-07-12, 15 Treffer bei Scan-Limit 500) mit 15 Records
-  abgerechnet wurde — bestaetigt die Billing-Annahme.
+  DACH-Listen/Monat in lead_gen_jobs. **Billing-Annahme VALIDIERT (2026-07-12, Jans
+  Usage-Dashboard):** El-Paso-Filter-Lauf (15 Treffer bei Scan-Limit
+  500) wurde mit exakt 15 Records abgerechnet; Fahrschulen-Koeln
+  (unfiltered, DE) mit 119 = zurueckgegebene Records. Outscraper
+  berechnet IMMER das Gelieferte, nie das Scan-Limit — die
+  Zwei-Phasen-Oekonomie rechnet exakt wie geplant.
 
 ## 14. Bewusst NICHT v1 / offen
 
