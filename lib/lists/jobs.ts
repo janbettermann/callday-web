@@ -9,6 +9,7 @@
  * pending→processing stellt sicher, dass nur einer verarbeitet.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { ListReady } from "@/emails/list-ready";
@@ -177,6 +178,13 @@ async function failJob(
   jobId: string,
   message: string,
 ): Promise<LeadGenJob> {
+  // Failed Jobs sollen aktiv alarmieren, nicht nur in der Admin-Tabelle
+  // liegen — bewusst ohne Query/Nutzerdaten, nur Fehlercode + Job-Ref.
+  Sentry.captureMessage(`lead-gen job failed: ${message}`, {
+    level: "error",
+    tags: { feature: "lists-generator" },
+    extra: { jobId },
+  });
   const { data, error } = await admin
     .from("lead_gen_jobs")
     .update({

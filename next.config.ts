@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import createMDX from "@next/mdx";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const withMDX = createMDX({
   extension: /\.mdx?$/,
@@ -35,4 +36,12 @@ const nextConfig: NextConfig = {
   ],
 };
 
-export default withMDX(nextConfig);
+// Sentry-Wrap: injiziert die Client-/Server-Configs in den Build und
+// laedt Source Maps hoch, WENN ein SENTRY_AUTH_TOKEN in den Env-Vars
+// liegt (optional — ohne Token wird der Upload still uebersprungen,
+// Capture funktioniert trotzdem, nur ohne entzifferte Stacktraces).
+export default withSentryConfig(withMDX(nextConfig), {
+  org: "callday",
+  project: "callday-web",
+  silent: true,
+});
