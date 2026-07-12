@@ -88,6 +88,23 @@ function formatWorkingHours(
   return parts.length > 0 ? parts.join("; ") : null;
 }
 
+/**
+ * Google-Maps-Listings haengen an Website-Links teils percent-encodete
+ * Tracking-Querys an (`...%3Futm_source%3Dgoogle...`) — fuer eine
+ * Lead-Liste zaehlt die Seite, nicht der Kampagnen-Anhang.
+ */
+function cleanWebsite(raw: string | undefined): string | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  const lower = value.toLowerCase();
+  let cut = value.length;
+  for (const marker of ["?", "%3f", "#"]) {
+    const index = lower.indexOf(marker);
+    if (index !== -1 && index < cut) cut = index;
+  }
+  return value.slice(0, cut) || null;
+}
+
 function toCustomFields(place: OutscraperPlace): Record<string, string> {
   const fields: Record<string, string> = {};
   const rating = formatRating(place);
@@ -128,7 +145,7 @@ export function toCallableLeads(
       company_name: name,
       phone,
       email: null,
-      website: (place.website ?? place.site)?.trim() || null,
+      website: cleanWebsite(place.website ?? place.site),
       contact_name: null,
       industry: place.category?.trim() || fallbackIndustry,
       location: (place.address ?? place.full_address)?.trim() || null,

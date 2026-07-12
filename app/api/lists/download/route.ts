@@ -1,13 +1,19 @@
 /**
- * GET /api/lists/download?list=<id> — CSV-Export einer generierten
- * Liste. Kein Gate (bewusste Entscheidung, Spec §5): die Gratis-Liste
- * ist frei herunterladbar, der Wertabgriff ist der Signup.
+ * GET /api/lists/download?list=<id>[&format=xlsx] — Export einer
+ * generierten Liste. Kein Gate (bewusste Entscheidung, Spec §5): die
+ * Gratis-Liste ist frei herunterladbar, der Wertabgriff ist der Signup.
+ *
+ * Zwei Formate: `xlsx` (Default-Button in der UI — formatierte
+ * Kopfzeile, Freeze, Auto-Filter; oeffnet locale-unabhaengig korrekt,
+ * waehrend Komma-CSV in deutschem Excel in einer Spalte landet) und
+ * `csv` als Rohformat fuer CRM-Importe.
  *
  * Auth: eingeloggter User; die Liste muss ihm gehoeren (Ownership-Check
  * gegen lead_lists.user_id, sonst 404).
  */
 
 import { NextRequest } from "next/server";
+import ExcelJS from "exceljs";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
 
@@ -75,28 +81,37 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "download_failed" }, { status: 500 });
   }
 
-  const lines = [
-    CSV_HEADER.map(csvCell).join(","),
-    ...(leads ?? []).map((lead) =>
-      [
-        lead.company_name,
-        lead.phone,
-        lead.email,
-        lead.website,
-        lead.contact_name,
-        lead.industry,
-        lead.location,
-      ]
-        .map(csvCell)
-        .join(","),
-    ),
-  ];
+  const rows = (leads ?? []).map((lead) => [
+    lead.company_name,
+    lead.phone,
+    lead.email,
+    lead.website,
+    lead.contact_name,
+    lead.industry,
+    lead.location,
+  ]);
 
   const slug =
     list.name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "") || "leads";
+
+  if (request.nextUrl.searchParams.get("format") === "xlsx") {
+    const buffer = await buildWorkbook(list.name, rows);
+    return new Response(buffer, {
+      headers: {
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="callday-${slug}.xlsx"`,
+      },
+    });
+  }
+
+  const lines = [
+    CSV_HEADER.map(csvCell).join(","),
+    ...rows.map((row) => row.map(csvCell).join(",")),
+  ];
 
   // BOM, damit Excel das UTF-8 (Umlaute in Firmennamen) korrekt oeffnet.
   return new Response("\u{FEFF}" + lines.join("\r\n"), {
@@ -105,4 +120,48 @@ export async function GET(request: NextRequest) {
       "Content-Disposition": `attachment; filename="callday-${slug}.csv"`,
     },
   });
+}
+
+const COLUMN_WIDTHS = [34, 20, 26, 42, 20, 22, 40];
+
+/**
+ * Formatiertes Workbook: Brand-blaue Kopfzeile (fixiert), Auto-Filter,
+ * lesbare Spaltenbreiten. Bewusst schlicht — es soll nach sauberem
+ * Werkzeug aussehen, nicht nach Report-Deko.
+ */
+async function buildWorkbook(
+  listName: string,
+  rows: Array<Array<string | null>>,
+): Promise<ArrayBuffer> {
+  const workbook = new ExcelJS.Workbook();
+  // Sheet-Name = Listenname (Excel-Limit 31 Zeichen, Sonderzeichen raus).
+  const sheetName =
+    listName.replace(/[\\/?*[\]:]/g, "").trim().slice(0, 31) || "Leads";
+  const sheet = workbook.addWorksheet(sheetName, {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
+
+  sheet.columns = CSV_HEADER.map((header, index) => ({
+    header,
+    width: COLUMN_WIDTHS[index],
+  }));
+  for (const row of rows) {
+    sheet.addRow(row.map((value) => value ?? ""));
+  }
+
+  const headerRow = sheet.getRow(1);
+  headerRow.height = 22;
+  headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+  headerRow.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FF3564E0" },
+  };
+  headerRow.alignment = { vertical: "middle" };
+  sheet.autoFilter = { from: "A1", to: "G1" };
+
+  // Zur Laufzeit ein Node-Buffer — als BodyInit-kompatibler ArrayBuffer
+  // typisiert (exceljs' eigener Buffer-Typ passt nicht auf Response).
+  const buffer = await workbook.xlsx.writeBuffer();
+  return buffer as ArrayBuffer;
 }

@@ -3068,6 +3068,11 @@ h2 .accent {
   max-width: 420px;
   line-height: 1.5;
 }
+.lists-meta-link {
+  color: var(--blue-deep);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .lists-chip-row {
   display: flex;
   flex-wrap: wrap;

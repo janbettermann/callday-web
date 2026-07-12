@@ -575,10 +575,10 @@ function ReadyView({
         </Link>
         {job.listId && (
           <a
-            href={`/api/lists/download?list=${job.listId}`}
+            href={`/api/lists/download?list=${job.listId}&format=xlsx`}
             className="account-btn account-btn-secondary"
           >
-            Download CSV
+            Download for Excel
           </a>
         )}
       </div>
@@ -586,6 +586,18 @@ function ReadyView({
       <p className="lists-meta">
         Your list is already in your Callday account — it&apos;ll be waiting
         when you open the app.
+        {job.listId && (
+          <>
+            {" "}
+            Need a plain file instead?{" "}
+            <a
+              className="lists-meta-link"
+              href={`/api/lists/download?list=${job.listId}`}
+            >
+              Download CSV
+            </a>
+          </>
+        )}
       </p>
     </>
   );
