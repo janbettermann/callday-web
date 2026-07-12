@@ -14,6 +14,15 @@ export const FREE_LIST_SIZE = 250;
 export const OUTSCRAPER_FETCH_LIMIT = 400;
 
 /**
+ * Maximale Scan-Tiefe bei aktivem Server-Filter: Das limit zaehlt
+ * GESCANNTE Plaetze, nicht gefilterte Treffer (live gemessen
+ * 2026-07-12: Baseline 10 Records/1 ohne Website vs. Filter-Lauf
+ * 1 Record bei limit 10). Zurueck kommen nur Treffer — bei
+ * Filter-Laeufen lohnt darum das API-Maximum.
+ */
+export const OUTSCRAPER_MAX_SCAN_LIMIT = 500;
+
+/**
  * Kuratierte Branchen-Vorschlaege fuer die Chips unter dem Industry-Feld.
  * Scharf auf Cold-Calling-taugliche B2B-Branchen (Spec §11) — Freitext
  * bleibt moeglich, die Chips senken nur die Muell-Query-Quote.

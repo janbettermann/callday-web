@@ -14,7 +14,10 @@ import { NextRequest } from "next/server";
 import { randomBytes } from "crypto";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
-import { OUTSCRAPER_FETCH_LIMIT } from "@/lib/lists/config";
+import {
+  OUTSCRAPER_FETCH_LIMIT,
+  OUTSCRAPER_MAX_SCAN_LIMIT,
+} from "@/lib/lists/config";
 import { findCountry } from "@/lib/lists/countries";
 import { startGoogleMapsSearch } from "@/lib/lists/outscraper";
 import {
@@ -117,10 +120,18 @@ export async function POST(request: NextRequest) {
     if (websiteFilter === "with") serverFilters.push("only_with_website");
   }
 
+  // Bei aktivem Website-Server-Filter zaehlt das Limit gescannte
+  // Plaetze (nicht Treffer) — dann volle Scan-Tiefe, zurueck kommen
+  // ohnehin nur die Matches.
+  const scanLimit =
+    serverFilters.length > 0 && websiteFilter !== "any"
+      ? OUTSCRAPER_MAX_SCAN_LIMIT
+      : OUTSCRAPER_FETCH_LIMIT;
+
   try {
     const requestId = await startGoogleMapsSearch({
       query,
-      limit: OUTSCRAPER_FETCH_LIMIT,
+      limit: scanLimit,
       region: countryConfig.code,
       language: countryConfig.language,
       webhookUrl,
