@@ -99,6 +99,14 @@ eine Liste wollen).
   (z. B. 100–250 vs. 500) tradet Hook-Stärke gegen Kosten-/Leak-Exposure.
   Kleiner aktiviert immer noch („meine Leads sind schon in der App"), kostet aber
   weniger pro Nicht-Konvertierer. Mit Conversion-Daten tunen (siehe §11).
+- **Re-affirmiert 2026-07-12:** Die Idee „Download weg, Liste nur in der
+  App" (mehr Install-Druck) wurde geprüft und **verworfen** — Bait-
+  Wahrnehmung vergiftet Affiliate-Glaubwürdigkeit + Word-of-Mouth
+  (Affiliates bewerben nichts, was ihre Kommentarspalte zerlegt),
+  Markt-Standard ist Liste=Datei, und Desktop-Traffic sähe eine
+  Sackgasse. Der App-Push läuft stattdessen über die Abo-Credits (§10):
+  Der Generator wird für Abonnenten zum wiederkehrenden Abo-Feature —
+  Zwang durch Wert ersetzt.
 
 ## 6. Outscraper-Integration (verifiziert aus OpenAPI v0.4.3)
 
@@ -183,16 +191,35 @@ Live-Push aufs Gerät. Für den Funnel reicht das (Install → Open → Liste da
 Live-Erscheinen bei offener App bräuchte einen Extra-Trigger (Realtime oder
 Push-Notification → Pull). (Related Memory: `feedback_local_db_single_tenant`.)
 
-## 10. Monetarisierung / Billing
+## 10. Monetarisierung — Abo-Credits (ENTSCHEIDUNG 2026-07-12, ersetzt Stripe-à-la-carte)
 
-- **Gratis:** 1 Liste/Konto (im Funnel).
-- **Bezahlte Folge-Listen:** à-la-carte **via Stripe im Web** — **kein
-  Apple-Cut.** (In-App-Consumables auf iOS = 15–30 % IAP + Regeln; deshalb ist
-  der Web-Kanal der bessere Ort fürs à-la-carte-Listen-Geld.) Stripe wurde für
-  den Launch rausgenommen (Apple-IAP-only) → **Wieder-Einführung für Web-Listen
-  ist eine bewusste Post-Launch-Entscheidung**, deferred.
-- **Haupt-Umsatz bleibt das App-Abo** ($14.99/mo). Listen sind ein Zweitstrom +
-  Akquise, nicht der Kern.
+Folge-Listen laufen NICHT über Einzelkäufe, sondern als **Abo-Benefit**:
+Callday-Abonnenten bekommen **500 Generator-Leads pro Monat** als Credits.
+
+- **Warum statt Stripe à la carte:** braucht **keine Web-Zahlung** — das
+  Abo läuft wie geplant über Apple-IAP, die Credits sind ein Entitlement
+  daraus. Die „Stripe-Wiedereinführung?"-Frage stirbt damit komplett.
+  COGS trivial: 500 Leads ≤ ~$1,50 gegen $14.99 Abo (<10 %, real weniger
+  — Stadt-Pools sind kleiner, und nicht jeder schöpft aus).
+- **Stacking als Churn-Bremse:** ungenutzte Credits rollen über — Loss
+  Aversion (Kündigen = gesammelte Credits verlieren), und es entschärft
+  nebenbei das bewusst fehlende Pause-Feature (ruhige Monate sammeln
+  wenigstens Wert an). **Rollover-Cap: 3 Monatsrationen (1.500)** — für
+  die Lesbarkeit des Versprechens, nicht wegen der Kosten.
+- **Zahl: mit 500 starten, nicht 1.000** — erhöhen ist später ein
+  Geschenk, senken ein Skandal.
+- **Kommunikation von Anfang an** (Jans Bedingung): Paywall-Bullet
+  („500 fresh leads every month"), Import-Trigger, Account-Listen-Card
+  („Need another list?" wird für Abonnenten zum echten Generate-Button).
+- **Free-User:** unverändert 1 Gratis-Liste/Konto (§5) — Funnel bleibt.
+- **Verbrauchseinheit:** gelieferte Leads pro Job (lead_count) — dieselbe
+  Einheit, nach der Outscraper uns berechnet (validiert §12b/13b).
+- **Umsetzung (Post-Launch, ~2–3 Tage, erst NACH IAP-Verdrahtung):**
+  Credits-Ledger (Tabelle + monatliche Gutschrift), Abo-Status web-seitig
+  (RevenueCat-Webhook → profiles), Metering in der Generate-Route,
+  Credit-Anzeige in Account-Card + /lists.
+- **Haupt-Umsatz bleibt das App-Abo** — Credits machen das Abo wertiger;
+  Listen sind bewusst kein eigener Umsatzstrom mehr.
 
 ## 11. Zielgruppen-Qualität + Unit Economics — WATCH-POINT #2
 
@@ -359,8 +386,10 @@ Folge-Listen — mit vier Erkenntnissen fuer die Umsetzung:
 
 - **Kein volles zweites Marketing-Site-Ding** — das ist die Spin-out-Phase
   (eigene Subdomain/Brand).
-- **Outscraper-Preis** live bestätigen (§6).
-- **Stripe-Wiedereinführung** für Folge-Listen: Post-Launch (§10).
+- **Outscraper-Preis** live bestätigen (§6). ✅ erledigt (§12b/13c).
+- ~~**Stripe-Wiedereinführung** für Folge-Listen~~ — **GESTRICHEN
+  2026-07-12:** Folge-Listen laufen als Abo-Credits (§10), keine
+  Web-Zahlung nötig.
 - **Email-Enrichment** (`leads_n_contacts`) optional + teurer — später zuschaltbar.
 - **Raw-CSV bei bezahlten Listen** ist Standard; bei der Gratis-Liste auch (§5).
 
