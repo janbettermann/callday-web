@@ -310,6 +310,20 @@ machen (schlaegt selbstgebaute Ads fast immer).
   Karten-Stack (Anti-Prokrastination). Daten liegen lokal
   (leads.website), kein Sync-Thema. Bei groesseren Maerkten +
   Filter-Undershoot: `skipPlaces`-Pagination als Tiefenscan-Ausbau.
+- **Geplante Optimierung: Zwei-Phasen-Fetch fuer gefilterte
+  DACH-Laeufe** (Jan-Einwand 2026-07-12, berechtigt): Client-Filter
+  bezahlt den vollen Raw-Scan — bei 5 % Trefferquote ~$1,20 pro Liste
+  fuer 20 Leads; auf Kampagnen-Volumen (1.000 Listen/Monat) vierstellig
+  vermeidbar. Loesung OHNE en-Zwang: (1) `language=en` + Server-Filter
+  → nur Treffer werden geliefert/berechnet, nur `place_id`s verwenden;
+  (2) place_ids als Batch-Query mit `language=de` nachladen (bis 1.000
+  Queries/Request) → deutsche Labels, City-Sort intakt. Extremfall
+  $0,12 statt $1,20. Preis: zweite Async-Stufe im Job (Latenz +
+  State). **Trigger:** vor DACH-Meta-Kampagne ODER >~200 gefilterte
+  DACH-Listen/Monat in lead_gen_jobs. **Vorab-Validierung (Jan):** im
+  Outscraper-Usage-Dashboard pruefen, ob der El-Paso-Filter-Lauf
+  (2026-07-12, 15 Treffer bei Scan-Limit 500) mit 15 Records
+  abgerechnet wurde — bestaetigt die Billing-Annahme.
 
 ## 14. Bewusst NICHT v1 / offen
 
