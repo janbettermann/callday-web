@@ -36,6 +36,13 @@ const CSV_HEADER = [
   "Location",
 ];
 
+/** Shape der custom_field_defs-Eintraege (siehe lib/lists/pipeline.ts). */
+interface CustomFieldDef {
+  key: string;
+  label: string;
+  order: number;
+}
+
 function csvCell(value: string | null | undefined): string {
   return `"${String(value ?? "").replace(/"/g, '""')}"`;
 }
@@ -57,7 +64,7 @@ export async function GET(request: NextRequest) {
   const admin = getServerSupabase();
   const { data: list, error: listError } = await admin
     .from("lead_lists")
-    .select("id, name, user_id")
+    .select("id, name, user_id, custom_field_defs")
     .eq("id", listId)
     .maybeSingle();
   if (listError) {
@@ -71,7 +78,7 @@ export async function GET(request: NextRequest) {
   const { data: leads, error: leadsError } = await admin
     .from("leads")
     .select(
-      "company_name, phone, email, website, contact_name, industry, location",
+      "company_name, phone, email, website, contact_name, industry, location, custom_fields",
     )
     .eq("list_id", listId)
     .order("position_in_batch", { ascending: true })
@@ -81,6 +88,14 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "download_failed" }, { status: 500 });
   }
 
+  // Custom Fields (Google rating, Opening hours, …) haengen als
+  // dynamische Spalten hinter den Standard-Spalten — der Export soll
+  // alles enthalten, was die App zeigt.
+  const customDefs = ((list.custom_field_defs ?? []) as CustomFieldDef[])
+    .slice()
+    .sort((a, b) => a.order - b.order);
+
+  const header = [...CSV_HEADER, ...customDefs.map((def) => def.label)];
   const rows = (leads ?? []).map((lead) => [
     lead.company_name,
     lead.phone,
@@ -89,6 +104,7 @@ export async function GET(request: NextRequest) {
     lead.contact_name,
     lead.industry,
     lead.location,
+    ...customDefs.map((def) => lead.custom_fields?.[def.key] ?? ""),
   ]);
 
   const slug =
@@ -98,7 +114,7 @@ export async function GET(request: NextRequest) {
       .replace(/^-+|-+$/g, "") || "leads";
 
   if (request.nextUrl.searchParams.get("format") === "xlsx") {
-    const buffer = await buildWorkbook(list.name, rows);
+    const buffer = await buildWorkbook(list.name, header, rows);
     return new Response(buffer, {
       headers: {
         "Content-Type":
@@ -109,7 +125,7 @@ export async function GET(request: NextRequest) {
   }
 
   const lines = [
-    CSV_HEADER.map(csvCell).join(","),
+    header.map(csvCell).join(","),
     ...rows.map((row) => row.map(csvCell).join(",")),
   ];
 
@@ -122,7 +138,26 @@ export async function GET(request: NextRequest) {
   });
 }
 
+/** Feste Breiten fuer die 7 Standard-Spalten. */
 const COLUMN_WIDTHS = [34, 20, 26, 42, 20, 22, 40];
+
+/**
+ * Breite fuer dynamische Custom-Spalten aus dem Inhalt ableiten
+ * (laengste Zelle der ersten Zeilen, geklemmt) — Opening hours ist
+ * lang, ein Rating kurz; eine feste Breite passt nie beiden.
+ */
+function widthForColumn(
+  rows: Array<Array<string | null>>,
+  columnIndex: number,
+  headerLabel: string,
+): number {
+  let longest = headerLabel.length;
+  for (const row of rows.slice(0, 50)) {
+    const length = (row[columnIndex] ?? "").length;
+    if (length > longest) longest = length;
+  }
+  return Math.min(60, Math.max(16, longest + 2));
+}
 
 /**
  * Formatiertes Workbook: Brand-blaue Kopfzeile (fixiert), Auto-Filter,
@@ -131,6 +166,7 @@ const COLUMN_WIDTHS = [34, 20, 26, 42, 20, 22, 40];
  */
 async function buildWorkbook(
   listName: string,
+  header: string[],
   rows: Array<Array<string | null>>,
 ): Promise<ArrayBuffer> {
   const workbook = new ExcelJS.Workbook();
@@ -141,9 +177,9 @@ async function buildWorkbook(
     views: [{ state: "frozen", ySplit: 1 }],
   });
 
-  sheet.columns = CSV_HEADER.map((header, index) => ({
-    header,
-    width: COLUMN_WIDTHS[index],
+  sheet.columns = header.map((label, index) => ({
+    header: label,
+    width: COLUMN_WIDTHS[index] ?? widthForColumn(rows, index, label),
   }));
   for (const row of rows) {
     sheet.addRow(row.map((value) => value ?? ""));
@@ -158,7 +194,10 @@ async function buildWorkbook(
     fgColor: { argb: "FF3564E0" },
   };
   headerRow.alignment = { vertical: "middle" };
-  sheet.autoFilter = { from: "A1", to: "G1" };
+  sheet.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: 1, column: header.length },
+  };
 
   // Zur Laufzeit ein Node-Buffer — als BodyInit-kompatibler ArrayBuffer
   // typisiert (exceljs' eigener Buffer-Typ passt nicht auf Response).
