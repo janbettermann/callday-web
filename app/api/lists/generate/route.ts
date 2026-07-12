@@ -105,6 +105,18 @@ export async function POST(request: NextRequest) {
 
   const webhookUrl = `${request.nextUrl.origin}/api/lists/webhook?job=${job.id}&secret=${webhookSecret}`;
 
+  // Server-seitige Quick-Filter gibt es nur bei language=en (API-
+  // Constraint). Fuer en-Maerkte lassen wir Outscraper vorfiltern —
+  // tiefere Ausbeute, weniger verworfene (bezahlte) Records. Fuer
+  // lokalisierte Maerkte (de/fr/…) filtert die Pipeline client-seitig;
+  // sie laeuft als Garantie-Netz ohnehin immer.
+  const serverFilters: string[] = [];
+  if (countryConfig.language === "en") {
+    serverFilters.push("with_phone", "operational_only");
+    if (websiteFilter === "without") serverFilters.push("only_without_website");
+    if (websiteFilter === "with") serverFilters.push("only_with_website");
+  }
+
   try {
     const requestId = await startGoogleMapsSearch({
       query,
@@ -112,6 +124,7 @@ export async function POST(request: NextRequest) {
       region: countryConfig.code,
       language: countryConfig.language,
       webhookUrl,
+      filters: serverFilters,
     });
     await admin
       .from("lead_gen_jobs")

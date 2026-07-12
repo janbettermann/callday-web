@@ -62,6 +62,14 @@ interface StartSearchOptions {
   region: string;
   language: string;
   webhookUrl: string;
+  /**
+   * Server-seitige Quick-Filter (only_without_website, with_phone, …).
+   * WICHTIG: Outscraper unterstuetzt sie nur bei language=en — der
+   * Aufrufer (generate-Route) setzt sie deshalb nur fuer en-Maerkte;
+   * fuer de/fr/… filtert die Pipeline client-seitig, damit Kategorien
+   * und Ortsnamen lokalisiert bleiben.
+   */
+  filters?: string[];
 }
 
 /** Startet den async Google-Maps-Search-Job, gibt die Request-ID zurueck. */
@@ -77,6 +85,9 @@ export async function startGoogleMapsSearch(
     webhook: options.webhookUrl,
     fields: RESULT_FIELDS,
   });
+  for (const filter of options.filters ?? []) {
+    params.append("filters", filter);
+  }
 
   const response = await fetch(
     `${OUTSCRAPER_BASE_URL}/google-maps-search?${params.toString()}`,
