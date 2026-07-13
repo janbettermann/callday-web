@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
-import { ListsNav } from "../ListsNav";
+import { AppNav } from "../../components/AppNav";
 import { GeneratorClient } from "./GeneratorClient";
 
 /**
@@ -41,7 +41,7 @@ export default async function NewListPage({
 
   return (
     <>
-      <ListsNav authed />
+      <AppNav active="lists" />
       <main className="lists-page">
         <GeneratorClient />
       </main>

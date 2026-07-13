@@ -2,18 +2,12 @@ import Link from "next/link";
 import { CalldayLogo } from "../components/CalldayLogo";
 
 /**
- * Nav der Listen-Welt (Landing, Uebersicht, Generator) — Logo +
- * "Lists"-Sub-Brand-Pill. Rechts kontextabhaengig: ausgeloggt der
- * Sign-in-Link (Ziel konfigurierbar, damit Filter-Presets ueberleben),
- * eingeloggt der Weg zurueck zur Account-Sektion.
+ * Nav der LOGGED-OUT Listen-Landing — Logo + "Lists"-Sub-Brand-Pill
+ * (Akquise-Branding) + Sign-in-Link. Das Ziel des Sign-in ist
+ * konfigurierbar, damit Filter-Presets den Login-Umweg ueberleben.
+ * Eingeloggte Seiten nutzen die AppNav (components/AppNav.tsx).
  */
-export function ListsNav({
-  authed,
-  signInNext = "/lists",
-}: {
-  authed: boolean;
-  signInNext?: string;
-}) {
+export function ListsNav({ signInNext = "/lists" }: { signInNext?: string }) {
   return (
     <nav className="site-nav" data-scrolled="true">
       <div className="container nav-inner">
@@ -24,18 +18,12 @@ export function ListsNav({
           </Link>
           <span className="lists-brand-pill">Lists</span>
         </div>
-        {authed ? (
-          <Link className="nav-cta" href="/account">
-            Account
-          </Link>
-        ) : (
-          <Link
-            className="nav-cta"
-            href={`/login?next=${encodeURIComponent(signInNext)}`}
-          >
-            Sign in
-          </Link>
-        )}
+        <Link
+          className="nav-cta"
+          href={`/login?next=${encodeURIComponent(signInNext)}`}
+        >
+          Sign in
+        </Link>
       </div>
     </nav>
   );

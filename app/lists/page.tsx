@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { buildListName, fetchJobsForUser } from "@/lib/lists/jobs";
+import { AppNav } from "../components/AppNav";
 import type { JobView } from "./job-view";
 import { ListsClient } from "./ListsClient";
-import { ListsNav } from "./ListsNav";
 import { MyLists } from "./MyLists";
 
 /**
@@ -66,7 +66,7 @@ export default async function ListsPage({
 
   return (
     <>
-      <ListsNav authed />
+      <AppNav active="lists" />
       <main className="lists-page">
         <MyLists jobs={jobViews} />
       </main>

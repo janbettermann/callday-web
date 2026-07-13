@@ -31,7 +31,7 @@ export function ListsClient() {
 
   return (
     <>
-      <ListsNav authed={false} signInNext={nextPath} />
+      <ListsNav signInNext={nextPath} />
 
       <main className="lists-page">
         <div className="lists-inner">

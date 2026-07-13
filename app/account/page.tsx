@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
+import { AppNav } from "../components/AppNav";
 import { CalldayLogo } from "../components/CalldayLogo";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { parseUserAgent } from "@/lib/user-agent";
@@ -149,14 +150,7 @@ export default async function AccountPage() {
       <div className="bg-orb bg-orb-2" />
       <div className="bg-orb bg-orb-3" />
 
-      <nav className="site-nav" data-scrolled="true">
-        <div className="container nav-inner">
-          <Link href="/" className="logo" style={{ textDecoration: "none" }}>
-            <CalldayLogo size={32} />
-            Callday
-          </Link>
-        </div>
-      </nav>
+      <AppNav active="account" />
 
       <main className="account-page">
         <div className="account-inner">
