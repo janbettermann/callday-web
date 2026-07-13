@@ -167,11 +167,11 @@ export default async function AccountPage() {
           </h1>
           <p className="account-sub">You call. Callday handles the rest.</p>
 
-          {/* Lead-Listen: Generator/Building/Ready, zustandsgesteuert —
-              das Logged-in-Zuhause des Listen-Generators (beide Funnel
-              landen hier, siehe LeadListsSection). Bewusst VOR der
-              TestFlight-Card: Schritt 1 Liste, Schritt 2 App. */}
-          <LeadListsSection />
+          {/* Lead-Listen: kompakter Zeiger auf die Listen-Welt (/lists +
+              /lists/new) — Promo/Status/Zeile je nach Zustand, siehe
+              LeadListsSection. Bewusst VOR der TestFlight-Card:
+              Schritt 1 Liste, Schritt 2 App. */}
+          <LeadListsSection userId={user.id} />
 
           {/* Install-/Onboarding-Card — immer sichtbar: direkt nach dem Signup
               UND wenn ein Rueckkehrer (neues Handy) die App neu laden muss. */}

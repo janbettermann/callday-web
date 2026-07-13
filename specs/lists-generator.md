@@ -50,24 +50,40 @@ zweierlei:
     Einbahnstraße** (auch ein voll-neutraler Brand bleibt offen, falls Daten je
     zeigen, dass der Callday-Name Cold-Call-Sucher abschreckt — unwahrscheinlich).
 
-## 2b. Architektur-Update 2026-07-13: EIN Logged-in-Zuhause (/account)
+## 2b. Architektur-Update 2026-07-13 (v2): Listen-Welt unter /lists, /account zeigt nur hin
 
-**Der Generator lebt eingeloggt in der Account-Sektion**
-(`app/account/LeadListsSection.tsx`), nicht mehr auf /lists — Folge der
-Credits-Entscheidung (§10): der Generator ist kein Standalone-Produkt,
-sondern ein Konto-Feature, das im Web beginnt.
+Ersetzt die Vormittags-Entscheidung „Generator in der Account-Sektion"
+noch am selben Tag (Jan): /account soll Verwaltungsseite bleiben und
+nicht mit Produkt-Features wachsen — die Listen-Welt lebt komplett
+unter `/lists` (haelt auch den spaeteren Subdomain-Spin-out §2 als
+sauberen Schnitt offen).
 
-- **/lists bleibt als Logged-out-Akquise-Tuer** (Message-Match fuer
-  Affiliate-/SEO-Traffic mit Listen-Intent; Preset-Links). Eingeloggt →
-  Redirect auf /account, Query-Presets reisen mit (auch durch den
-  Signup via nextPath).
-- **/account ist zustandsgesteuert, nicht herkunftsgesteuert** — beide
-  Funnel (App-Landing-Signup + Listen-Signup) landen auf derselben
-  Seite, der beobachtbare Zustand ordnet die Bausteine: keine Liste →
-  Generator-Card prominent („Get your first lead list — free", loest
-  fuer App-Signups das Leere-App-Problem); Job laeuft → Building-Card;
-  Liste fertig → Listen-Card mit Preview + Download. TestFlight-Card
-  direkt darunter = Schritt 2 (App).
+- **`/lists` ausgeloggt** — unveraendert die Akquise-Landing
+  (Message-Match fuer Affiliate-/SEO-Traffic; `ListsClient`). Signup
+  fuehrt jetzt direkt in den Generator (`nextPath=/lists/new`,
+  Presets reisen mit).
+- **`/lists` eingeloggt** — die Listen-Uebersicht (`MyLists`),
+  server-gerendert (SSR-Auth wie /account, kein Client-Swap):
+  fertige Listen als Cards mit Downloads, laufender Job als pollende
+  Building-Card, Empty-State mit Free-List-Promo. Kommt ein
+  eingeloggter Besucher mit `?website=`-Preset (Affiliate-Link =
+  Generate-Intent), wird er zu /lists/new durchgereicht. Nebeneffekt:
+  der /lists-Link in der List-Ready-Mail landet wieder richtig.
+- **`/lists/new`** — der Generator als eigene Workspace-Seite
+  (`GeneratorClient`): Konsolen-Layout (Formular links, Live-Summary
+  rechts, die spaeter Credits-Kosten + Enricher-Zeilen traegt),
+  How-it-works-Pipeline-Strip; Building-State zeigt dieselben Stufen
+  ehrlich zustandsgesteuert (pending = Scan, processing = Pipeline,
+  keine Fake-Timer); Ready-State mit LeadPreviewCard + Downloads.
+- **/account** (`LeadListsSection`, jetzt Server-Component ohne
+  Polling) — kompakter Zeiger statt Generator: keine Liste/failed →
+  Promo-Card („Get your first lead list — free" → /lists/new, haelt
+  das Leere-App-Problem fuer App-Signups geloest — ein Klick mehr,
+  Versprechen bleibt); Job laeuft → Status-Zeile → /lists; Liste
+  fertig → Listen-Zeile + „View your lists".
+- **Zustandsgesteuert statt herkunftsgesteuert** gilt weiter — beide
+  Funnel sehen dieselben Zustaende, nur eben auf /lists(/new) statt
+  auf /account.
 - Offen (bewusst nach hinten gestellt): „first list free"-Kommunikation
   auf der App-Landing (Jan macht Copy/Platzierung separat).
 

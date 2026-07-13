@@ -93,6 +93,25 @@ export async function fetchLatestJobForUser(
 }
 
 /**
+ * Alle Jobs eines Users, neueste zuerst — Datengrundlage der
+ * Listen-Uebersicht auf /lists. Beim Free-Cap 1 sind das heute
+ * maximal eine Handvoll Rows (Fails + die eine Liste); mit den
+ * Abo-Credits (Spec §10) waechst die Liste organisch weiter.
+ */
+export async function fetchJobsForUser(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<LeadGenJob[]> {
+  const { data, error } = await admin
+    .from("lead_gen_jobs")
+    .select(JOB_COLUMNS)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`lead_gen_jobs fetch failed: ${error.message}`);
+  return (data ?? []) as LeadGenJob[];
+}
+
+/**
  * Verarbeitet einen pending Job, sofern Outscraper fertig ist.
  * Idempotent + race-sicher: der Uebergang pending→processing ist der
  * Claim; wer ihn verliert, gibt den aktuellen Job-Stand zurueck.

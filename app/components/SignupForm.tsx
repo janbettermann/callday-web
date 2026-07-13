@@ -307,7 +307,7 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
       <div className="login-switch-mode">
         Already have an account?{" "}
         <Link
-          href={`/login?next=${encodeURIComponent("/account")}`}
+          href={`/login?next=${encodeURIComponent(nextPath)}`}
           className="login-text-link login-text-link-strong"
         >
           Sign in

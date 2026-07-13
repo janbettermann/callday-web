@@ -1,8 +1,10 @@
 /**
- * ListReady — Transaktions-Mail des Lead-Generators (callday.io/lists),
- * verschickt sobald ein Generierungs-Job auf 'ready' wechselt. Faengt
- * die User wieder ein, die waehrend der 1–3-Minuten-Wartezeit den Tab
- * geschlossen haben.
+ * ListReady — Transaktions-Mail des Lead-Generators, verschickt sobald
+ * ein Generierungs-Job auf 'ready' wechselt. Faengt die User wieder
+ * ein, die waehrend der 1–3-Minuten-Wartezeit den Tab geschlossen
+ * haben. CTA zeigt auf /lists — eingeloggt ist das die
+ * Listen-Uebersicht; ausgeloggt die Landing (Sign-in via Nav oder
+ * "Already have an account?"-Link im Formular).
  *
  * Bewusst kurz + ohne Sign-off: reine Status-Notification, kein
  * persoenlicher Brief.
