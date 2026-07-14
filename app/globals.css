@@ -3220,141 +3220,6 @@ h2 .accent {
   font-weight: 600;
   margin-bottom: 16px;
 }
-/* Pre-Call-Karten-Vorschau (Ready-State): erste echte Firma als
-   stilisierte Callday-Karte, zwei angedeutete Kartenraender dahinter =
-   Stack-Gefuehl der App. Bewusst vereinfachte Anmutung, kein
-   pixelgenauer App-Zwilling. */
-.lists-precall-stack {
-  position: relative;
-  margin: 0 auto 14px;
-  max-width: 400px;
-}
-.lists-precall-shadow {
-  position: absolute;
-  border: 0.5px solid var(--line);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.6);
-}
-.lists-precall-shadow-1 {
-  inset: 4px 6px -4px;
-}
-.lists-precall-shadow-2 {
-  inset: 8px 14px -8px;
-}
-.lists-precall-card {
-  position: relative;
-  background: var(--bg-page);
-  border: 0.5px solid var(--line-strong);
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 8px 24px rgba(8, 10, 20, 0.08);
-}
-.lists-precall-label {
-  font-family: var(--font-label), sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--blue-deep);
-  margin: 0 0 10px;
-}
-.lists-precall-name {
-  font-family: var(--font-geist-sans), sans-serif;
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.4px;
-  line-height: 1.25;
-  color: var(--ink);
-  margin: 0 0 4px;
-}
-.lists-precall-meta {
-  font-size: 13px;
-  color: var(--ink-dim);
-  margin: 0 0 4px;
-}
-.lists-precall-rating {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--sun-deep);
-  margin: 0;
-}
-.lists-precall-callbtn {
-  margin-top: 16px;
-  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
-  color: #ffffff;
-  border-radius: 14px;
-  padding: 13px 0;
-  text-align: center;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.1px;
-  font-variant-numeric: tabular-nums;
-}
-.lists-precall-ghost-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-.lists-precall-ghost {
-  flex: 1;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 9px 0;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--ink-dim);
-}
-.lists-stack-note {
-  text-align: center;
-  font-size: 13px;
-  color: var(--ink-dim);
-  margin: 0 0 24px;
-}
-.lists-preview {
-  background: var(--bg-page);
-  border: 0.5px solid var(--line);
-  border-radius: 16px;
-  overflow: hidden;
-  margin-bottom: 24px;
-  box-shadow: 0 4px 16px rgba(26, 29, 38, 0.04);
-}
-.lists-preview-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding: 13px 18px;
-  border-bottom: 0.5px solid var(--line);
-  font-size: 14px;
-}
-.lists-preview-name {
-  color: var(--ink);
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.lists-preview-phone {
-  color: var(--ink-dim);
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
-.lists-preview-more {
-  padding: 11px 18px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--ink-faint);
-}
-.lists-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.lists-actions .account-btn {
-  margin-top: 0;
-}
-
 @media (max-width: 600px) {
   .lists-page {
     padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 40px) 24px
@@ -3447,6 +3312,46 @@ h2 .accent {
 }
 .lists-fail-banner {
   margin: 0 0 20px;
+}
+/* Free-Cap verbraucht: Hinweis-Karte ueber der ausgegrauten Konsole —
+   erklaert warum das Formular gesperrt ist und zeigt zur Liste. */
+.lists-locked-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+  background: linear-gradient(180deg, rgba(37, 99, 232, 0.06) 0%, #ffffff 70%);
+  border: 1px solid rgba(37, 99, 232, 0.3);
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin: 0 0 20px;
+}
+.lists-locked-title {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+.lists-locked-body {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-dim);
+  margin: 0;
+  max-width: 560px;
+}
+.lists-locked-btn {
+  width: auto;
+  margin-top: 0;
+  flex-shrink: 0;
+}
+.lists-console.is-locked {
+  opacity: 0.55;
+  filter: saturate(0.8);
+  pointer-events: none;
+  user-select: none;
 }
 .lists-summary {
   position: sticky;
@@ -3682,19 +3587,6 @@ h2 .accent {
 .lists-empty-failnote {
   color: var(--sun-deep);
 }
-.lists-ready-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 4px;
-}
-.lists-ready-actions .account-btn {
-  width: auto;
-  flex: 1;
-  min-width: 170px;
-  margin-top: 0;
-}
-
 @media (max-width: 900px) {
   .lists-console {
     grid-template-columns: 1fr;

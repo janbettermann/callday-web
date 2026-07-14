@@ -28,7 +28,6 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const PREVIEW_SIZE = 5;
 
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseSSR();
@@ -79,27 +78,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  let preview: Array<{
-    company_name: string;
-    phone: string;
-    location: string | null;
-    industry: string | null;
-    custom_fields: Record<string, string>;
-  }> = [];
-  if (job.status === "ready" && job.list_id) {
-    const { data: previewRows, error: previewError } = await admin
-      .from("leads")
-      .select("company_name, phone, location, industry, custom_fields")
-      .eq("list_id", job.list_id)
-      .order("position_in_batch", { ascending: true })
-      .limit(PREVIEW_SIZE);
-    if (previewError) {
-      console.error("[lists/status] preview fetch failed", previewError);
-    } else {
-      preview = previewRows ?? [];
-    }
-  }
-
   return Response.json({
     job: {
       id: job.id,
@@ -111,6 +89,5 @@ export async function GET(request: NextRequest) {
       params: job.params,
       createdAt: job.created_at,
     },
-    preview,
   });
 }

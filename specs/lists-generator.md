@@ -74,7 +74,15 @@ sauberen Schnitt offen).
   rechts, die spaeter Credits-Kosten + Enricher-Zeilen traegt),
   How-it-works-Pipeline-Strip; Building-State zeigt dieselben Stufen
   ehrlich zustandsgesteuert (pending = Scan, processing = Pipeline,
-  keine Fake-Timer); Ready-State mit LeadPreviewCard + Downloads.
+  keine Fake-Timer). **Eine URL, keine Ready-Ansicht** (Jan-Entscheidung
+  2026-07-14): ist die Free-Liste verbraucht (`ready`), bleibt der
+  Generator sichtbar, aber gesperrt — Formular ausgegraut
+  (`.lists-console.is-locked`), darueber Hinweis-Karte warum + Link zu
+  /lists; Client-Guard ist nur Gurt, den Cap erzwingt weiter der
+  partial unique index (409). Wird der Job in derselben Session fertig,
+  leitet die Seite zu /lists weiter — Cards + Downloads wohnen NUR
+  dort. Die fruehere Ready-Ansicht samt LeadPreviewCard (§13b) ist
+  ersatzlos raus, Git-History als Re-Impl-Vorlage.
 - **/account** (`LeadListsSection`, jetzt Server-Component ohne
   Polling) — kompakter Zeiger statt Generator: keine Liste/failed →
   Promo-Card („Get your first lead list — free" → /lists/new, haelt
@@ -364,10 +372,13 @@ machen (schlaegt selbstgebaute Ads fast immer).
   (auf der Pre-Call-Card via custom_field_defs enabled=true),
   `opening_hours` + `google_profile_claimed` (leise als Custom Fields).
   Shape identisch zum CSV-Import (App types/lead-list.ts).
-- **Leadcard-Preview im Ready-State:** erster echter Lead als
-  stilisierte Callday-Karte (Stack-Optik, Rating-Zeile) — verkauft das
-  Erlebnis, nicht nur die Daten. Bewusst vereinfacht, kein
-  pixelgenauer App-Zwilling.
+- **Leadcard-Preview im Ready-State** *(2026-07-14 wieder entfernt:
+  der Ready-State ist der One-URL-Entscheidung in §2b gewichen —
+  LeadPreviewCard + `preview` im Status-Endpoint liegen in der
+  Git-History als Re-Impl-Vorlage, falls die Karte mal auf /lists
+  oder der Landing wiederkommt)*: erster echter Lead als stilisierte
+  Callday-Karte (Stack-Optik, Rating-Zeile) — verkauft das Erlebnis,
+  nicht nur die Daten.
 - **Backlog (App-Seite, Post-Launch):** „No website"-Filter als
   zusaetzliche FilterPill in der Listen-Ansicht der App (Jan-Idee
   2026-07-12) — Filter gehoeren in den Browse-Modus, NICHT in den

@@ -27,17 +27,8 @@ export interface JobView {
   createdAt: string;
 }
 
-export interface PreviewLead {
-  company_name: string;
-  phone: string;
-  location: string | null;
-  industry: string | null;
-  custom_fields?: Record<string, string>;
-}
-
 export interface StatusResponse {
   job: JobView | null;
-  preview?: PreviewLead[];
 }
 
 export async function fetchJobStatus(jobId?: string): Promise<StatusResponse> {

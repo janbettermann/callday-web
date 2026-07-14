@@ -8,14 +8,13 @@ import {
   type FormEvent,
 } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CityAutocomplete } from "../CityAutocomplete";
 import { CountryAutocomplete } from "../CountryAutocomplete";
-import { LeadPreviewCard } from "../LeadPreviewCard";
 import {
   failureMessage,
   fetchJobStatus,
   type JobView,
-  type PreviewLead,
   type StatusResponse,
 } from "../job-view";
 import {
@@ -32,10 +31,14 @@ import type { WebsiteFilterMode } from "@/lib/lists/pipeline";
  * Building-Ansicht mit echten Pipeline-Stufen (pending = Scan,
  * processing = Verarbeitung — keine simulierten Fortschritte).
  *
- * Zustaende kommen aus /api/lists/status (geteilte View-Typen in
+ * /lists/new ist DIE eine Generator-URL (Jan-Entscheidung 2026-07-14) —
+ * die fertige Free-Liste hat hier keine eigene Ansicht mehr, sie wohnt
+ * auf /lists. Zustaende aus /api/lists/status (geteilte View-Typen in
  * ../job-view): kein Job/failed → Form, pending/processing → Building,
- * ready → Ready-Ansicht (frisch gebaut ODER Revisit — Copy passt fuer
- * beide, weil der Free-Cap 1 die fertige Liste zum Seitenzustand macht).
+ * ready → Form gesperrt (ausgegraut + Hinweis warum, Free-Cap 1
+ * verbraucht). Wird der Job in derselben Session fertig, leiten wir
+ * direkt zu /lists weiter — der Payoff ist die Liste, nicht der
+ * Generator.
  */
 
 const POLL_INTERVAL_MS = 5000;
@@ -80,6 +83,7 @@ function websiteSummaryLabel(mode: WebsiteFilterMode): string {
 }
 
 export function GeneratorClient() {
+  const router = useRouter();
   const [statusData, setStatusData] = useState<
     StatusResponse | null | undefined
   >(undefined);
@@ -91,8 +95,9 @@ export function GeneratorClient() {
   const [country, setCountry] = useState<string | null>("DE");
   const [websiteFilter, setWebsiteFilter] = useState<WebsiteFilterMode>("any");
 
-  // True sobald diese Session einen Job hat laufen sehen — steuert nur
-  // die Ready-Headline ("is ready" vs. Revisit-"Your free list").
+  // True sobald diese Session einen Job hat laufen sehen — unterscheidet
+  // "frisch fertig gebaut" (→ Redirect zu /lists) vom Revisit (→ Form
+  // gesperrt).
   const sawBuildingRef = useRef(false);
 
   // Preset aus Affiliate-/Funnel-Links (?website=without) — reist durch
@@ -122,6 +127,15 @@ export function GeneratorClient() {
     if (jobRunning) sawBuildingRef.current = true;
   }, [jobRunning]);
 
+  // Free-Cap 1: eine fertige Liste sperrt den Generator — das Formular
+  // bleibt sichtbar (eine URL, ein Ort), ist aber ausgegraut mit Hinweis.
+  const freeUsed = job?.status === "ready";
+  const justBuilt = freeUsed && sawBuildingRef.current;
+
+  useEffect(() => {
+    if (justBuilt) router.replace("/lists");
+  }, [justBuilt, router]);
+
   useEffect(() => {
     if (!jobRunning || !job) return;
     const timer = setInterval(() => {
@@ -138,7 +152,9 @@ export function GeneratorClient() {
   const handleGenerate = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      if (submitting) return;
+      // freeUsed-Guard ist Gurt zur Hose: server-seitig erzwingt der
+      // partial unique index den Free-Cap ohnehin (409).
+      if (submitting || freeUsed) return;
       setFormError(null);
 
       if (!industry.trim() || !city.trim()) {
@@ -186,7 +202,7 @@ export function GeneratorClient() {
         setSubmitting(false);
       }
     },
-    [submitting, industry, city, country, websiteFilter],
+    [submitting, freeUsed, industry, city, country, websiteFilter],
   );
 
   if (statusData === undefined) {
@@ -196,15 +212,15 @@ export function GeneratorClient() {
   if (jobRunning && job) {
     return <BuildingView job={job} />;
   }
-  if (job?.status === "ready") {
+  if (justBuilt) {
+    // router.replace("/lists") laeuft bereits — kein Flash des
+    // gesperrten Formulars zwischen Building und Redirect.
     return (
-      <ReadyView
-        job={job}
-        preview={statusData?.preview ?? []}
-        justBuilt={sawBuildingRef.current}
-      />
+      <p className="lists-loading">Your list is ready — taking you there…</p>
     );
   }
+
+  const formDisabled = submitting || freeUsed;
 
   return (
     <div className="lists-inner-wide">
@@ -224,7 +240,28 @@ export function GeneratorClient() {
         </p>
       )}
 
-      <div className="lists-console">
+      {freeUsed && (
+        <div className="lists-locked-note" role="status">
+          <div>
+            <p className="lists-locked-title">
+              Your free list is already built.
+            </p>
+            <p className="lists-locked-body">
+              One free list per account — yours is synced to the Callday app
+              and waiting in your lists. Need another one? That&apos;s coming
+              soon.
+            </p>
+          </div>
+          <Link
+            href="/lists"
+            className="account-btn account-btn-secondary lists-locked-btn"
+          >
+            View your lists
+          </Link>
+        </div>
+      )}
+
+      <div className={"lists-console" + (freeUsed ? " is-locked" : "")}>
         <form className="beta-form lists-console-form" onSubmit={handleGenerate} noValidate>
           <div className="beta-field">
             <label className="beta-field-label" htmlFor="gen-industry-input">
@@ -237,7 +274,7 @@ export function GeneratorClient() {
               onChange={(e) => setIndustry(e.target.value)}
               placeholder="Dentists"
               maxLength={60}
-              disabled={submitting}
+              disabled={formDisabled}
             />
             <div className="lists-chip-row" aria-label="Industry suggestions">
               {INDUSTRY_SUGGESTIONS.map((suggestion) => (
@@ -246,7 +283,7 @@ export function GeneratorClient() {
                   type="button"
                   className="lists-chip"
                   onClick={() => setIndustry(suggestion)}
-                  disabled={submitting}
+                  disabled={formDisabled}
                 >
                   {suggestion}
                 </button>
@@ -256,14 +293,14 @@ export function GeneratorClient() {
 
           <CountryAutocomplete
             code={country}
-            disabled={submitting}
+            disabled={formDisabled}
             onChange={setCountry}
           />
 
           <CityAutocomplete
             value={city}
             country={country}
-            disabled={submitting}
+            disabled={formDisabled}
             onChange={setCity}
           />
 
@@ -285,7 +322,7 @@ export function GeneratorClient() {
                     (websiteFilter === option.value ? " is-active" : "")
                   }
                   onClick={() => setWebsiteFilter(option.value)}
-                  disabled={submitting}
+                  disabled={formDisabled}
                 >
                   {option.label}
                 </button>
@@ -297,7 +334,7 @@ export function GeneratorClient() {
             type="submit"
             className="beta-submit"
             aria-busy={submitting}
-            disabled={submitting}
+            disabled={formDisabled}
           >
             {submitting ? "Starting…" : "Generate my list"}
           </button>
@@ -313,6 +350,7 @@ export function GeneratorClient() {
           industry={industry}
           city={city}
           websiteFilter={websiteFilter}
+          locked={freeUsed}
         />
       </div>
 
@@ -340,10 +378,12 @@ function SummaryPanel({
   industry,
   city,
   websiteFilter,
+  locked,
 }: {
   industry: string;
   city: string;
   websiteFilter: WebsiteFilterMode;
+  locked: boolean;
 }) {
   const hasQuery = Boolean(industry.trim() && city.trim());
 
@@ -371,7 +411,9 @@ function SummaryPanel({
         <span className="lists-summary-free">Free</span>
       </div>
       <p className="lists-summary-hint">
-        Your first list is on us. No credit card.
+        {locked
+          ? "You've already used your free list."
+          : "Your first list is on us. No credit card."}
       </p>
     </aside>
   );
@@ -437,72 +479,3 @@ function BuildingView({ job }: { job: JobView }) {
   );
 }
 
-function ReadyView({
-  job,
-  preview,
-  justBuilt,
-}: {
-  job: JobView;
-  preview: PreviewLead[];
-  justBuilt: boolean;
-}) {
-  const leadCount = job.leadCount ?? 0;
-  const firstLead = preview[0];
-
-  return (
-    <div className="lists-inner">
-      <header className="lists-workhead">
-        <h1 className="lists-worktitle">
-          {justBuilt ? "Your list is ready." : "Your free list"}
-        </h1>
-        <p className="lists-worksub">
-          {job.listName} — {leadCount} callable leads, synced to the Callday
-          app.
-        </p>
-      </header>
-
-      <section className="account-card">
-        {firstLead && (
-          <div style={{ margin: "4px 0" }}>
-            <LeadPreviewCard lead={firstLead} />
-            {leadCount > 1 && (
-              <p className="lists-stack-note" style={{ marginBottom: 0 }}>
-                + {leadCount - 1} more waiting in your stack
-              </p>
-            )}
-          </div>
-        )}
-
-        <div className="lists-ready-actions">
-          <Link href="/lists" className="account-btn account-btn-primary">
-            View your lists
-          </Link>
-          {job.listId && (
-            <a
-              href={`/api/lists/download?list=${job.listId}&format=xlsx`}
-              className="account-btn account-btn-secondary"
-            >
-              Download for Excel
-            </a>
-          )}
-        </div>
-
-        <p className="account-hint">
-          {job.listId && (
-            <>
-              Prefer a plain file?{" "}
-              <a
-                className="lists-meta-link"
-                href={`/api/lists/download?list=${job.listId}`}
-              >
-                Download CSV
-              </a>
-              .
-            </>
-          )}{" "}
-          Need another list? That&apos;s coming soon.
-        </p>
-      </section>
-    </div>
-  );
-}
