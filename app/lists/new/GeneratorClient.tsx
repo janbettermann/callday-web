@@ -43,13 +43,16 @@ import type { WebsiteFilterMode } from "@/lib/lists/pipeline";
 
 const POLL_INTERVAL_MS = 5000;
 
+// "Only…"-Formulierung macht die Einschraenkung eindeutig (Jan-Copy-
+// Entscheidung 2026-07-15) — "With a website" allein liest sich auch
+// als "einschliessen" statt "einschraenken".
 const WEBSITE_FILTER_OPTIONS: Array<{
   value: WebsiteFilterMode;
   label: string;
 }> = [
-  { value: "any", label: "All businesses" },
-  { value: "without", label: "Without a website" },
-  { value: "with", label: "With a website" },
+  { value: "any", label: "With and without website" },
+  { value: "without", label: "Only without website" },
+  { value: "with", label: "Only with website" },
 ];
 
 /**
@@ -304,30 +307,27 @@ export function GeneratorClient() {
             onChange={setCity}
           />
 
+          {/* Dropdown statt Chips (Jan-Entscheidung 2026-07-15, Spec
+              §13b) — die Wirkung der Wahl spiegelt das Summary-Panel. */}
           <div className="beta-field">
-            <span className="beta-field-label">Website</span>
-            <div
-              className="lists-chip-row lists-filter-row"
-              role="radiogroup"
-              aria-label="Website filter"
+            <label className="beta-field-label" htmlFor="gen-website-select">
+              Website
+            </label>
+            <select
+              id="gen-website-select"
+              className="lists-select"
+              value={websiteFilter}
+              onChange={(e) =>
+                setWebsiteFilter(e.target.value as WebsiteFilterMode)
+              }
+              disabled={formDisabled}
             >
               {WEBSITE_FILTER_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={websiteFilter === option.value}
-                  className={
-                    "lists-chip" +
-                    (websiteFilter === option.value ? " is-active" : "")
-                  }
-                  onClick={() => setWebsiteFilter(option.value)}
-                  disabled={formDisabled}
-                >
+                <option key={option.value} value={option.value}>
                   {option.label}
-                </button>
+                </option>
               ))}
-            </div>
+            </select>
           </div>
 
           <button

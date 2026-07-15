@@ -362,12 +362,23 @@ machen (schlaegt selbstgebaute Ads fast immer).
 
 ## 13b. Website-Filter + Anreicherung (gebaut 2026-07-12)
 
-- **Website-Filter** („All / Without a website / With a website") im
-  Generator-Form — der Ziel-Filter fuer die KI-Website-Builder- und
-  Agentur-Zielgruppe. Client-seitig in der Pipeline (Outscrapers
-  Quick-Filter sind UI-only, API unterstuetzt sie nicht —
-  Staff-bestaetigt im Outscraper-Forum). Affiliate-Link-Preset:
-  `/lists?website=without` waehlt den Filter vor.
+- **Website-Filter** im Generator-Form — der Ziel-Filter fuer die
+  KI-Website-Builder- und Agentur-Zielgruppe. Client-seitig in der
+  Pipeline (Outscrapers Quick-Filter sind UI-only, API unterstuetzt
+  sie nicht — Staff-bestaetigt im Outscraper-Forum).
+  Affiliate-Link-Preset: `/lists?website=without` waehlt den Filter
+  vor. **Seit 2026-07-15 Dropdown statt Chips** (Jan-Entscheidung
+  gegen meine Chips-Empfehlung, bewusst getroffen) mit den
+  eindeutigen „Only…"-Labels („With and without website / Only
+  without website / Only with website"). Default bleibt „With and
+  without" — „Only with website" als Default wurde geprueft und
+  VERWORFEN (haette im Beauty-Salon-Testlauf 38 % anrufbarer Betriebe
+  gekostet, fuer einen E-Mail-Bonus der ~25 % der Leads hilft). Die
+  Wirkung der Wahl spiegelt das Summary-Panel. **Rating-Filter
+  (gut/schlecht bewertet) wurde diskutiert und bewusst rausgelassen**
+  (2026-07-15) — waere gratis via `google_rating` client-seitig
+  machbar, liegt im Backlog (Undershoot-Wechselwirkung + Umgang mit
+  Betrieben ohne Rating dann mitentscheiden).
 - **Gratis-Anreicherung aus dem Basis-Response:** `google_rating`
   (auf der Pre-Call-Card via custom_field_defs enabled=true),
   `opening_hours` + `google_profile_claimed` (leise als Custom Fields).
@@ -430,6 +441,69 @@ Folge-Listen — mit vier Erkenntnissen fuer die Umsetzung:
    persoenlicher Postfaecher wo vorhanden" — NICHT „Decision-Maker-
    Namen", bis ein groesserer Test Namens-Ausbeute belegt.
 
+## 13d. Enrichment-Endstand + Phasenplan (Jan-Entscheidungen 2026-07-15)
+
+Ersetzt die „bezahltes Add-on"-Rahmung aus §13c: **Leads & Contacts
+laeuft IMMER, auch auf der Free-Liste. Keine Enricher-Auswahl, nie
+Kacheln.** Grundlage: 285-Zeilen-Analyse eines 6-Enricher-Laufs
+(Beauty Salons US, 200 Betriebe) — SimilarWeb/BuiltWith/Company
+Insights/Emails Validator liefern fuer Kaltakquise Rauschen
+(107 von 213 Spalten Tech/Traffic-Muell, Insights matcht Plattformen
+statt Betriebe, 66 % der Kosten bei 3 % Nutzwert). Ein
+Kaltakquisiteur kann eine Enricher-Auswahl nicht qualifiziert
+treffen — abgewaelzte Entscheidung, keine Freiheit. Whitepages
+Phones geparkt als spaeteres Credits-Upsell („Wer hebt ab?").
+Emails Validator bleibt als SERVER-seitiges Werkzeug in der
+Hinterhand (20 % der gefundenen Adressen INVALID, ZInfo-Quelle 52 %) —
+falls Prefill-Qualitaet enttaeuscht, Validator nur auf den
+Prefill-Kandidaten, nie als Nutzerentscheidung.
+
+**E-Mail-Feld-Konzept** (Zweck: geschlossene Frage am Telefon fuer
+die Meeting-Bestaetigung — „Ist jeannie@… noch richtig?"):
+
+- Aggregation nach `place_id` ZUERST (faengt die Zeilen-Explosion,
+  85 Dubletten im Testlauf), Kandidaten sammeln (Adresse + Quelle),
+  Quellen serverseitig auf Enum normalisieren
+  (`website | facebook | linkedin | directory | guessed | other`).
+- Prefill-Prioritaet: (1) Domain == Website-Domain, (2) Freemail mit
+  konservativem Firmennamen-Match, (3) sonst LEER. `guessed`/
+  Fremd-Domains nie vorbefuellen; gilt auch fuer Einzel-Kandidaten
+  (eine einzelne `domainnames@regiscorp.com` gehoert nicht ins Feld).
+  Platzhalter-Blacklist (`hi@mystore.com`-Square-Template).
+- Realistische Erwartung: ~20–25 % der Leads bekommen einen Prefill
+  (37/200 Domain-Match im Test; ohne Website 0 % E-Mails, mit
+  Website 79 % ≥1). Der Hauptfall ist das leere Eingabefeld.
+
+**Phasenplan:**
+
+- **Phase 0 (✅ 2026-07-15):** Website-Filter als Dropdown mit
+  „Only…"-Labels; Google-Maps-Quelle in Landing-Sub + Metadata
+  („We scan Google Maps…"). KEIN „Scraper" in Titel/Pille/Nav, kein
+  Google-Pin-Asset (Marken-/Optik-Entscheidung).
+- **Phase 0b (offen, unbestaetigt):** GMB-Kategorien-Autocomplete
+  fuers Industry-Feld (gebundelte Liste, Freitext-Fallback,
+  Suggest-UI aus `suggest.tsx` wiederverwenden).
+- **Phase 1 (nur Web, ~halber Tag):** `leads_n_contacts` immer an
+  (beide Sprach-Pfade!), Aggregation + Prioritaetsregeln als pure
+  Functions mit vitest, Prefill in `lead.email` (KEIN Schema-Change),
+  Kosten-Gate mit echtem Lauf, Summary-Notiz bei „Only without
+  website" („No emails — these businesses have no website").
+- **Beobachtungs-Gate:** 2–3 echte Listen — Prefill-Quote und
+  -Fehlerrate messen. Nur bei Bedarf weiter.
+- **Phase 2 (Cross-Repo, 1–2 Tage, NUR nach Gate):**
+  `leads.email_candidates` (jsonb, additiv, nur Cloud→App-lesend),
+  lokale Migration + Sync-Pull + Shape-Contract beidseitig,
+  Kandidaten-Auswahl-Sheet im Post-Call-Meeting-Form (Source-Label
+  klein unter jeder Adresse, kein natives Picker-Experiment),
+  XLSX-Kandidaten-Spalten.
+
+**Bewusst verworfen** (nicht wieder aufrollen ohne neue Datenlage):
+Enricher-Kacheln/-Auswahl; „Only with website" als Default;
+„Google Maps Scraper" als Seitentitel/Pille (SEO-Keyword gehoert in
+einen Blog-Artikel, nicht in den Produkttitel); Rating-Filter v1;
+Outscraper-Tool-UI-Elemente (Unlimited-Toggle, Exact-Match,
+Duplicate-Keep, Export-Format-Wahl, API-Request-Drawer, Task-Tags).
+
 ## 14. Bewusst NICHT v1 / offen
 
 - **Kein volles zweites Marketing-Site-Ding** — das ist die Spin-out-Phase
@@ -438,7 +512,8 @@ Folge-Listen — mit vier Erkenntnissen fuer die Umsetzung:
 - ~~**Stripe-Wiedereinführung** für Folge-Listen~~ — **GESTRICHEN
   2026-07-12:** Folge-Listen laufen als Abo-Credits (§10), keine
   Web-Zahlung nötig.
-- **Email-Enrichment** (`leads_n_contacts`) optional + teurer — später zuschaltbar.
+- ~~**Email-Enrichment** (`leads_n_contacts`) optional + teurer — später zuschaltbar~~ —
+  **ERSETZT 2026-07-15:** laeuft immer, auch Free-Liste, nie als Auswahl (§13d).
 - **Raw-CSV bei bezahlten Listen** ist Standard; bei der Gratis-Liste auch (§5).
 
 ## 15. Verweise

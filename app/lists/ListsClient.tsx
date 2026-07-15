@@ -40,9 +40,9 @@ export function ListsClient() {
               Your cold-calling list, in 2 minutes.
             </h1>
             <p className="lists-sub">
-              Pick an industry and a city. We build a call-ready lead list —
-              every lead with a phone number, deduped, ready to dial. Your
-              first list is free.
+              Pick an industry and a city. We scan Google Maps and build a
+              call-ready lead list — every lead with a phone number, deduped,
+              ready to dial. Your first list is free.
             </p>
           </header>
           <SignupForm nextPath={nextPath} />
