@@ -480,9 +480,15 @@ die Meeting-Bestaetigung — „Ist jeannie@… noch richtig?"):
   „Only…"-Labels; Google-Maps-Quelle in Landing-Sub + Metadata
   („We scan Google Maps…"). KEIN „Scraper" in Titel/Pille/Nav, kein
   Google-Pin-Asset (Marken-/Optik-Entscheidung).
-- **Phase 0b (offen, unbestaetigt):** GMB-Kategorien-Autocomplete
-  fuers Industry-Feld (gebundelte Liste, Freitext-Fallback,
-  Suggest-UI aus `suggest.tsx` wiederverwenden).
+- **Phase 0b (✅ 2026-07-15):** Kategorien-Autocomplete fuers
+  Industry-Feld (`IndustryAutocomplete` + `lib/lists/gmb-categories.ts`).
+  Bewusst KURATIERTE ~280er-Liste im GMB-Stil (englisch, singular)
+  statt der vollen ~4.000er-GMB-Liste — Cold-Calling-taugliche
+  Branchen, kein Bahnhofs-Rauschen. Freitext bleibt immer gueltig
+  (Query ist Text-Suche); Haekchen = erkannte Kategorie, pur aus dem
+  Wert abgeleitet. Chips (INDUSTRY_SUGGESTIONS) auf GMB-Singular
+  ausgerichtet, damit sie das Haekchen treffen; Chips leben jetzt in
+  der Komponente (suggestions-Prop).
 - **Phase 1 (✅ 2026-07-15):** `leads_n_contacts` immer an (ein
   Request-Pfad, `enrichments` in startGoogleMapsSearch), Aggregation
   nach place_id + Prioritaetsregeln in `lib/lists/emails.ts` (pure,

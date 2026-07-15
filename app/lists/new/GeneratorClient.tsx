@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CityAutocomplete } from "../CityAutocomplete";
 import { CountryAutocomplete } from "../CountryAutocomplete";
+import { IndustryAutocomplete } from "../IndustryAutocomplete";
 import {
   failureMessage,
   fetchJobStatus,
@@ -266,33 +267,12 @@ export function GeneratorClient() {
 
       <div className={"lists-console" + (freeUsed ? " is-locked" : "")}>
         <form className="beta-form lists-console-form" onSubmit={handleGenerate} noValidate>
-          <div className="beta-field">
-            <label className="beta-field-label" htmlFor="gen-industry-input">
-              Industry
-            </label>
-            <input
-              id="gen-industry-input"
-              type="text"
-              value={industry}
-              onChange={(e) => setIndustry(e.target.value)}
-              placeholder="Dentists"
-              maxLength={60}
-              disabled={formDisabled}
-            />
-            <div className="lists-chip-row" aria-label="Industry suggestions">
-              {INDUSTRY_SUGGESTIONS.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  className="lists-chip"
-                  onClick={() => setIndustry(suggestion)}
-                  disabled={formDisabled}
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          </div>
+          <IndustryAutocomplete
+            value={industry}
+            disabled={formDisabled}
+            onChange={setIndustry}
+            suggestions={INDUSTRY_SUGGESTIONS}
+          />
 
           <CountryAutocomplete
             code={country}

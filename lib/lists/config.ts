@@ -26,16 +26,18 @@ export const OUTSCRAPER_MAX_SCAN_LIMIT = 500;
  * Kuratierte Branchen-Vorschlaege fuer die Chips unter dem Industry-Feld.
  * Scharf auf Cold-Calling-taugliche B2B-Branchen (Spec §11) — Freitext
  * bleibt moeglich, die Chips senken nur die Muell-Query-Quote.
+ * Im GMB-Singular-Stil, damit sie exakt Eintraege der Autocomplete-
+ * Liste (lib/lists/gmb-categories.ts) treffen und das Haekchen kriegen.
  */
 export const INDUSTRY_SUGGESTIONS = [
-  "Dentists",
-  "Roofers",
-  "Real estate agents",
-  "Marketing agencies",
-  "Law firms",
-  "Gyms",
-  "Electricians",
-  "Car dealers",
+  "Dentist",
+  "Roofing contractor",
+  "Real estate agency",
+  "Marketing agency",
+  "Law firm",
+  "Gym",
+  "Electrician",
+  "Car dealer",
 ];
 
 /**
