@@ -26,6 +26,8 @@ interface Props {
   onChange: (value: string) => void;
   /** Null-Tipp-Einstiege (Chips unterm Feld) — kuratierte Starter. */
   suggestions?: string[];
+  /** Zeigt den Pflicht-Stern am Label. */
+  required?: boolean;
 }
 
 export function IndustryAutocomplete({
@@ -33,6 +35,7 @@ export function IndustryAutocomplete({
   disabled,
   onChange,
   suggestions,
+  required,
 }: Props) {
   const [options, setOptions] = useState<SuggestOption[]>([]);
   const [open, setOpen] = useState(false);
@@ -65,6 +68,7 @@ export function IndustryAutocomplete({
   return (
     <div className="beta-field">
       <label className="beta-field-label" htmlFor="lists-industry-input">
+        {required && <span className="lists-req">* </span>}
         Industry
       </label>
       <div className="lists-suggest-wrap">
@@ -113,12 +117,13 @@ export function IndustryAutocomplete({
         )}
       </div>
       {suggestions && suggestions.length > 0 && (
-        <div className="lists-chip-row" aria-label="Industry suggestions">
+        <div className="lists-try" aria-label="Industry suggestions">
+          Try:
           {suggestions.map((suggestion) => (
             <button
               key={suggestion}
               type="button"
-              className="lists-chip"
+              className="lists-try-chip"
               onClick={() => {
                 onChange(suggestion);
                 setOpen(false);

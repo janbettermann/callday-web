@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   findCountry,
   searchCountries,
@@ -28,13 +28,20 @@ interface Props {
   code: string | null;
   disabled?: boolean;
   onChange: (code: string | null) => void;
+  /** Zeigt den Pflicht-Stern am Label. */
+  required?: boolean;
 }
 
 function toSuggestOption(option: CountryOption): SuggestOption {
   return { value: option.code, label: option.label };
 }
 
-export function CountryAutocomplete({ code, disabled, onChange }: Props) {
+export function CountryAutocomplete({
+  code,
+  disabled,
+  onChange,
+  required,
+}: Props) {
   const [text, setText] = useState(() =>
     code ? (findCountry(code)?.label ?? "") : "",
   );
@@ -42,6 +49,15 @@ export function CountryAutocomplete({ code, disabled, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const selected = code !== null;
+
+  // Aendert der Parent den Code von aussen (Schnellwahl-Pillen), muss
+  // das Feld den passenden Laendernamen nachziehen — der Initializer
+  // oben laeuft nur einmal beim Mount.
+  useEffect(() => {
+    if (!code) return;
+    const label = findCountry(code)?.label;
+    if (label) setText(label);
+  }, [code]);
 
   function showMatches(query: string) {
     const matches = searchCountries(query).map(toSuggestOption);
@@ -82,6 +98,7 @@ export function CountryAutocomplete({ code, disabled, onChange }: Props) {
   return (
     <div className="beta-field">
       <label className="beta-field-label" htmlFor="lists-country-input">
+        {required && <span className="lists-req">* </span>}
         Country
       </label>
       <div className="lists-suggest-wrap">

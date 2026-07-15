@@ -41,6 +41,12 @@ export const INDUSTRY_SUGGESTIONS = [
 ];
 
 /**
+ * Schnellwahl-Pillen unter dem Country-Feld (ISO-Codes) — die
+ * Kern-Maerkte des Generators. Wie im v2-Entwurf ("Try: US GB DE …").
+ */
+export const COUNTRY_SUGGESTIONS = ["US", "GB", "DE", "CA", "AU"];
+
+/**
  * Ziel des "Get the Callday app"-CTAs. Waehrend der Beta zeigt /account
  * die TestFlight-2-Step-Card; beim Public-Launch auf den App-Store-Link
  * umstellen (eine Stelle).

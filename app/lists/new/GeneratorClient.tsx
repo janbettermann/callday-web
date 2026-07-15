@@ -20,6 +20,8 @@ import {
 } from "../job-view";
 import {
   APP_DOWNLOAD_PATH,
+  COUNTRY_SUGGESTIONS,
+  FREE_LIST_SIZE,
   INDUSTRY_SUGGESTIONS,
 } from "@/lib/lists/config";
 import type { WebsiteFilterMode } from "@/lib/lists/pipeline";
@@ -266,59 +268,131 @@ export function GeneratorClient() {
             disabled={formDisabled}
             onChange={setIndustry}
             suggestions={INDUSTRY_SUGGESTIONS}
+            required
           />
 
-          <CountryAutocomplete
-            code={country}
-            disabled={formDisabled}
-            onChange={setCountry}
-          />
-
-          <CityAutocomplete
-            value={city}
-            country={country}
-            disabled={formDisabled}
-            onChange={setCity}
-          />
-
-          {/* Dropdown statt Chips (Jan-Entscheidung 2026-07-15, Spec
-              §13b) — die Wirkung der Wahl spiegelt das Summary-Panel. */}
+          {/* Country + City in einer Zeile, darunter die Country-
+              Schnellwahl-Pillen (v2-Layout). */}
           <div className="beta-field">
-            <label className="beta-field-label" htmlFor="gen-website-select">
-              Website
-            </label>
-            <select
-              id="gen-website-select"
-              className="lists-select"
-              value={websiteFilter}
-              onChange={(e) =>
-                setWebsiteFilter(e.target.value as WebsiteFilterMode)
-              }
-              disabled={formDisabled}
-            >
-              {WEBSITE_FILTER_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
+            <div className="lists-field-row">
+              <div className="lists-col-country">
+                <CountryAutocomplete
+                  code={country}
+                  disabled={formDisabled}
+                  onChange={setCountry}
+                  required
+                />
+              </div>
+              <div className="lists-col-city">
+                <CityAutocomplete
+                  value={city}
+                  country={country}
+                  disabled={formDisabled}
+                  onChange={setCity}
+                />
+              </div>
+            </div>
+            <div className="lists-try" aria-label="Country shortcuts">
+              Try:
+              {COUNTRY_SUGGESTIONS.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  className="lists-try-chip"
+                  onClick={() => setCountry(suggestion)}
+                  disabled={formDisabled}
+                >
+                  {suggestion}
+                </button>
               ))}
-            </select>
-            {/* Ehrliche E-Mail-Konsequenz im Moment der Wahl (§13d):
-                ohne Website gibt es nichts zu scrapen. */}
-            {websiteFilter === "without" && (
-              <p className="lists-field-hint">
-                No emails on these — businesses without a website have
-                nothing to scrape. Every lead still has a phone number.
-              </p>
-            )}
+            </div>
+          </div>
+
+          {/* Listengroesse — im Free-State fix (250), deaktiviert. Der
+              bediente Regler kommt mit der Credits-Runde; hier bewusst
+              OHNE Credits-/Pricing-Wording (Pre-Launch-Regel). */}
+          <div className="beta-field">
+            <label className="beta-field-label" htmlFor="gen-listsize">
+              List size
+            </label>
+            <div className="lists-size-row">
+              <input
+                id="gen-listsize"
+                className="lists-size-input"
+                type="text"
+                value={FREE_LIST_SIZE}
+                inputMode="numeric"
+                disabled
+                readOnly
+                aria-describedby="gen-listsize-hint"
+              />
+              <span className="lists-size-unit">leads</span>
+            </div>
+            <p id="gen-listsize-hint" className="lists-field-hint">
+              Your free list includes up to {FREE_LIST_SIZE} leads.
+            </p>
+          </div>
+
+          {/* Eigener Filters-Abschnitt (Dropdown statt Chips,
+              Jan-Entscheidung 2026-07-15, Spec §13b). */}
+          <div className="lists-filters-section">
+            <span className="lists-section-title">Filters</span>
+            <div className="beta-field">
+              <label className="beta-field-label" htmlFor="gen-website-select">
+                Website
+              </label>
+              <select
+                id="gen-website-select"
+                className="lists-select"
+                value={websiteFilter}
+                onChange={(e) =>
+                  setWebsiteFilter(e.target.value as WebsiteFilterMode)
+                }
+                disabled={formDisabled}
+              >
+                {WEBSITE_FILTER_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {/* Ehrliche E-Mail-Konsequenz im Moment der Wahl (§13d):
+                  ohne Website gibt es nichts zu scrapen. */}
+              {websiteFilter === "without" && (
+                <p className="lists-field-hint">
+                  No emails on these — businesses without a website have
+                  nothing to scrape. Every lead still has a phone number.
+                </p>
+              )}
+            </div>
           </div>
 
           <button
             type="submit"
-            className="beta-submit"
+            className="beta-submit lists-generate-btn"
             aria-busy={submitting}
             disabled={formDisabled}
           >
-            {submitting ? "Starting…" : "Generate my list"}
+            {submitting ? (
+              "Starting…"
+            ) : (
+              <>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Build my list
+              </>
+            )}
           </button>
 
           {formError && (
