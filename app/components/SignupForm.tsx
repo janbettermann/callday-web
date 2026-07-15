@@ -75,7 +75,11 @@ function isUserAlreadyRegistered(error: {
 
 type Status = "idle" | "submitting" | "error";
 
-const DEFAULT_NEXT_PATH = "/account?welcome=signup";
+// Post-Signup-Landing: das Dashboard ist seit 2026-07-15 die Startseite
+// des eingeloggten Bereichs. (Der App-Install-Nudge, frueher die
+// welcome=signup-Card auf /account, zieht spaeter als Dashboard-Zustand
+// nach — bis dahin fuehrt der Funnel list-first.)
+const DEFAULT_NEXT_PATH = "/dashboard";
 
 interface Props {
   /** Affiliate-Slug fuer Attribution — nur auf /a/[slug] gesetzt. */

@@ -93,6 +93,12 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Scrollbar-Platz IMMER reservieren, auch auf kurzen Seiten ohne
+     Scrollbar. Sonst springt der zentrierte Content beim Wechsel von
+     einer scrollenden (Landing) auf eine nicht-scrollende Seite
+     (Account/Dashboard) um die halbe Scrollbar-Breite horizontal —
+     sichtbar am Logo links (Windows: 15px klassische Scrollbar). */
+  scrollbar-gutter: stable;
   /* STATISCHE Farbe fuer die Notch-/Status-Bar-Zone — niemals per
      Scroll togglen: der on-scroll dark→cream Toggle liess die
      Safe-Area-Zone auf mindestens einem Geraet transparent rendern
@@ -879,6 +885,15 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
   width: 100%;
   margin: 0 auto;
 }
+/* === Account-Bereich — kanonische Titel-Skala (Geist, weight 600) ===
+   Anker ist .account-headline. Alle Account-Seiten (Dashboard, Lists,
+   Generator, Account, Calldays) nutzen diese Werte — bei neuen Titeln
+   hier abgleichen, nicht neue Groessen erfinden.
+     h1 (Seitentitel): clamp(28px, 4vw, 40px) / 600 / -0.5px / lh 1.1
+     h2 (Card-Titel):  18px / 600 / -0.2px
+     h3 (Item-Titel):  16px / 600 / -0.2px
+     mini (Eyebrow):   --font-label 12px / 600 / 0.9px / uppercase
+   Sub-Zeile unter h1: 15px / var(--ink-dim). */
 .account-headline {
   font-family: var(--font-geist-sans), sans-serif;
   font-size: clamp(28px, 4vw, 40px);
@@ -1942,8 +1957,9 @@ h2 .accent {
 }
 
 /* === FOOTER === */
+/* Symmetrisches Padding (war 56/40 — der Sprung wirkte schief). */
 .site-footer {
-  padding: 56px 0 40px;
+  padding: 44px 0;
   border-top: 0.5px solid var(--line);
 }
 .footer-inner {
@@ -1972,6 +1988,43 @@ h2 .accent {
   font-size: 11px;
   color: var(--ink-faint);
   letter-spacing: 1.5px;
+}
+/* Account-Bereich-Footer: Legal-Links bewusst leiser (Jan 2026-07-15) —
+   erreichbar bleiben sie (Impressumspflicht/DSGVO), stechen aber nicht
+   heraus. Nur hier via .app-footer — Landing/Legal behalten den
+   Standard-Footer. */
+.app-footer .footer-meta {
+  font-size: 12.5px;
+}
+.app-footer .footer-meta a {
+  color: var(--ink-mute);
+}
+.app-footer .footer-meta a:hover {
+  color: var(--ink-dim);
+}
+
+/* Landing- + Account-Footer (Variante C, ueberarbeitet 2026-07-15): nur das
+   Marken-Statement links, Legal-Links rechtsbuendig auf gleicher Hoehe.
+   Kein Trenner, kein Logo, deutlich mehr Padding unten als oben. */
+.site-footer-brand {
+  padding-top: 36px;
+  padding-bottom: 84px;
+}
+.footer-tagline-big {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: clamp(19px, 2.6vw, 22px);
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+  color: var(--ink);
+  margin: 0;
+}
+.footer-brand-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px 24px;
 }
 
 /* === LEGAL PAGE LAYOUT === */
@@ -3033,6 +3086,15 @@ h2 .accent {
   width: 100%;
   margin: 0 auto;
 }
+/* Lists-UEBERSICHT (MyLists) auf der vollen Account-Breite (1136, wie
+   Header/Dashboard/Account) — nicht die schmale 560er-Spalte, die sich
+   .lists-inner mit der Marketing-Landing + Generator-Building-View
+   teilt. Die Generator-FORM bleibt bewusst auf .lists-inner-wide. */
+.lists-inner-account {
+  max-width: 1136px;
+  width: 100%;
+  margin: 0 auto;
+}
 .lists-hero {
   text-align: center;
   margin-bottom: 32px;
@@ -3075,29 +3137,89 @@ h2 .accent {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.lists-chip-row {
+/* "Try:"-Vorschlagszeile unter Industry / Country — Pillengroesse aus
+   dem v2-Entwurf (4x11, 12.5px). Bewusst mit Abstand zum Feld (frueher
+   klebten die Pillen durch margin-top: -6px direkt an der Unterkante). */
+.lists-try {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: -6px;
-}
-.lists-chip {
-  background: var(--bg-page);
-  border: 1px solid var(--line-strong);
-  border-radius: 100px;
-  padding: 7px 14px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
   font-size: 13px;
+  color: var(--ink-faint);
+}
+.lists-try-chip {
+  border: 1px solid var(--line-strong);
+  background: #ffffff;
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 12.5px;
   font-weight: 500;
   font-family: inherit;
   color: var(--ink-dim);
   cursor: pointer;
   transition:
-    border-color 0.15s,
-    color 0.15s;
+    border-color 0.12s,
+    color 0.12s,
+    background 0.12s;
 }
-.lists-chip:hover:not(:disabled) {
+.lists-try-chip:hover:not(:disabled) {
   border-color: rgba(74, 122, 247, 0.5);
   color: var(--blue-deep);
+  background: var(--blue-tint);
+}
+/* Pflicht-Stern an Industry-/Country-Label. */
+.lists-req {
+  color: var(--blue-deep);
+  font-weight: 700;
+}
+/* Country + City nebeneinander in einer Zeile (v2-Layout); wrappt auf
+   schmalen Viewports uebereinander. */
+.lists-field-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.lists-col-country {
+  flex: 0 1 200px;
+  min-width: 150px;
+}
+.lists-col-city {
+  flex: 1 1 260px;
+  min-width: 200px;
+}
+/* Eigener "Filters"-Abschnitt mit Titel ueber dem Website-Dropdown. */
+.lists-filters-section {
+  border-top: 1px solid var(--line);
+  padding-top: 22px;
+  margin-top: 4px;
+}
+.lists-section-title {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+/* Generator-CTA im v2-Look: schwarz mit Icon statt Blau-Gradient. Nur
+   hier — die .beta-submit der Landing/Auth bleibt Callday-Blau. */
+.lists-generate-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--ink);
+  box-shadow:
+    0 1px 2px rgba(8, 10, 20, 0.05),
+    0 10px 28px -14px rgba(8, 10, 20, 0.35);
+}
+.lists-generate-btn:hover:not(:disabled) {
+  background: #000;
+}
+.lists-generate-btn svg {
+  width: 18px;
+  height: 18px;
 }
 /* Select im iOS-Settings-Look der .beta-field-Inputs. 16px Font ist
    Pflicht (iOS-Focus-Zoom), Chevron als Data-URI weil appearance:none
@@ -3286,12 +3408,13 @@ h2 .accent {
 .lists-backlink:hover {
   color: var(--blue-deep);
 }
+/* h1 — kanonische Account-Titel-Skala (siehe .account-headline). */
 .lists-worktitle {
   font-family: var(--font-geist-sans), sans-serif;
-  font-size: clamp(26px, 3.5vw, 34px);
+  font-size: clamp(28px, 4vw, 40px);
   font-weight: 600;
-  letter-spacing: -0.6px;
-  line-height: 1.15;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
   color: var(--ink);
   margin: 0 0 6px;
 }
@@ -3356,6 +3479,27 @@ h2 .accent {
   color: var(--ink-dim);
   margin: 3px 0 0;
   padding-left: 2px;
+}
+/* Listengroesse — im Free-State fix + deaktiviert (der bediente Regler
+   kommt mit Credits). Zahl schmal, "leads" daneben, gedaempft. */
+.lists-size-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.lists-size-input {
+  width: 110px;
+}
+.lists-console-form .lists-size-input:disabled {
+  background-color: rgba(26, 29, 38, 0.045);
+  border-color: transparent;
+  color: var(--ink-faint);
+  -webkit-text-fill-color: var(--ink-faint);
+  cursor: not-allowed;
+}
+.lists-size-unit {
+  font-size: 14px;
+  color: var(--ink-dim);
 }
 .lists-fail-banner {
   margin: 0 0 20px;
@@ -3484,9 +3628,10 @@ h2 .accent {
   justify-content: space-between;
   gap: 16px;
 }
+/* h3 (Item-Titel) — kanonische Account-Skala, wie .dash-tile-name. */
 .lists-listcard-name {
   font-family: var(--font-geist-sans), sans-serif;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.2px;
   color: var(--ink);
@@ -3547,27 +3692,520 @@ h2 .accent {
 
 /* === APP-NAV (eingeloggter Account-Bereich: /lists, /lists/new, /account) ===
    Tabs als sichtbare Klammer ueber den Unterseiten des Bereichs. */
-.app-nav-tabs {
+/* === APP NAV (eingeloggter Bereich) — Inhalt im .site-nav-Shell ===
+   Primaere Links links neben dem Logo, "Manage account" rechts. Unter
+   900px klappen die Links in ein Hamburger-Menue. */
+.appnav-inner {
+  gap: 20px;
+  /* Content-Zeile auf 40px wie der Landing-CTA → Nav-Gesamthoehe 77px,
+     identisch zur Landing (die Account-Pille allein waere nur 36px). */
+  min-height: 40px;
+}
+.appnav-left {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  min-width: 0;
 }
-.app-nav-tab {
-  padding: 8px 16px;
-  border-radius: 100px;
+.appnav-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
+}
+.appnav-link {
+  padding: 7px 11px;
+  border-radius: 8px;
   font-size: 13.5px;
   font-weight: 500;
   color: var(--ink-dim);
   text-decoration: none;
+  white-space: nowrap;
   transition:
     color 0.15s,
     background 0.15s;
 }
-.app-nav-tab:hover {
-  color: var(--blue-deep);
+.appnav-link:hover {
+  background: rgba(26, 29, 38, 0.05);
+  color: var(--ink);
 }
-.app-nav-tab.is-active {
+.appnav-link.is-active {
+  color: var(--ink);
+  background: var(--bg-page);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.appnav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* "New list"-Aktion (Variante B: solid ink) — die eine klare Aktion im
+   Header, dunkel statt Marken-Blau, damit sie nicht mit der blauen
+   Account-Pille konkurriert. */
+.appnav-new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px 7px 10px;
+  border-radius: 9px;
+  background: var(--ink);
+  color: #fff;
+  text-decoration: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.appnav-new-btn:hover {
+  background: #000;
+}
+/* Account = runder Avatar-Button (avatar-only, ohne Label) — auf allen
+   Breiten wie frueher nur auf Mobile. */
+.appnav-account {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border-radius: 999px;
+  background: var(--blue-tint);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.appnav-account:hover,
+.appnav-account.is-active {
+  background: var(--blue-soft);
+}
+.appnav-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 11.5px;
+  flex-shrink: 0;
+}
+.appnav-burger {
+  display: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--bg-page);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  place-items: center;
+}
+.appnav-burger:hover {
+  border-color: var(--ink-faint);
+}
+.appnav-mobile {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 16px 40px -16px rgba(8, 10, 20, 0.18);
+}
+.appnav-mobile.is-open {
+  display: flex;
+}
+.appnav-mobile-link {
+  padding: 12px 14px;
+  border-radius: 9px;
+  text-decoration: none;
+  color: var(--ink);
+  font-weight: 500;
+  font-size: 15px;
+}
+.appnav-mobile-link:hover {
+  background: rgba(26, 29, 38, 0.05);
+}
+.appnav-mobile-link.is-active {
   background: var(--blue-tint);
   color: var(--blue-deep);
   font-weight: 600;
+}
+@media (max-width: 900px) {
+  .appnav-links {
+    display: none;
+  }
+  .appnav-burger {
+    display: grid;
+  }
+}
+
+/* === DASHBOARD (/dashboard) — Hub nach dem Login ===
+   Cream-Body (--bg), weisse Karten. Kartendesigns 1:1 aus der App
+   (ListCard + ShareCard). */
+/* Inhaltsbreite = Header (.container: max-width 1200 + 32px Padding →
+   Inhalt 1136, fluchtet mit Nav-Logo/Button). Padding MUSS aufs
+   1200er-Element, sonst schrumpft es die 1136 auf 1072 (Body war
+   dadurch schmaler als der Header). */
+.dash-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 44px) 32px 88px;
+}
+/* Greeting-Block: fixer Abstand zur ersten Sektion, egal ob die
+   Sub-Zeile (nur First-Run) da ist oder nicht. */
+.dash-head {
+  margin-bottom: 40px;
+}
+/* h1 — kanonische Account-Titel-Skala (siehe .account-headline). */
+.dash-greet {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  color: var(--ink);
+  margin: 0;
+}
+.dash-greet-sub {
+  margin: 6px 0 0;
+  color: var(--ink-dim);
+  font-size: 15px;
+}
+.dash-sec {
+  margin-bottom: 38px;
+}
+.dash-sec-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.dash-sec-head h2 {
+  font-family: var(--font-label), sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0;
+}
+/* Drei Cards pro Reihe auf der vollen Inhaltsbreite (statt zwei
+   ueberbreite). Jan-Entscheidung 2026-07-15. */
+.dash-duo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+/* Recent lists: 2 groessere Karten (Jan 2026-07-15). Recent Calldays
+   nutzen das Basis-3er-Grid. */
+.dash-duo-lists {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+/* Die 2 breiteren Listen-Karten proportional groesser (~1.3x auf allen
+   Innen-Massen: Padding/Radius/Fonts/Bar/Abstaende → auch die Hoehe
+   waechst mit). */
+.dash-duo-lists .dash-tile {
+  padding: 24px;
+  border-radius: 18px;
+}
+.dash-duo-lists .dash-tile-top {
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.dash-duo-lists .dash-tile-name {
+  font-size: 19px;
+  letter-spacing: -0.3px;
+}
+.dash-duo-lists .dash-badge {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+.dash-duo-lists .dash-tile-sub {
+  font-size: 14.5px;
+  margin: 0 0 18px;
+}
+.dash-duo-lists .dash-bar {
+  height: 8px;
+}
+.dash-duo-lists .dash-tile-foot {
+  margin-top: 8px;
+  font-size: 13.5px;
+}
+.dash-duo-lists .dash-tile-foot b {
+  font-size: 13.5px;
+}
+
+/* Listen-Kachel (App: components/listen/ListCard.tsx). */
+.dash-tile {
+  display: block;
+  background: var(--bg-page);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  padding: 18px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 1px 2px rgba(8, 10, 20, 0.04);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.dash-tile:hover {
+  border-color: var(--blue);
+  box-shadow: 0 8px 24px -12px rgba(8, 10, 20, 0.12);
+}
+.dash-tile-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+.dash-tile-name {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--blue-deep);
+  background: var(--blue-tint);
+  padding: 3px 8px;
+  border-radius: 100px;
+}
+.dash-tile-sub {
+  font-size: 12px;
+  color: var(--ink-dim);
+  letter-spacing: -0.1px;
+  margin: 0 0 14px;
+}
+.dash-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(26, 29, 38, 0.06);
+  overflow: hidden;
+}
+.dash-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--blue) 0%, var(--blue-deep) 100%);
+}
+.dash-tile-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+.dash-tile-foot b {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Callday-Sticker (App: components/share/ShareCard.tsx, light-Theme).
+   Feste Sticker-Farben — bewusst nicht themebar, wie die App-Vorlage. */
+.dash-sticker {
+  display: flex;
+  flex-direction: column;
+  min-height: 250px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 22px;
+  padding: 22px 22px 18px;
+  box-shadow: 0 1px 2px rgba(8, 10, 20, 0.04);
+}
+.dash-sticker-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  color: #8a8a85;
+  margin-bottom: 28px;
+}
+.dash-sticker-rel {
+  color: #a8a8a3;
+}
+.dash-sticker-stats {
+  margin: auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dash-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.dash-stat-num {
+  font-size: 46px;
+  font-weight: 600;
+  letter-spacing: -1.4px;
+  line-height: 1.05;
+  color: #111111;
+  font-variant-numeric: tabular-nums;
+}
+.dash-stat-lbl {
+  font-size: 14px;
+  font-weight: 400;
+  color: #8a8a85;
+}
+.dash-sticker.is-empty .dash-stat-num {
+  color: var(--ink-faint);
+}
+.dash-sticker-rule {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.06);
+  margin: 24px 0 12px;
+}
+.dash-sticker-foot {
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.2px;
+  color: #a8a8a3;
+}
+
+/* First-Run: der leere Slot IST der CTA (volle Inhaltsbreite). */
+.dash-dropin {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-height: 150px;
+  padding: 26px 28px;
+  border-radius: 18px;
+  border: 2px dashed var(--line-strong);
+  background: var(--bg-page);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.18s,
+    background 0.18s,
+    box-shadow 0.18s;
+}
+.dash-dropin:hover {
+  border-color: var(--blue);
+  background: var(--blue-tint);
+  box-shadow: 0 8px 24px -12px rgba(8, 10, 20, 0.12);
+}
+.dash-dropin-ic {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
+  color: #fff;
+}
+.dash-free {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--green-deep);
+  background: rgba(16, 185, 129, 0.12);
+  padding: 3px 9px;
+  border-radius: 999px;
+  margin-bottom: 9px;
+}
+.dash-dropin-title {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.dash-dropin-sub {
+  display: block;
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 48ch;
+}
+.dash-dropin-go {
+  margin-left: auto;
+  flex: none;
+  color: var(--ink-faint);
+}
+.dash-dropin:hover .dash-dropin-go {
+  color: var(--blue-deep);
+}
+.dash-sec-note {
+  align-self: center;
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-faint);
+  line-height: 1.6;
+}
+/* First-Run-Calldays: Sticker + Erklaertext nebeneinander (nicht im
+   3er-Grid, sonst bliebe eine leere Spalte). */
+.dash-empty-row {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) 1fr;
+  gap: 22px;
+  align-items: center;
+}
+.dash-stub {
+  max-width: 460px;
+  padding: 20px 0 60px;
+}
+/* h1 — kanonische Account-Titel-Skala (siehe .account-headline). */
+.dash-stub-title {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  color: var(--ink);
+  margin: 0 0 10px;
+}
+.dash-stub-body {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-dim);
+  margin: 0;
+}
+@media (max-width: 900px) {
+  .dash-wrap {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .dash-duo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .dash-duo,
+  .dash-duo-lists {
+    grid-template-columns: 1fr;
+  }
+  .dash-empty-row {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .dash-dropin {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .dash-dropin-go {
+    display: none;
+  }
 }

@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { AppNav } from "../components/AppNav";
-import { CalldayLogo } from "../components/CalldayLogo";
+import { AppFooter } from "../components/AppFooter";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { parseUserAgent } from "@/lib/user-agent";
 import {
@@ -13,6 +12,7 @@ import {
 } from "./actions";
 import { ResendTestFlightButton } from "./ResendTestFlightButton";
 import { LeadListsSection } from "./LeadListsSection";
+import { avatarInitial } from "@/lib/dashboard/data";
 
 export const metadata: Metadata = {
   title: "Your account · Callday",
@@ -150,7 +150,10 @@ export default async function AccountPage() {
       <div className="bg-orb bg-orb-2" />
       <div className="bg-orb bg-orb-3" />
 
-      <AppNav active="account" />
+      <AppNav
+        active="account"
+        initial={avatarInitial(profile.name, profile.email)}
+      />
 
       <main className="account-page">
         <div className="account-inner">
@@ -393,21 +396,7 @@ export default async function AccountPage() {
         </div>
       </main>
 
-      <footer className="site-footer">
-        <div className="container footer-inner">
-          <div className="logo">
-            <CalldayLogo size={28} />
-            Callday
-          </div>
-          <div className="footer-tagline">MAKE TODAY A CALLDAY.</div>
-          <div className="footer-meta">
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
-            <Link href="/terms#imprint">Imprint</Link>
-            <a href="mailto:hello@callday.io">hello@callday.io</a>
-          </div>
-        </div>
-      </footer>
+      <AppFooter />
     </>
   );
 }

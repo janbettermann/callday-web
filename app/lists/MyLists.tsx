@@ -23,7 +23,7 @@ export function MyLists({ jobs }: { jobs: JobView[] }) {
   const isEmpty = !running && ready.length === 0;
 
   return (
-    <div className="lists-inner">
+    <div className="lists-inner-account">
       <header className="lists-topbar">
         <div>
           <h1 className="lists-worktitle">Your lead lists</h1>

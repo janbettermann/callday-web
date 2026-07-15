@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CalldayLogo } from "./components/CalldayLogo";
 import { FaqAccordion } from "./components/FaqAccordion";
 import { FlowTabs } from "./components/FlowTabs";
 import { BetaCta } from "./components/BetaCta";
@@ -220,13 +219,9 @@ export default function Home() {
       </section>
 
       {/* === FOOTER === */}
-      <footer className="site-footer">
-        <div className="container footer-inner">
-          <div className="logo">
-            <CalldayLogo size={28} />
-            Callday
-          </div>
-          <div className="footer-tagline">MAKE TODAY A CALLDAY.</div>
+      <footer className="site-footer site-footer-brand">
+        <div className="container footer-brand-row">
+          <p className="footer-tagline-big">Make today a Callday.</p>
           <div className="footer-meta">
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>

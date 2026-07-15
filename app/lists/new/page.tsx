@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
+import { avatarInitial } from "@/lib/dashboard/data";
 import { AppNav } from "../../components/AppNav";
+import { AppFooter } from "../../components/AppFooter";
 import { GeneratorClient } from "./GeneratorClient";
 
 /**
@@ -41,10 +43,11 @@ export default async function NewListPage({
 
   return (
     <>
-      <AppNav active="lists" />
+      <AppNav active="new" initial={avatarInitial(null, user.email)} />
       <main className="lists-page">
         <GeneratorClient />
       </main>
+      <AppFooter />
     </>
   );
 }

@@ -103,7 +103,9 @@ function isEmailNotConfirmed(error: { message?: string; code?: string }): boolea
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/";
+  // Ohne explizites next landet der eingeloggte User auf dem Dashboard
+  // (Startseite des Account-Bereichs seit 2026-07-15).
+  const next = searchParams.get("next") || "/dashboard";
   const presetEmail = searchParams.get("email") || "";
   const initialError = searchParams.get("error");
 

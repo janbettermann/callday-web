@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { buildListName, fetchJobsForUser } from "@/lib/lists/jobs";
+import { avatarInitial } from "@/lib/dashboard/data";
 import { AppNav } from "../components/AppNav";
+import { AppFooter } from "../components/AppFooter";
 import type { JobView } from "./job-view";
 import { ListsClient } from "./ListsClient";
 import { MyLists } from "./MyLists";
@@ -66,10 +68,11 @@ export default async function ListsPage({
 
   return (
     <>
-      <AppNav active="lists" />
+      <AppNav active="lists" initial={avatarInitial(null, user.email)} />
       <main className="lists-page">
         <MyLists jobs={jobViews} />
       </main>
+      <AppFooter />
     </>
   );
 }
