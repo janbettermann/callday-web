@@ -77,6 +77,44 @@ describe("toCallableLeads", () => {
     ]);
   });
 
+  it("faltet Enrichment-Zeilen (eine pro E-Mail) auf einen Lead zusammen", () => {
+    const winkRow = {
+      place_id: "wink-1",
+      website: "https://www.ilovewink.com/",
+    };
+    const leads = toCallableLeads(
+      [
+        place({
+          ...winkRow,
+          email: "shop@ilovewink.com",
+          source: "https://www.ilovewink.com/gift-certificates",
+        }),
+        place({ ...winkRow, email: "chrissyd@ilovewink.com", source: "fb" }),
+        place({ name: "Ohne Mails", phone: "+1 828 2", place_id: "other-1" }),
+      ],
+      null,
+    );
+    expect(leads).toHaveLength(2);
+    // Beide Adressen matchen die Domain — die Website-Quelle gewinnt.
+    expect(leads[0].email).toBe("shop@ilovewink.com");
+    expect(leads[1].email).toBeNull();
+  });
+
+  it("vorbefuellt keine Fremd-Domain-Adresse (Ketten-Fall)", () => {
+    const leads = toCallableLeads(
+      [
+        place({
+          place_id: "sc-1",
+          website: "https://www.supercuts.com/x",
+          email: "domainnames@regiscorp.com",
+          source: "https://www.supercuts.com/contact",
+        }),
+      ],
+      null,
+    );
+    expect(leads[0].email).toBeNull();
+  });
+
   it("schneidet Tracking-Anhaenge von Website-URLs ab (roh und percent-encoded)", () => {
     const leads = toCallableLeads(
       [

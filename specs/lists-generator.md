@@ -483,11 +483,22 @@ die Meeting-Bestaetigung — „Ist jeannie@… noch richtig?"):
 - **Phase 0b (offen, unbestaetigt):** GMB-Kategorien-Autocomplete
   fuers Industry-Feld (gebundelte Liste, Freitext-Fallback,
   Suggest-UI aus `suggest.tsx` wiederverwenden).
-- **Phase 1 (nur Web, ~halber Tag):** `leads_n_contacts` immer an
-  (beide Sprach-Pfade!), Aggregation + Prioritaetsregeln als pure
-  Functions mit vitest, Prefill in `lead.email` (KEIN Schema-Change),
-  Kosten-Gate mit echtem Lauf, Summary-Notiz bei „Only without
-  website" („No emails — these businesses have no website").
+- **Phase 1 (✅ 2026-07-15):** `leads_n_contacts` immer an (ein
+  Request-Pfad, `enrichments` in startGoogleMapsSearch), Aggregation
+  nach place_id + Prioritaetsregeln in `lib/lists/emails.ts` (pure,
+  getestet), Prefill in `lead.email` (kein Schema-Change,
+  `schema_field_sources.email` ergaenzt), Summary-Zeile („Emails
+  where we find them" / „No emails — these businesses have no
+  website"). **Live verifiziert** (3 Mini-Laeufe, Cent-Bereich):
+  API liefert `email`/`source`/`place_id` pro Zeile (Shape wie
+  UI-XLSX), Felder ueberleben den `fields`-Filter, E2E ueber die
+  echten lib-Funktionen: 26 Zeilen → 8 Leads, 5/8 Prefill
+  (Physio Boise; B2B-Vertical deutlich ueber Beauty-Quote).
+  Nebenbefunde: (a) `full_name` kommt bei linkedin/appolo-Quellen
+  MIT (widerspricht §13c-Notiz „keine Personen-Namen" — war
+  de-Markt); contact_name-Prefill waere moeglich, bewusst NICHT in
+  Phase 1. (b) `raw_count` am Job zaehlt jetzt Enrichment-Zeilen,
+  nicht Betriebe (Vergleich raw vs. lead_count entsprechend lesen).
 - **Beobachtungs-Gate:** 2–3 echte Listen — Prefill-Quote und
   -Fehlerrate messen. Nur bei Bedarf weiter.
 - **Phase 2 (Cross-Repo, 1–2 Tage, NUR nach Gate):**

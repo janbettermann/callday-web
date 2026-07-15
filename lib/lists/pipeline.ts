@@ -13,6 +13,7 @@
 
 import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { choosePrefillEmail, collectEmailCandidates } from "./emails";
 import type { OutscraperPlace } from "./outscraper";
 
 export interface CallableLead {
@@ -67,12 +68,14 @@ export interface GeneratedCustomFieldDef {
  * Quell-Spalten-Mapping fuer das Re-Mapping-Sheet der App
  * (lead_lists.schema_field_sources) — als "Quelle" dienen die
  * Spaltennamen des Generator-Exports (identisch zu XLSX/CSV-Headern).
- * email/contact_name fehlen bewusst: der Generator liefert sie nicht,
- * "No source" ist dort die korrekte Anzeige (beide optional).
+ * contact_name fehlt bewusst: der Generator liefert ihn nicht,
+ * "No source" ist dort die korrekte Anzeige (Feld optional).
+ * email kommt seit dem leads_n_contacts-Enrichment mit (§13d).
  */
 const GENERATED_SCHEMA_SOURCES: Record<string, string> = {
   company_name: "Company",
   phone: "Phone",
+  email: "Email",
   website: "Website",
   industry: "Industry",
   location: "Location",
@@ -139,9 +142,31 @@ function toCustomFields(place: OutscraperPlace): Record<string, string> {
 }
 
 /**
- * Filter + Dedupe + Mapping. Dedupe-Schluessel ist die normalisierte
- * Telefonnummer — dieselbe Firma taucht bei Google Maps gern in
- * mehreren Kategorien auf.
+ * Mit leads_n_contacts liefert Outscraper EINE ZEILE PRO GEFUNDENER
+ * E-MAIL (Zeilen-Explosion, §13c/§13d) — vor allem anderen die Zeilen
+ * eines Betriebs wieder zusammenfassen. Basis-Felder sind pro Gruppe
+ * identisch (erste Zeile gewinnt), die E-Mails kommen aus allen.
+ * Fallback-Schluessel fuer Laeufe ohne place_id: Name + Telefon.
+ */
+function groupByPlace(places: OutscraperPlace[]): OutscraperPlace[][] {
+  const groups = new Map<string, OutscraperPlace[]>();
+  for (const place of places) {
+    const key =
+      place.place_id?.trim() || `${place.name ?? ""}|${place.phone ?? ""}`;
+    const group = groups.get(key);
+    if (group) {
+      group.push(place);
+    } else {
+      groups.set(key, [place]);
+    }
+  }
+  return [...groups.values()];
+}
+
+/**
+ * Gruppierung + Filter + Dedupe + Mapping. Dedupe-Schluessel ueber
+ * Gruppen hinweg ist die normalisierte Telefonnummer — dieselbe Firma
+ * taucht bei Google Maps gern in mehreren Kategorien auf.
  */
 export function toCallableLeads(
   places: OutscraperPlace[],
@@ -150,7 +175,8 @@ export function toCallableLeads(
   const seenPhones = new Set<string>();
   const leads: CallableLead[] = [];
 
-  for (const place of places) {
+  for (const rows of groupByPlace(places)) {
+    const place = rows[0];
     const name = place.name?.trim();
     const phone = place.phone?.trim();
     if (!name || !phone) continue;
@@ -162,11 +188,15 @@ export function toCallableLeads(
     if (!phoneKey || seenPhones.has(phoneKey)) continue;
     seenPhones.add(phoneKey);
 
+    const website = cleanWebsite(place.website ?? place.site);
     leads.push({
       company_name: name,
       phone,
-      email: null,
-      website: cleanWebsite(place.website ?? place.site),
+      email: choosePrefillEmail(collectEmailCandidates(rows), {
+        website,
+        companyName: name,
+      }),
+      website,
       contact_name: null,
       industry: place.category?.trim() || fallbackIndustry,
       location: (place.address ?? place.full_address)?.trim() || null,

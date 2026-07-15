@@ -136,6 +136,9 @@ export async function POST(request: NextRequest) {
       language: countryConfig.language,
       webhookUrl,
       filters: serverFilters,
+      // Ein Enricher, immer an, auch Free (§13d) — E-Mails fuer den
+      // Prefill; abgerechnet pro Domain, Betriebe ohne Website gratis.
+      enrichments: ["leads_n_contacts"],
     });
     await admin
       .from("lead_gen_jobs")

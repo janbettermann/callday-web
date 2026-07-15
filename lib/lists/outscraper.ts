@@ -35,6 +35,15 @@ export interface OutscraperPlace {
   working_hours?: Record<string, string[] | string>;
   /** Google-Business-Profil beansprucht/verifiziert. */
   verified?: boolean;
+  /** Google-Place-ID — Gruppierungs-Schluessel gegen die Zeilen-
+   *  Explosion des leads_n_contacts-Enrichments (eine Zeile pro
+   *  gefundener E-Mail; live verifiziert 2026-07-15). */
+  place_id?: string;
+  /** E-Mail dieser Enrichment-Zeile (nur mit enrichment gesetzt). */
+  email?: string;
+  /** Fundort der E-Mail: 'fb', 'linkedin', 'appolo', 'ai-research'
+   *  oder eine volle URL — Normalisierung in lib/lists/emails.ts. */
+  source?: string;
 }
 
 export type OutscraperResultStatus = "pending" | "success" | "failed";
@@ -46,9 +55,11 @@ export interface OutscraperResults {
 
 /** Felder eingrenzen — kleinerer Payload, schnellere Antwort. Rating/
  *  Reviews/Hours/Verified sind im Basis-Preis enthalten und werden als
- *  Custom Fields an die Leads gehaengt (Icebreaker + Call-Timing). */
+ *  Custom Fields an die Leads gehaengt (Icebreaker + Call-Timing).
+ *  place_id/email/source gehoeren zum leads_n_contacts-Enrichment —
+ *  live verifiziert (2026-07-15): sie ueberleben den fields-Filter. */
 const RESULT_FIELDS =
-  "query,name,phone,website,site,address,full_address,category,business_status,rating,reviews,working_hours,verified";
+  "query,name,phone,website,site,address,full_address,category,business_status,rating,reviews,working_hours,verified,place_id,email,source";
 
 function getApiKey(): string {
   const key = process.env.OUTSCRAPER_API_KEY;
@@ -70,6 +81,12 @@ interface StartSearchOptions {
    * und Ortsnamen lokalisiert bleiben.
    */
   filters?: string[];
+  /**
+   * Enricher (z. B. leads_n_contacts). Achtung Antwort-Shape: mit
+   * Enrichment liefert Outscraper EINE ZEILE PRO E-MAIL — die
+   * Pipeline gruppiert per place_id zurueck auf einen Lead.
+   */
+  enrichments?: string[];
 }
 
 /** Startet den async Google-Maps-Search-Job, gibt die Request-ID zurueck. */
@@ -87,6 +104,9 @@ export async function startGoogleMapsSearch(
   });
   for (const filter of options.filters ?? []) {
     params.append("filters", filter);
+  }
+  for (const enrichment of options.enrichments ?? []) {
+    params.append("enrichment", enrichment);
   }
 
   const response = await fetch(

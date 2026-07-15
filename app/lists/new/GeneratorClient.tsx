@@ -402,6 +402,13 @@ function SummaryPanel({
       <ul className="lists-summary-specs">
         <li>Up to {FREE_LIST_SIZE} callable leads</li>
         <li>Phone number on every lead</li>
+        <li>
+          {/* Ehrliche E-Mail-Zeile: ohne Website gibt es nichts zu
+              scrapen (§13d) — das sagen wir im Moment der Wahl. */}
+          {websiteFilter === "without"
+            ? "No emails — these businesses have no website"
+            : "Emails where we find them"}
+        </li>
         <li>{websiteSummaryLabel(websiteFilter)}</li>
         <li>Deduped — one entry per business</li>
         <li>Synced straight to the Callday app</li>
