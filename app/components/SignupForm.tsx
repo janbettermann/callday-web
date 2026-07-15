@@ -69,8 +69,8 @@ function isUserAlreadyRegistered(error: {
  * Der OTP-Code-Step lebt seit 2026-07-05 auf der eigenen Route /confirm
  * (Email-Handoff via sessionStorage, siehe lib/signup-confirm.ts) — der
  * fruehere In-Place-Swap war nicht reload-fest und als Funnel-Step
- * unsichtbar. Nach erfolgreichem Confirm landet der User auf
- * /account?welcome=signup — siehe TestFlight-Recovery-Section in /account.
+ * unsichtbar. Nach erfolgreichem Confirm landet der User auf dem
+ * Dashboard (Post-Login-Startseite seit 2026-07-15).
  */
 
 type Status = "idle" | "submitting" | "error";
@@ -88,7 +88,7 @@ interface Props {
    * Interner Pfad nach abgeschlossenem Sign-Up (OAuth via login_next-
    * Cookie, Email/PW via /confirm-Handoff). Einstiege mit eigenem
    * Funnel (z. B. /lists) setzen das, damit der User dorthin
-   * zurueckkommt; Default ist die Account-Welcome-Card.
+   * zurueckkommt; Default ist das Dashboard.
    */
   nextPath?: string;
 }

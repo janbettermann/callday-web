@@ -27,7 +27,7 @@ export interface SignupConfirmHandoff {
   /**
    * Interner Pfad, auf dem der User nach erfolgreichem Confirm landet.
    * Gesetzt von Einstiegen mit eigenem Funnel (z. B. /lists); ohne Wert
-   * gilt der Default /account?welcome=signup (siehe ConfirmCard).
+   * gilt der Default /dashboard (siehe ConfirmCard).
    */
   next?: string;
 }

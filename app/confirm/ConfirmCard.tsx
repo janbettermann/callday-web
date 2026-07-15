@@ -90,8 +90,8 @@ export function ConfirmCard() {
     void sendTestflightInviteMail("ConfirmCard");
 
     // Funnel-Einstiege (z. B. /lists) geben ihr Ziel im Handoff mit;
-    // Default bleibt die Account-Welcome-Card.
-    router.push(handoff?.next ?? "/account?welcome=signup");
+    // Default ist das Dashboard (Post-Login-Startseite seit 2026-07-15).
+    router.push(handoff?.next ?? "/dashboard");
   }
 
   /**
