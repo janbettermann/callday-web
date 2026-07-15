@@ -3,12 +3,11 @@ import { redirect } from "next/navigation";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { buildListName, fetchJobsForUser } from "@/lib/lists/jobs";
-import { avatarInitial } from "@/lib/dashboard/data";
+import { fetchAllLists, fetchProfileIdentity } from "@/lib/dashboard/data";
 import { AppNav } from "../components/AppNav";
 import { AppFooter } from "../components/AppFooter";
-import type { JobView } from "./job-view";
 import { ListsClient } from "./ListsClient";
-import { MyLists } from "./MyLists";
+import { MyLists, type ListCardData } from "./MyLists";
 
 /**
  * callday.io/lists — auth-aware Front-Door der Listen-Welt (Spec:
@@ -54,23 +53,44 @@ export default async function ListsPage({
   }
 
   const admin = getServerSupabase();
-  const jobs = await fetchJobsForUser(admin, user.id);
-  const jobViews: JobView[] = jobs.map((job) => ({
-    id: job.id,
-    status: job.status,
-    error: job.error,
-    leadCount: job.lead_count,
-    listId: job.list_id,
-    listName: buildListName(job.params, job.query),
-    params: job.params,
-    createdAt: job.created_at,
+  const [identity, lists, jobs] = await Promise.all([
+    fetchProfileIdentity(admin, user.id, user.email ?? null),
+    fetchAllLists(admin, user.id),
+    fetchJobsForUser(admin, user.id),
+  ]);
+
+  // Quelle: hat die Liste einen Generator-Job → "Generated", sonst
+  // (App-Datei-Import) → "Imported".
+  const generatedListIds = new Set(
+    jobs.map((job) => job.list_id).filter((id): id is string => Boolean(id)),
+  );
+  const cards: ListCardData[] = lists.map((list) => ({
+    ...list,
+    source: generatedListIds.has(list.id) ? "generated" : "imported",
   }));
+
+  // Laufender Job (noch keine lead_lists-Row) → Building-Card oben.
+  const runningJob = jobs.find(
+    (job) => job.status === "pending" || job.status === "processing",
+  );
+  const building = runningJob
+    ? {
+        jobId: runningJob.id,
+        listName: buildListName(runningJob.params, runningJob.query),
+      }
+    : null;
+
+  // Fehlgeschlagener letzter Versuch nur relevant, wenn sonst nichts da ist.
+  const hadFailure =
+    cards.length === 0 && !building
+      ? jobs.some((job) => job.status === "failed")
+      : false;
 
   return (
     <>
-      <AppNav active="lists" initial={avatarInitial(null, user.email)} />
+      <AppNav active="lists" initial={identity.initial} />
       <main className="lists-page">
-        <MyLists jobs={jobViews} />
+        <MyLists lists={cards} building={building} hadFailure={hadFailure} />
       </main>
       <AppFooter />
     </>

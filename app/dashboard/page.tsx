@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
 import {
-  avatarInitial,
+  fetchProfileIdentity,
   fetchRecentCalldays,
   fetchRecentLists,
   type DashboardCallday,
@@ -12,6 +12,7 @@ import {
 } from "@/lib/dashboard/data";
 import { AppNav } from "../components/AppNav";
 import { AppFooter } from "../components/AppFooter";
+import { CalldaySticker, EmptyCalldaySticker } from "../components/CalldaySticker";
 import { DashboardGreeting } from "./DashboardGreeting";
 
 export const metadata: Metadata = {
@@ -42,16 +43,11 @@ export default async function DashboardPage() {
   }
 
   const admin = getServerSupabase();
-  const { data: profileRow } = await admin
-    .from("profiles")
-    .select("name, email")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const name = (profileRow?.name as string | null) ?? null;
-  const email = (profileRow?.email as string | null) ?? user.email ?? null;
-  const firstName = name?.trim().split(/\s+/)[0] || null;
-  const initial = avatarInitial(name, email);
+  const { firstName, initial } = await fetchProfileIdentity(
+    admin,
+    user.id,
+    user.email ?? null,
+  );
 
   // Datenfehler duerfen das Dashboard nicht mitreissen — dann Empty-State.
   const [lists, calldays] = await Promise.all([
@@ -128,16 +124,12 @@ export default async function DashboardPage() {
           {calldays.length > 0 ? (
             <div className="dash-duo">
               {calldays.map((day) => (
-                <Sticker
-                  key={day.isoDate}
-                  name={firstName ?? "You"}
-                  day={day}
-                />
+                <CalldaySticker key={day.isoDate} day={day} />
               ))}
             </div>
           ) : (
             <div className="dash-empty-row">
-              <EmptySticker name={firstName ?? "You"} />
+              <EmptyCalldaySticker />
               <p className="dash-sec-note">
                 A Callday is a day you picked up the phone. Once your list is in,
                 this fills up on its own — one sticker per day, ready to share.
@@ -189,64 +181,5 @@ function ListTile({ list, active }: { list: DashboardList; active: boolean }) {
         <b>{pct}%</b>
       </div>
     </Link>
-  );
-}
-
-/**
- * Callday-Sticker — Design aus der App (components/share/ShareCard.tsx,
- * light-Theme): "{name} · {date}" / "{relative}", zwei Stat-Zeilen
- * (calls, meetings booked), "Callday"-Fusszeile.
- */
-function Sticker({ name, day }: { name: string; day: DashboardCallday }) {
-  return (
-    <div className="dash-sticker">
-      <div className="dash-sticker-top">
-        <span>
-          {name} · {day.label}
-        </span>
-        <span className="dash-sticker-rel">{day.relative}</span>
-      </div>
-      <div className="dash-sticker-stats">
-        <div className="dash-stat">
-          <span className="dash-stat-num">{day.calls}</span>
-          <span className="dash-stat-lbl">calls</span>
-        </div>
-        <div className="dash-stat">
-          <span className="dash-stat-num">{day.meetings}</span>
-          <span className="dash-stat-lbl">meetings booked</span>
-        </div>
-      </div>
-      <div className="dash-sticker-rule" />
-      <div className="dash-sticker-foot">Callday</div>
-    </div>
-  );
-}
-
-function EmptySticker({ name }: { name: string }) {
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const [, m, d] = todayIso.split("-").map((n) => parseInt(n, 10));
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-  return (
-    <div className="dash-sticker is-empty">
-      <div className="dash-sticker-top">
-        <span>
-          {name} · {months[m - 1]} {d}
-        </span>
-        <span className="dash-sticker-rel">Today</span>
-      </div>
-      <div className="dash-sticker-stats">
-        <div className="dash-stat">
-          <span className="dash-stat-num">0</span>
-          <span className="dash-stat-lbl">calls</span>
-        </div>
-        <div className="dash-stat">
-          <span className="dash-stat-num">0</span>
-          <span className="dash-stat-lbl">meetings booked</span>
-        </div>
-      </div>
-      <div className="dash-sticker-rule" />
-      <div className="dash-sticker-foot">Callday</div>
-    </div>
   );
 }

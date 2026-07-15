@@ -225,9 +225,6 @@ export function GeneratorClient() {
   return (
     <div className="lists-inner-wide">
       <header className="lists-workhead">
-        <Link href="/lists" className="lists-backlink">
-          ← Your lists
-        </Link>
         <h1 className="lists-worktitle">New lead list</h1>
         <p className="lists-worksub">
           Tell us who you want to call — we handle the rest.

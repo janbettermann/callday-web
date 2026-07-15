@@ -874,7 +874,9 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
 .account-page {
   position: relative;
   z-index: 1;
-  padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 56px) 32px
+  /* Top-Offset zum h1 = Dashboard (+44), einheitlich ueber alle
+     Account-Seiten. */
+  padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 44px) 32px
     120px;
   min-height: 100dvh;
 }
@@ -1178,7 +1180,7 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
 
 @media (max-width: 600px) {
   .account-page {
-    padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 40px) 24px
+    padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 44px) 24px
       80px;
   }
   .account-card {
@@ -3077,7 +3079,8 @@ h2 .accent {
    CTAs .account-btn. Hier leben nur die Lists-spezifischen Teile:
    kompakter Hero, Branchen-Chips, Progress, Ergebnis-Preview. */
 .lists-page {
-  padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 56px) 32px
+  /* Top-Offset zum h1 = Dashboard (+44), einheitlich. */
+  padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 44px) 32px
     120px;
   min-height: 100dvh;
 }
@@ -3344,12 +3347,6 @@ h2 .accent {
     transform: translateX(300%);
   }
 }
-.lists-app-card .account-btn {
-  margin-top: 12px;
-}
-.lists-app-benefits {
-  margin-bottom: 4px;
-}
 .lists-ready-badge {
   display: inline-flex;
   align-items: center;
@@ -3365,7 +3362,7 @@ h2 .accent {
 }
 @media (max-width: 600px) {
   .lists-page {
-    padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 40px) 24px
+    padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 44px) 24px
       80px;
   }
 }
@@ -3397,17 +3394,6 @@ h2 .accent {
 .lists-workhead {
   margin-bottom: 28px;
 }
-.lists-backlink {
-  display: inline-block;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--ink-faint);
-  text-decoration: none;
-  margin-bottom: 14px;
-}
-.lists-backlink:hover {
-  color: var(--blue-deep);
-}
 /* h1 — kanonische Account-Titel-Skala (siehe .account-headline). */
 .lists-worktitle {
   font-family: var(--font-geist-sans), sans-serif;
@@ -3423,22 +3409,6 @@ h2 .accent {
   color: var(--ink-dim);
   line-height: 1.5;
   margin: 0;
-}
-.lists-topbar {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.lists-topbar .lists-worksub {
-  margin-top: 2px;
-}
-.lists-newbtn {
-  width: auto;
-  margin-top: 0;
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 /* Generator-Konsole: EIN Formular als Card (v2-Look, Jan 2026-07-15) —
@@ -3622,11 +3592,11 @@ h2 .accent {
   padding: 20px 24px;
   margin: 0 0 16px;
 }
-.lists-listcard-head {
+.lists-card-top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
 }
 /* h3 (Item-Titel) — kanonische Account-Skala, wie .dash-tile-name. */
 .lists-listcard-name {
@@ -3635,43 +3605,100 @@ h2 .accent {
   font-weight: 600;
   letter-spacing: -0.2px;
   color: var(--ink);
-  margin: 0 0 4px;
 }
-.lists-listcard-meta {
-  font-size: 13px;
-  color: var(--ink-dim);
-  margin: 0;
-  line-height: 1.5;
-}
-.lists-synced-badge {
+/* Quelle-Pill: Generated (Callday-nativ, blau) / Imported (neutral). */
+.lists-src {
   flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
   padding: 4px 10px;
   border-radius: 100px;
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--green-deep);
-  font-size: 12px;
-  font-weight: 600;
-}
-.lists-synced-badge::before {
-  content: "✓";
-}
-.lists-listcard-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px 16px;
-  margin-top: 16px;
-}
-.lists-listcard-actions .account-btn {
-  width: auto;
-  margin-top: 0;
   white-space: nowrap;
 }
-.lists-listcard-progress {
-  margin: 16px 0 4px;
+.lists-src-generated {
+  background: rgba(74, 122, 247, 0.12);
+  color: var(--blue-deep);
+}
+.lists-src-imported {
+  background: rgba(26, 29, 38, 0.06);
+  color: var(--ink-dim);
+}
+.lists-card-sub {
+  font-size: 12px;
+  color: var(--ink-dim);
+  margin: 5px 0 15px;
+  line-height: 1.5;
+}
+/* Fortschrittsbalken — wie Dashboard (.dash-bar). */
+.lists-card-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(26, 29, 38, 0.07);
+  overflow: hidden;
+  position: relative;
+}
+.lists-card-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--blue);
+}
+/* Building: unbestimmtes Segment laeuft durch die gleiche Bar-Groesse. */
+.lists-card-bar-load {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 36%;
+  border-radius: 99px;
+  background: var(--blue);
+  animation: lists-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes lists-shimmer {
+  0% {
+    transform: translateX(-130%);
+  }
+  100% {
+    transform: translateX(360%);
+  }
+}
+.lists-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+.lists-card-foot b {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.lists-card-building {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.lists-card-build-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--blue);
+  animation: lists-pulse 1.5s ease-out infinite;
+  flex-shrink: 0;
+}
+@keyframes lists-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(74, 122, 247, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(74, 122, 247, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 122, 247, 0);
+  }
 }
 .lists-empty-failnote {
   color: var(--sun-deep);
@@ -3680,13 +3707,6 @@ h2 .accent {
   .lists-console-form {
     padding: 22px;
     border-radius: 16px;
-  }
-  .lists-topbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .lists-newbtn {
-    width: 100%;
   }
 }
 
@@ -3746,9 +3766,9 @@ h2 .accent {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 12px 7px 10px;
+  padding: 9px 16px 9px 14px;
   border-radius: 9px;
-  background: var(--ink);
+  background: var(--blue);
   color: #fff;
   text-decoration: none;
   font-size: 12.5px;
@@ -3757,7 +3777,7 @@ h2 .accent {
   transition: background 0.15s;
 }
 .appnav-new-btn:hover {
-  background: #000;
+  background: var(--blue-deep);
 }
 /* Account = runder Avatar-Button (avatar-only, ohne Label) — auf allen
    Breiten wie frueher nur auf Mobile. */
@@ -3767,19 +3787,19 @@ h2 .accent {
   justify-content: center;
   padding: 5px;
   border-radius: 999px;
-  background: var(--blue-tint);
+  background: rgba(26, 29, 38, 0.06);
   text-decoration: none;
   transition: background 0.15s;
 }
 .appnav-account:hover,
 .appnav-account.is-active {
-  background: var(--blue-soft);
+  background: rgba(26, 29, 38, 0.12);
 }
 .appnav-avatar {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
+  background: var(--ink);
   color: #fff;
   display: grid;
   place-items: center;
@@ -4021,25 +4041,12 @@ h2 .accent {
 .dash-sticker {
   display: flex;
   flex-direction: column;
-  min-height: 250px;
+  min-height: 196px;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.07);
   border-radius: 22px;
-  padding: 22px 22px 18px;
+  padding: 20px 22px 16px;
   box-shadow: 0 1px 2px rgba(8, 10, 20, 0.04);
-}
-.dash-sticker-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.3px;
-  color: #8a8a85;
-  margin-bottom: 28px;
-}
-.dash-sticker-rel {
-  color: #a8a8a3;
 }
 .dash-sticker-stats {
   margin: auto 0;
@@ -4071,11 +4078,21 @@ h2 .accent {
 .dash-sticker-rule {
   height: 1px;
   background: rgba(0, 0, 0, 0.06);
-  margin: 24px 0 12px;
+  margin: 18px 0 11px;
 }
 .dash-sticker-foot {
-  text-align: center;
-  font-size: 10px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.dash-sticker-date {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  color: #8a8a85;
+}
+.dash-sticker-url {
+  font-size: 12px;
   letter-spacing: 0.2px;
   color: #a8a8a3;
 }
@@ -4161,26 +4178,6 @@ h2 .accent {
   grid-template-columns: minmax(0, 320px) 1fr;
   gap: 22px;
   align-items: center;
-}
-.dash-stub {
-  max-width: 460px;
-  padding: 20px 0 60px;
-}
-/* h1 — kanonische Account-Titel-Skala (siehe .account-headline). */
-.dash-stub-title {
-  font-family: var(--font-geist-sans), sans-serif;
-  font-size: clamp(28px, 4vw, 40px);
-  font-weight: 600;
-  letter-spacing: -0.5px;
-  line-height: 1.1;
-  color: var(--ink);
-  margin: 0 0 10px;
-}
-.dash-stub-body {
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--ink-dim);
-  margin: 0;
 }
 @media (max-width: 900px) {
   .dash-wrap {

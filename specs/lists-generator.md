@@ -63,12 +63,25 @@ sauberen Schnitt offen).
   fuehrt jetzt direkt in den Generator (`nextPath=/lists/new`,
   Presets reisen mit).
 - **`/lists` eingeloggt** — die Listen-Uebersicht (`MyLists`),
-  server-gerendert (SSR-Auth wie /account, kein Client-Swap):
-  fertige Listen als Cards mit Downloads, laufender Job als pollende
-  Building-Card, Empty-State mit Free-List-Promo. Kommt ein
-  eingeloggter Besucher mit `?website=`-Preset (Affiliate-Link =
-  Generate-Intent), wird er zu /lists/new durchgereicht. Nebeneffekt:
-  der /lists-Link in der List-Ready-Mail landet wieder richtig.
+  server-gerendert (SSR-Auth wie /account, kein Client-Swap).
+  **Karten-Redesign 2026-07-16 (Jan):** Karten im Dashboard-Design
+  (`fetchAllLists` liest `lead_lists`, Demo via `is_sample` aus,
+  Progress-Logik mit dem Dashboard geteilt) — Name, Quelle-Pill oben
+  rechts (`Generated` = hat einen Generator-Job / `Imported` = App-
+  Datei-Import), Fortschrittsbalken, „x / y leads in list". Ein
+  laufender Job sitzt als pollende Building-Card oben (pulsierender
+  Punkt + „Building your list…", durchlaufende Ladeanimation im Balken
+  gleicher Groesse). **Raus:** In-Page-„New list"-Button (die AppNav
+  traegt ihn), Subtext unter h1, Download-Aktionen, „Call them with the
+  app"-Card, Synced-Badge. Filter-Toggles (all/synced/imported) bewusst
+  weggelassen — bei „alles synced" haetten sie leeren/identischen
+  Inhalt; die Quelle-Pill traegt die Info stattdessen pro Karte. Kommt
+  ein eingeloggter Besucher mit `?website=`-Preset (Affiliate-Link =
+  Generate-Intent), wird er zu /lists/new durchgereicht.
+  - **Offen (Jan 2026-07-16, bewusst vertagt):** Fehlgeschlagene
+    Generierung ist **kein** eigener Karten-Zustand — sie erscheint nur
+    noch als Empty-State-Hinweis (wenn sonst keine Liste da ist). Spaeter
+    ggf. vierter Zustand: rote `Failed`-Pill + „Retry" statt Balken.
 - **`/lists/new`** — der Generator als eigene Workspace-Seite
   (`GeneratorClient`): Konsolen-Layout (Formular links, Live-Summary
   rechts, die spaeter Credits-Kosten + Enricher-Zeilen traegt),
@@ -80,9 +93,11 @@ sauberen Schnitt offen).
   (`.lists-console.is-locked`), darueber Hinweis-Karte warum + Link zu
   /lists; Client-Guard ist nur Gurt, den Cap erzwingt weiter der
   partial unique index (409). Wird der Job in derselben Session fertig,
-  leitet die Seite zu /lists weiter — Cards + Downloads wohnen NUR
-  dort. Die fruehere Ready-Ansicht samt LeadPreviewCard (§13b) ist
-  ersatzlos raus, Git-History als Re-Impl-Vorlage.
+  leitet die Seite zu /lists weiter — die fertigen Listen wohnen dort
+  (Download-Buttons seit dem Karten-Redesign 2026-07-16 aus der UI raus,
+  `/api/lists/download` bleibt bestehen). Die fruehere Ready-Ansicht
+  samt LeadPreviewCard (§13b) ist ersatzlos raus, Git-History als
+  Re-Impl-Vorlage.
 - **/account** (`LeadListsSection`, jetzt Server-Component ohne
   Polling) — kompakter Zeiger statt Generator: keine Liste/failed →
   Promo-Card („Get your first lead list — free" → /lists/new, haelt

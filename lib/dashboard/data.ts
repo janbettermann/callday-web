@@ -4,7 +4,7 @@
  * Liest die gesyncte App-Aktivitaet server-seitig: die letzten Listen
  * mit Fortschritt (lead_lists + leads) und die letzten "Calldays" —
  * Tage, an denen der User telefoniert hat (Aggregation aus
- * call_outcomes). Beide bewusst auf die letzten zwei begrenzt: das
+ * call_outcomes). Beide bewusst knapp (Listen: 2, Calldays: 3): das
  * Dashboard zeigt "recent", die Vollansicht haengt hinter den
  * "All your …"-Links.
  *
@@ -23,14 +23,24 @@ export interface DashboardList {
   /** ACTIVE-Badge-Kandidat: die Liste wurde tatsaechlich schon bearbeitet. */
   worked: boolean;
   metaLine: string;
+  /** Relatives Erstell-Datum ("2 days ago") — fuer quellenabhaengige Sub. */
+  createdAtRelative: string;
 }
+
+interface LeadListRow {
+  id: string;
+  name: string;
+  total_leads: number | null;
+  created_at: string;
+  last_worked_at: string | null;
+}
+
+const LIST_SELECT = "id, name, total_leads, created_at, last_worked_at";
 
 export interface DashboardCallday {
   isoDate: string;
   /** "Jul 14" */
   label: string;
-  /** "Today" | "Yesterday" | Wochentag */
-  relative: string;
   calls: number;
   meetings: number;
 }
@@ -43,9 +53,6 @@ const NOT_DONE_STATUSES = new Set(["new", "not_reached"]);
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-const WEEKDAYS = [
-  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
 ];
 
 function relativeShort(iso: string | null): string {
@@ -80,40 +87,26 @@ function dayMonthLabel(isoDate: string): string {
   return `${MONTHS[m - 1]} ${d}`;
 }
 
-function relativeDayLabel(isoDate: string): string {
-  const todayIso = new Date().toISOString().slice(0, 10);
-  if (isoDate === todayIso) return "Today";
-  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-  if (isoDate === yesterday) return "Yesterday";
-  const [y, m, d] = isoDate.split("-").map((n) => parseInt(n, 10));
-  return WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
-}
-
-export async function fetchRecentLists(
+/**
+ * Rechnet den Fortschritt (total_done) fuer bereits geladene Listen-Rows:
+ * eine Leads-Query fuer alle Listen in einem Zug, dann in JS zaehlen —
+ * spart eine PostgREST-not.in-Query mit Quoting-Fallen. Geteilt von
+ * fetchRecentLists (Dashboard, max 2) und fetchAllLists (/lists, alle).
+ */
+async function listsWithProgress(
   admin: SupabaseClient,
   userId: string,
-  limit = 2,
+  rows: LeadListRow[],
 ): Promise<DashboardList[]> {
-  const { data: lists, error } = await admin
-    .from("lead_lists")
-    .select("id, name, total_leads, created_at, last_worked_at")
-    .eq("user_id", userId)
-    .neq("status", "archived")
-    .order("last_worked_at", { ascending: false })
-    .limit(limit);
-  if (error) throw new Error(`recent lists failed: ${error.message}`);
-  const rows = lists ?? [];
   if (rows.length === 0) return [];
 
-  // total_done fuer die (max 2) sichtbaren Listen in einem Zug holen und
-  // in JS zaehlen — spart eine PostgREST-not.in-Query mit Quoting-Fallen.
-  const ids = rows.map((r) => r.id as string);
-  const { data: leadRows, error: leadError } = await admin
+  const ids = rows.map((r) => r.id);
+  const { data: leadRows, error } = await admin
     .from("leads")
     .select("list_id, status, archived_at")
     .eq("user_id", userId)
     .in("list_id", ids);
-  if (leadError) throw new Error(`lead counts failed: ${leadError.message}`);
+  if (error) throw new Error(`lead counts failed: ${error.message}`);
 
   const doneByList = new Map<string, number>();
   for (const lead of leadRows ?? []) {
@@ -126,39 +119,77 @@ export async function fetchRecentLists(
   }
 
   return rows.map((row) => {
-    const totalLeads = (row.total_leads as number) ?? 0;
-    const totalDone = doneByList.get(row.id as string) ?? 0;
+    const totalLeads = row.total_leads ?? 0;
+    const totalDone = doneByList.get(row.id) ?? 0;
     const worked =
       row.last_worked_at != null && row.last_worked_at !== row.created_at;
     const metaLine =
       !worked && totalDone === 0
-        ? `Imported ${relativeShort(row.created_at as string)}`
-        : `Last worked ${relativeShort(row.last_worked_at as string)}`;
+        ? `Imported ${relativeShort(row.created_at)}`
+        : `Last worked ${relativeShort(row.last_worked_at)}`;
     return {
-      id: row.id as string,
-      name: row.name as string,
+      id: row.id,
+      name: row.name,
       totalLeads,
       totalDone,
       isComplete: totalLeads > 0 && totalDone >= totalLeads,
       worked,
       metaLine,
+      createdAtRelative: relativeShort(row.created_at),
     };
   });
 }
 
-export async function fetchRecentCalldays(
+// Demo-/Sample-Liste bleibt ueberall aussen vor (Jan-Entscheidung
+// 2026-07-16): Dashboard + /lists zeigen nur echte + generierte Listen.
+function listQuery(admin: SupabaseClient, userId: string) {
+  return admin
+    .from("lead_lists")
+    .select(LIST_SELECT)
+    .eq("user_id", userId)
+    .eq("is_sample", false)
+    .neq("status", "archived")
+    .order("last_worked_at", { ascending: false });
+}
+
+/** Die letzten `limit` Listen mit Fortschritt — Dashboard-Preview. */
+export async function fetchRecentLists(
   admin: SupabaseClient,
   userId: string,
   limit = 2,
+): Promise<DashboardList[]> {
+  const { data, error } = await listQuery(admin, userId).limit(limit);
+  if (error) throw new Error(`recent lists failed: ${error.message}`);
+  return listsWithProgress(admin, userId, (data ?? []) as LeadListRow[]);
+}
+
+/** Alle Listen mit Fortschritt — /lists-Uebersicht. */
+export async function fetchAllLists(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<DashboardList[]> {
+  const { data, error } = await listQuery(admin, userId);
+  if (error) throw new Error(`all lists failed: ${error.message}`);
+  return listsWithProgress(admin, userId, (data ?? []) as LeadListRow[]);
+}
+
+/**
+ * Alle Calldays des Users, nach Datum absteigend (neueste zuerst).
+ * Cap auf die 2000 juengsten Outcomes: nach called_at DESC sortiert,
+ * decken sie die angezeigten Tage immer ab. called_at ist NOT NULL,
+ * daher kein Null-Filter noetig.
+ */
+async function bucketCalldays(
+  admin: SupabaseClient,
+  userId: string,
 ): Promise<DashboardCallday[]> {
   const { data, error } = await admin
     .from("call_outcomes")
     .select("called_at, outcome")
     .eq("user_id", userId)
-    .not("called_at", "is", null)
     .order("called_at", { ascending: false })
     .limit(2000);
-  if (error) throw new Error(`recent calldays failed: ${error.message}`);
+  if (error) throw new Error(`calldays failed: ${error.message}`);
 
   const byDay = new Map<string, { calls: number; meetings: number }>();
   for (const row of data ?? []) {
@@ -171,14 +202,29 @@ export async function fetchRecentCalldays(
 
   return [...byDay.entries()]
     .sort((a, b) => b[0].localeCompare(a[0]))
-    .slice(0, limit)
     .map(([isoDate, v]) => ({
       isoDate,
       label: dayMonthLabel(isoDate),
-      relative: relativeDayLabel(isoDate),
       calls: v.calls,
       meetings: v.meetings,
     }));
+}
+
+/** Die letzten `limit` Calldays — Preview auf dem Dashboard. */
+export async function fetchRecentCalldays(
+  admin: SupabaseClient,
+  userId: string,
+  limit = 3,
+): Promise<DashboardCallday[]> {
+  return (await bucketCalldays(admin, userId)).slice(0, limit);
+}
+
+/** Volle Callday-Historie — /calldays. */
+export async function fetchAllCalldays(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<DashboardCallday[]> {
+  return bucketCalldays(admin, userId);
 }
 
 /** Erst-Buchstabe fuers Avatar (Name > Email > "?"). */
@@ -188,4 +234,34 @@ export function avatarInitial(
 ): string {
   const source = name?.trim() || email?.trim() || "";
   return source ? source[0].toUpperCase() : "?";
+}
+
+export interface ProfileIdentity {
+  name: string | null;
+  email: string | null;
+  /** Vorname (echter Name > null) fuer Begruessungen. */
+  firstName: string | null;
+  initial: string;
+}
+
+/**
+ * Profil-Identitaet fuers Nav-Avatar + Begruessung — name/email aus
+ * profiles, Auth-Email als Fallback. Zentral, damit jede eingeloggte
+ * Seite denselben Avatar-Buchstaben zeigt (nicht mal name-, mal
+ * email-basiert). service_role, auf id gescoped.
+ */
+export async function fetchProfileIdentity(
+  admin: SupabaseClient,
+  userId: string,
+  fallbackEmail: string | null,
+): Promise<ProfileIdentity> {
+  const { data } = await admin
+    .from("profiles")
+    .select("name, email")
+    .eq("id", userId)
+    .maybeSingle();
+  const name = (data?.name as string | null) ?? null;
+  const email = (data?.email as string | null) ?? fallbackEmail ?? null;
+  const firstName = name?.trim().split(/\s+/)[0] || null;
+  return { name, email, firstName, initial: avatarInitial(name, email) };
 }

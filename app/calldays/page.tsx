@@ -2,9 +2,17 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
-import { avatarInitial } from "@/lib/dashboard/data";
+import {
+  fetchAllCalldays,
+  fetchProfileIdentity,
+  type DashboardCallday,
+} from "@/lib/dashboard/data";
 import { AppNav } from "../components/AppNav";
 import { AppFooter } from "../components/AppFooter";
+import {
+  CalldaySticker,
+  EmptyCalldaySticker,
+} from "../components/CalldaySticker";
 
 export const metadata: Metadata = {
   title: "Your Calldays · Callday",
@@ -15,8 +23,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * /calldays — Vollansicht aller Call-Tage (Ziel des "Calldays"-Nav-Tabs).
- * Platzhalter: die Sticker-Historie kommt spaeter; das Dashboard zeigt
- * die letzten drei bereits live.
+ * Jeder Tag, an dem der User telefoniert hat, als teilbarer Sticker; das
+ * Dashboard zeigt nur die letzten drei. Leerer Zustand: ein Muster-Sticker
+ * (heute, 0 calls) plus Hinweis.
  */
 export default async function CalldaysPage() {
   const supabase = await createSupabaseSSR();
@@ -26,29 +35,41 @@ export default async function CalldaysPage() {
   if (!user) redirect("/login?next=/calldays");
 
   const admin = getServerSupabase();
-  const { data: profileRow } = await admin
-    .from("profiles")
-    .select("name, email")
-    .eq("id", user.id)
-    .maybeSingle();
-  const initial = avatarInitial(
-    profileRow?.name as string | null,
-    (profileRow?.email as string | null) ?? user.email,
-  );
+  const [{ initial }, calldays] = await Promise.all([
+    fetchProfileIdentity(admin, user.id, user.email ?? null),
+    // Datenfehler duerfen die Seite nicht mitreissen — dann Empty-State.
+    fetchAllCalldays(admin, user.id).catch((err) => {
+      console.error("[calldays] fetch failed", err);
+      return [] as DashboardCallday[];
+    }),
+  ]);
 
   return (
     <>
       <AppNav active="calldays" initial={initial} />
+
       <main className="dash-wrap">
-        <div className="dash-stub">
-          <h1 className="dash-stub-title">Your Calldays</h1>
-          <p className="dash-stub-body">
-            Every day you pick up the phone becomes a shareable sticker. The
-            full history lands here soon — your latest days already show on your
-            dashboard.
-          </p>
+        <div className="dash-head">
+          <h1 className="dash-greet">Your Calldays</h1>
         </div>
+
+        {calldays.length > 0 ? (
+          <div className="dash-duo">
+            {calldays.map((day) => (
+              <CalldaySticker key={day.isoDate} day={day} />
+            ))}
+          </div>
+        ) : (
+          <div className="dash-empty-row">
+            <EmptyCalldaySticker />
+            <p className="dash-sec-note">
+              A Callday is a day you picked up the phone. Once your list is in,
+              this fills up on its own — one sticker per day, ready to share.
+            </p>
+          </div>
+        )}
       </main>
+
       <AppFooter />
     </>
   );
