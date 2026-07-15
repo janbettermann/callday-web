@@ -3318,18 +3318,44 @@ h2 .accent {
   flex-shrink: 0;
 }
 
-/* Generator-Konsole: Formular links, Live-Summary rechts (sticky). */
-.lists-console {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 20px;
-  align-items: start;
-}
+/* Generator-Konsole: EIN Formular als Card (v2-Look, Jan 2026-07-15) —
+   Live-Summary + How-it-works-Strip sind raus (Mobile-first, das Panel
+   saesse dort eh unterm Formular). .lists-console bleibt als Hook fuer
+   den is-locked-Zustand. */
 .lists-console-form {
   background: #ffffff;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 24px;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow:
+    0 1px 2px rgba(8, 10, 20, 0.04),
+    0 8px 24px -12px rgba(8, 10, 20, 0.1);
+}
+/* v2-Feld-Look NUR im Generator: weisse, umrandete Felder statt der
+   grauen beta-Insets — die Landing-/Auth-Formulare behalten ihren
+   iOS-Settings-Look. 16px Font bleibt Pflicht (iOS-Focus-Zoom). */
+.lists-console-form .beta-field input,
+.lists-console-form .lists-select {
+  background-color: #ffffff;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+}
+.lists-console-form .beta-field input:focus,
+.lists-console-form .lists-select:focus {
+  background-color: #ffffff;
+  border-color: rgba(74, 122, 247, 0.55);
+  box-shadow: 0 0 0 3px rgba(74, 122, 247, 0.14);
+}
+.lists-console-form .beta-field-label {
+  font-size: 14.5px;
+  color: var(--ink);
+}
+.lists-field-hint {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+  margin: 3px 0 0;
+  padding-left: 2px;
 }
 .lists-fail-banner {
   margin: 0 0 20px;
@@ -3374,111 +3400,8 @@ h2 .accent {
   pointer-events: none;
   user-select: none;
 }
-.lists-summary {
-  position: sticky;
-  top: calc(var(--nav-h) + 24px);
-  background: linear-gradient(180deg, rgba(37, 99, 232, 0.06) 0%, #ffffff 55%);
-  border: 1px solid rgba(37, 99, 232, 0.3);
-  border-radius: 16px;
-  padding: 22px;
-}
-.lists-summary-eyebrow {
-  font-family: var(--font-label), sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--blue-deep);
-  margin: 0 0 8px;
-}
-.lists-summary-title {
-  font-family: var(--font-geist-sans), sans-serif;
-  font-size: 19px;
-  font-weight: 600;
-  letter-spacing: -0.3px;
-  line-height: 1.3;
-  color: var(--ink);
-  margin: 0 0 14px;
-}
-.lists-summary-title.is-placeholder {
-  color: var(--ink-mute);
-  font-weight: 500;
-}
-.lists-summary-specs {
-  list-style: none;
-  margin: 0 0 18px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-.lists-summary-specs li {
-  position: relative;
-  padding-left: 24px;
-  font-size: 13.5px;
-  line-height: 1.45;
-  color: var(--ink-dim);
-}
-.lists-summary-specs li::before {
-  content: "✓";
-  position: absolute;
-  left: 0;
-  top: 0;
-  color: var(--blue-deep);
-  font-weight: 600;
-}
-.lists-summary-price {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  border-top: 1px solid var(--line);
-  padding-top: 14px;
-  font-size: 13px;
-  color: var(--ink-faint);
-}
-.lists-summary-free {
-  font-family: var(--font-geist-sans), sans-serif;
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--green-deep);
-}
-.lists-summary-hint {
-  font-size: 12.5px;
-  color: var(--ink-faint);
-  line-height: 1.5;
-  margin: 8px 0 0;
-}
-
-/* How-it-works-Strip unter der Konsole; im Building-State werden dieselben
-   Stufen zur vertikalen Pipeline mit Zustaenden. */
-.lists-pipeline-strip {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  margin-top: 28px;
-  padding: 20px 22px;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-}
-.lists-pipeline-stripstep {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-.lists-step-num {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--blue-tint);
-  color: var(--blue-deep);
-  font-size: 12px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+/* Stufen-Texte der Building-Pipeline (Namen historisch vom frueheren
+   How-it-works-Strip). */
 .lists-pipeline-striptitle {
   font-size: 13.5px;
   font-weight: 600;
@@ -3608,20 +3531,10 @@ h2 .accent {
 .lists-empty-failnote {
   color: var(--sun-deep);
 }
-@media (max-width: 900px) {
-  .lists-console {
-    grid-template-columns: 1fr;
-  }
-  .lists-summary {
-    position: static;
-  }
-  .lists-pipeline-strip {
-    grid-template-columns: 1fr 1fr;
-  }
-}
 @media (max-width: 600px) {
-  .lists-pipeline-strip {
-    grid-template-columns: 1fr;
+  .lists-console-form {
+    padding: 22px;
+    border-radius: 16px;
   }
   .lists-topbar {
     flex-direction: column;

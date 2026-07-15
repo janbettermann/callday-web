@@ -480,6 +480,16 @@ die Meeting-Bestaetigung — „Ist jeannie@… noch richtig?"):
   „Only…"-Labels; Google-Maps-Quelle in Landing-Sub + Metadata
   („We scan Google Maps…"). KEIN „Scraper" in Titel/Pille/Nav, kein
   Google-Pin-Asset (Marken-/Optik-Entscheidung).
+- **Design-Update Formular (✅ 2026-07-15, Jan):** Generator im
+  v2-Card-Look — weisse, umrandete Felder statt grauer beta-Insets
+  (scoped auf `.lists-console-form`; Landing-/Auth-Formulare behalten
+  den iOS-Settings-Look), ein Formular als Card. **Live-Summary
+  (Checkmark-Liste + Price-Free) und How-it-works-Strip ersatzlos
+  raus** — Mobile-first-Argument: das Panel saesse dort eh unterm
+  Formular; eleganter loesen, wenn Credits-/Enricher-Zeilen wirklich
+  kommen. Die ehrliche E-Mail-Notiz lebt jetzt als
+  `.lists-field-hint` direkt unterm Website-Dropdown (nur bei „Only
+  without website").
 - **Phase 0b (✅ 2026-07-15):** Kategorien-Autocomplete fuers
   Industry-Feld (`IndustryAutocomplete` + `lib/lists/gmb-categories.ts`).
   Bewusst KURATIERTE ~280er-Liste im GMB-Stil (englisch, singular)

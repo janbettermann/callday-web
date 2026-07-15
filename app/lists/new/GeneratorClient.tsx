@@ -20,17 +20,18 @@ import {
 } from "../job-view";
 import {
   APP_DOWNLOAD_PATH,
-  FREE_LIST_SIZE,
   INDUSTRY_SUGGESTIONS,
 } from "@/lib/lists/config";
 import type { WebsiteFilterMode } from "@/lib/lists/pipeline";
 
 /**
- * Generator-Konsole auf /lists/new — Formular links, Live-Summary
- * rechts ("was du bekommst" spiegelt die Eingaben), darunter die
- * Pipeline als How-it-works-Strip. Laeuft ein Job, uebernimmt die
- * Building-Ansicht mit echten Pipeline-Stufen (pending = Scan,
- * processing = Verarbeitung — keine simulierten Fortschritte).
+ * Generator-Konsole auf /lists/new — EIN Formular als Card, keine
+ * Live-Summary, kein How-it-works-Strip mehr (Jan-Design-Entscheidung
+ * 2026-07-15: Mobile-first, das Panel saesse dort eh unterm Formular;
+ * eleganter loesen wenn Credits/Enricher-Zeilen wirklich kommen).
+ * Laeuft ein Job, uebernimmt die Building-Ansicht mit echten
+ * Pipeline-Stufen (pending = Scan, processing = Verarbeitung — keine
+ * simulierten Fortschritte).
  *
  * /lists/new ist DIE eine Generator-URL (Jan-Entscheidung 2026-07-14) —
  * die fertige Free-Liste hat hier keine eigene Ansicht mehr, sie wohnt
@@ -58,8 +59,7 @@ const WEBSITE_FILTER_OPTIONS: Array<{
 
 /**
  * Die echten Verarbeitungsschritte des Generators (Pipeline-Reihenfolge
- * aus lib/lists/jobs.ts). Doppelte Rolle: How-it-works-Strip unter dem
- * Formular + Stufenanzeige im Building-State.
+ * aus lib/lists/jobs.ts) — Stufenanzeige im Building-State.
  */
 const PIPELINE_STEPS = [
   {
@@ -79,12 +79,6 @@ const PIPELINE_STEPS = [
     detail: "The list is waiting in the Callday app.",
   },
 ];
-
-function websiteSummaryLabel(mode: WebsiteFilterMode): string {
-  if (mode === "without") return "Only businesses without a website";
-  if (mode === "with") return "Only businesses with a website";
-  return "All businesses, with or without a website";
-}
 
 export function GeneratorClient() {
   const router = useRouter();
@@ -308,6 +302,14 @@ export function GeneratorClient() {
                 </option>
               ))}
             </select>
+            {/* Ehrliche E-Mail-Konsequenz im Moment der Wahl (§13d):
+                ohne Website gibt es nichts zu scrapen. */}
+            {websiteFilter === "without" && (
+              <p className="lists-field-hint">
+                No emails on these — businesses without a website have
+                nothing to scrape. Every lead still has a phone number.
+              </p>
+            )}
           </div>
 
           <button
@@ -325,84 +327,8 @@ export function GeneratorClient() {
             </p>
           )}
         </form>
-
-        <SummaryPanel
-          industry={industry}
-          city={city}
-          websiteFilter={websiteFilter}
-          locked={freeUsed}
-        />
       </div>
-
-      <section className="lists-pipeline-strip" aria-label="How it works">
-        {PIPELINE_STEPS.map((step, index) => (
-          <div key={step.title} className="lists-pipeline-stripstep">
-            <span className="lists-step-num">{index + 1}</span>
-            <div>
-              <p className="lists-pipeline-striptitle">{step.title}</p>
-              <p className="lists-pipeline-stripdetail">{step.detail}</p>
-            </div>
-          </div>
-        ))}
-      </section>
     </div>
-  );
-}
-
-/**
- * Live-Summary rechts neben dem Formular — spiegelt die Eingaben als
- * "das bekommst du"-Karte. Der Panel waechst spaeter mit Credits-Kosten
- * und Enricher-Zeilen weiter (Spec §10/§13c).
- */
-function SummaryPanel({
-  industry,
-  city,
-  websiteFilter,
-  locked,
-}: {
-  industry: string;
-  city: string;
-  websiteFilter: WebsiteFilterMode;
-  locked: boolean;
-}) {
-  const hasQuery = Boolean(industry.trim() && city.trim());
-
-  return (
-    <aside className="lists-summary" aria-label="What you'll get">
-      <p className="lists-summary-eyebrow">Your list</p>
-      <p
-        className={
-          "lists-summary-title" + (hasQuery ? "" : " is-placeholder")
-        }
-      >
-        {hasQuery
-          ? `${industry.trim()} – ${city.trim()}`
-          : "Pick an industry and a city"}
-      </p>
-      <ul className="lists-summary-specs">
-        <li>Up to {FREE_LIST_SIZE} callable leads</li>
-        <li>Phone number on every lead</li>
-        <li>
-          {/* Ehrliche E-Mail-Zeile: ohne Website gibt es nichts zu
-              scrapen (§13d) — das sagen wir im Moment der Wahl. */}
-          {websiteFilter === "without"
-            ? "No emails — these businesses have no website"
-            : "Emails where we find them"}
-        </li>
-        <li>{websiteSummaryLabel(websiteFilter)}</li>
-        <li>Deduped — one entry per business</li>
-        <li>Synced straight to the Callday app</li>
-      </ul>
-      <div className="lists-summary-price">
-        <span>Price</span>
-        <span className="lists-summary-free">Free</span>
-      </div>
-      <p className="lists-summary-hint">
-        {locked
-          ? "You've already used your free list."
-          : "Your first list is on us. No credit card."}
-      </p>
-    </aside>
   );
 }
 
