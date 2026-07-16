@@ -1,11 +1,23 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
+import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { FaqAccordion } from "./components/FaqAccordion";
 import { FlowTabs } from "./components/FlowTabs";
 import { BetaCta } from "./components/BetaCta";
 import { HeroCta } from "./components/HeroCta";
 import { SiteNav } from "./components/SiteNav";
 
-export default function Home() {
+export default async function Home() {
+  // Eingeloggte gehoeren in die Web-App, nicht auf den Pitch: die Homepage
+  // leitet sie direkt aufs Dashboard (Jan-Entscheidung 2026-07-17). Greift
+  // NUR hier (/) — /a/[slug], /lists, Legal regeln ihren eingeloggten
+  // Zustand selbst; ausgeloggte Besucher + Crawler sehen die Landing normal.
+  const supabase = await createSupabaseSSR();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) redirect("/dashboard");
+
   return (
     <>
       <div className="bg-orb bg-orb-2" />

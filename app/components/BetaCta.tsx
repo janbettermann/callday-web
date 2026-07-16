@@ -8,8 +8,8 @@ import { useIsLoggedIn } from "@/lib/use-is-logged-in";
  *
  * Ausgeloggt: das Sign-up-Formular. Eingeloggte Rueckkehrer haben sich
  * schon registriert — fuer sie eine "You're already in"-Karte, die zum
- * Account (Install + Verwaltung) fuehrt, statt sie nochmal zur Anmeldung
- * aufzufordern (das waere redundant + leicht irrefuehrend).
+ * Dashboard fuehrt, statt sie nochmal zur Anmeldung aufzufordern (das
+ * waere redundant + leicht irrefuehrend).
  *
  * Login-Check via geteiltem useIsLoggedIn-Hook (ein getSession fuer alle
  * Landing-Swaps, Landing bleibt statisch). Default = ausgeloggt (99% der
@@ -38,10 +38,10 @@ export function BetaCta({ slug }: { slug?: string }) {
           <div className="login-card">
             <h3 className="login-card-title">You&apos;re already in.</h3>
             <p className="login-card-sub">
-              Continue to your account to get the app and start calling.
+              Continue to your dashboard to keep calling.
             </p>
             <a
-              href="/account"
+              href="/dashboard"
               className="beta-submit"
               style={{
                 display: "block",
@@ -49,7 +49,7 @@ export function BetaCta({ slug }: { slug?: string }) {
                 textDecoration: "none",
               }}
             >
-              Go to your account
+              Go to your dashboard
             </a>
           </div>
         ) : (
