@@ -125,11 +125,6 @@ export default async function AccountPage() {
     referred_by_affiliate_id: null,
   };
 
-  // Nur echte Namen (kommen von Apple/Google-OAuth). Email-Signups haben
-  // keinen Namen — dann NICHT den Email-Localpart als "Name" zeigen (sah aus
-  // wie "Hi jan.bettermann11+628."), sondern ein generisches Welcome.
-  const firstName = profile.name?.trim().split(/\s+/)[0] || null;
-
   const hasActiveSubscription =
     profile.subscription_status === "active" ||
     profile.subscription_status === "trialing";
@@ -158,12 +153,7 @@ export default async function AccountPage() {
 
       <main className="account-page">
         <div className="account-inner">
-          <h1 className="account-headline">
-            {firstName
-              ? `Welcome to the beta, ${firstName}.`
-              : "Welcome to the beta"}
-          </h1>
-          <p className="account-sub">You call. Callday handles the rest.</p>
+          <h1 className="account-headline">Account</h1>
 
           {/* Lead-Listen: kompakter Zeiger auf die Listen-Welt (/lists +
               /lists/new) — Promo/Status/Zeile je nach Zustand, siehe

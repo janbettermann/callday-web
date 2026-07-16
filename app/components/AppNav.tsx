@@ -138,7 +138,7 @@ export function AppNav({
             }
             onClick={() => setOpen(false)}
           >
-            Manage account
+            Account
           </Link>
         </nav>
       </div>

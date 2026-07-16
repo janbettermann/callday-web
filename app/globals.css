@@ -912,21 +912,17 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
      h1 (Seitentitel): clamp(28px, 4vw, 40px) / 600 / -0.5px / lh 1.1
      h2 (Card-Titel):  18px / 600 / -0.2px
      h3 (Item-Titel):  16px / 600 / -0.2px
-     mini (Eyebrow):   --font-label 12px / 600 / 0.9px / uppercase
-   Sub-Zeile unter h1: 15px / var(--ink-dim). */
+     mini (Eyebrow):   --font-label 12px / 600 / 0.9px / uppercase */
 .account-headline {
   font-family: var(--font-geist-sans), sans-serif;
   font-size: clamp(28px, 4vw, 40px);
   font-weight: 600;
   letter-spacing: -0.5px;
   line-height: 1.1;
-  margin: 0 0 8px;
-  color: var(--ink);
-}
-.account-sub {
-  font-size: 15px;
-  color: var(--ink-dim);
+  /* Traegt den h1 → Inhalt-Abstand (seit die Sub-Zeile weg ist,
+     Jan 2026-07-17); Wert wie .dash-head auf dem Dashboard. */
   margin: 0 0 40px;
+  color: var(--ink);
 }
 .account-card {
   background: #ffffff;
@@ -1221,9 +1217,9 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
     padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 30px) 24px
       80px;
   }
-  /* Sub-Zeile → erste Card enger an die h1 (Mobile): 40 → 22. */
-  .account-sub {
-    margin-bottom: 22px;
+  /* h1 → erste Card enger (Mobile): 40 → 20 (wie .dash-head). */
+  .account-headline {
+    margin-bottom: 20px;
   }
   .account-card {
     padding: 20px;
