@@ -33,9 +33,7 @@ export const INDUSTRY_SUGGESTIONS = [
   "Dentist",
   "Roofing contractor",
   "Real estate agency",
-  "Marketing agency",
   "Law firm",
-  "Gym",
   "Electrician",
   "Car dealer",
 ];

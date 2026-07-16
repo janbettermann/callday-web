@@ -3089,10 +3089,10 @@ h2 .accent {
   width: 100%;
   margin: 0 auto;
 }
-/* Lists-UEBERSICHT (MyLists) auf der vollen Account-Breite (1136, wie
-   Header/Dashboard/Account) — nicht die schmale 560er-Spalte, die sich
-   .lists-inner mit der Marketing-Landing + Generator-Building-View
-   teilt. Die Generator-FORM bleibt bewusst auf .lists-inner-wide. */
+/* Lists-UEBERSICHT (MyLists) + Generator-Form auf der vollen Account-
+   Breite (1136, wie Header/Dashboard/Account) — nicht die schmale
+   560er-Spalte, die sich .lists-inner mit der Marketing-Landing +
+   Generator-Building-View teilt. */
 .lists-inner-account {
   max-width: 1136px;
   width: 100%;
@@ -3386,11 +3386,6 @@ h2 .accent {
   text-transform: uppercase;
   line-height: 1;
 }
-.lists-inner-wide {
-  max-width: 940px;
-  width: 100%;
-  margin: 0 auto;
-}
 .lists-workhead {
   margin-bottom: 28px;
 }
@@ -3423,6 +3418,13 @@ h2 .accent {
   box-shadow:
     0 1px 2px rgba(8, 10, 20, 0.04),
     0 8px 24px -12px rgba(8, 10, 20, 0.1);
+}
+/* Titel fluchtet auf voller Account-Breite (1136, .lists-inner-account);
+   die Form-Spalte selbst bleibt schmal + linksbuendig (Jan 2026-07-17). */
+.lists-console-form,
+.lists-fail-banner,
+.lists-locked-note {
+  max-width: 800px;
 }
 /* v2-Feld-Look NUR im Generator: weisse, umrandete Felder statt der
    grauen beta-Insets — die Landing-/Auth-Formulare behalten ihren

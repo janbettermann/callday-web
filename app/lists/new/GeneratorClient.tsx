@@ -223,9 +223,9 @@ export function GeneratorClient() {
   const formDisabled = submitting || freeUsed;
 
   return (
-    <div className="lists-inner-wide">
+    <div className="lists-inner-account">
       <header className="lists-workhead">
-        <h1 className="lists-worktitle">New lead list</h1>
+        <h1 className="lists-worktitle">Build a list from Google Maps</h1>
         <p className="lists-worksub">
           Tell us who you want to call — we handle the rest.
         </p>
