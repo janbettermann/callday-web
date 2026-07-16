@@ -3586,27 +3586,22 @@ h2 .accent {
   }
 }
 
-/* Listen-Uebersicht (/lists eingeloggt). */
-.lists-listcard {
-  background: #ffffff;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 20px 24px;
-  margin: 0 0 16px;
+/* Listen-Uebersicht (/lists eingeloggt) — dieselben Kacheln wie das
+   Dashboard (.dash-duo-lists: 2-spaltig, skalierte .dash-tile), nur nicht
+   verlinkt: kein Klick-Hover, Quelle-Pill oben rechts, und die Building-
+   Bar braucht position:relative fuers absolute Lade-Segment. */
+.dash-tile.dash-tile-plain {
+  cursor: default;
 }
-.lists-card-top {
-  display: flex;
-  align-items: center;
+.dash-tile.dash-tile-plain:hover {
+  border-color: var(--line-strong);
+  box-shadow: none;
+}
+.dash-tile-plain .dash-tile-top {
   justify-content: space-between;
-  gap: 12px;
 }
-/* h3 (Item-Titel) — kanonische Account-Skala, wie .dash-tile-name. */
-.lists-listcard-name {
-  font-family: var(--font-geist-sans), sans-serif;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.2px;
-  color: var(--ink);
+.dash-tile-plain .dash-bar {
+  position: relative;
 }
 /* Quelle-Pill: Generated (Callday-nativ, blau) / Imported (neutral). */
 .lists-src {
@@ -3626,27 +3621,9 @@ h2 .accent {
   background: rgba(26, 29, 38, 0.06);
   color: var(--ink-dim);
 }
-.lists-card-sub {
-  font-size: 12px;
-  color: var(--ink-dim);
-  margin: 5px 0 15px;
-  line-height: 1.5;
-}
-/* Fortschrittsbalken — wie Dashboard (.dash-bar). */
-.lists-card-bar {
-  height: 6px;
-  border-radius: 99px;
-  background: rgba(26, 29, 38, 0.07);
-  overflow: hidden;
-  position: relative;
-}
-.lists-card-bar > span {
-  display: block;
-  height: 100%;
-  border-radius: 99px;
-  background: var(--blue);
-}
-/* Building: unbestimmtes Segment laeuft durch die gleiche Bar-Groesse. */
+/* Building-Kachel: unbestimmtes Segment laeuft durch die (skalierte)
+   .dash-bar; braucht den .dash-tile-plain .dash-bar { position:relative }
+   Override oben. */
 .lists-card-bar-load {
   position: absolute;
   top: 0;
@@ -3664,19 +3641,6 @@ h2 .accent {
   100% {
     transform: translateX(360%);
   }
-}
-.lists-card-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 12px;
-  font-size: 12px;
-  color: var(--ink-dim);
-}
-.lists-card-foot b {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink);
 }
 .lists-card-building {
   display: flex;

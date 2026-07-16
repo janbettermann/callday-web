@@ -39,22 +39,22 @@ export function BuildingJobCard({
   }, [jobId, router]);
 
   return (
-    <section className="lists-listcard">
-      <div className="lists-card-top">
-        <span className="lists-listcard-name">{listName ?? "Your list"}</span>
+    <section className="dash-tile dash-tile-plain">
+      <div className="dash-tile-top">
+        <span className="dash-tile-name">{listName ?? "Your list"}</span>
         <span className="lists-src lists-src-generated">Generated</span>
       </div>
-      <p className="lists-card-sub">
+      <p className="dash-tile-sub">
         Usually 1 to 3 minutes — we&apos;ll email you when it&apos;s ready.
       </p>
       <div
-        className="lists-card-bar"
+        className="dash-bar"
         role="progressbar"
         aria-label="Building your list"
       >
         <div className="lists-card-bar-load" />
       </div>
-      <div className="lists-card-foot">
+      <div className="dash-tile-foot">
         <span className="lists-card-building">
           <span className="lists-card-build-dot" aria-hidden="true" />
           Building your list…

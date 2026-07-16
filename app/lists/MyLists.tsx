@@ -3,16 +3,16 @@ import type { DashboardList } from "@/lib/dashboard/data";
 import { BuildingJobCard } from "./BuildingJobCard";
 
 /**
- * Listen-Uebersicht auf /lists (eingeloggt) — Karten im Dashboard-Design
- * (components/ListTile-Look: Name, Quelle-Pill, Fortschrittsbalken,
- * "x / y leads in list"). Datenquelle sind die synced Listen (lead_lists,
- * Demo ausgeblendet); ein laufender Generator-Job sitzt als pollende
- * Building-Card oben. Kein In-Page-"New list"-Button (die AppNav traegt
- * ihn), kein Sub, keine Download-Aktionen.
+ * Listen-Uebersicht auf /lists (eingeloggt) — dieselben Kacheln wie das
+ * Dashboard (.dash-duo-lists: 2-spaltig, skalierte .dash-tile), nur nicht
+ * verlinkt (.dash-tile-plain) und mit Quelle-Pill oben rechts. Datenquelle
+ * sind die synced Listen (lead_lists, Demo ausgeblendet); ein laufender
+ * Generator-Job sitzt als pollende Building-Kachel oben. Kein In-Page-
+ * "New list"-Button (die AppNav traegt ihn), keine Download-Aktionen.
  *
  * Quelle: `Generated` = ueber den Callday-Generator erstellt, `Imported`
- * = in der App per Datei importiert (Unterscheidung passiert server-seitig
- * in page.tsx ueber die Existenz eines Generator-Jobs).
+ * = in der App per Datei importiert (Unterscheidung server-seitig in
+ * page.tsx ueber die Existenz eines Generator-Jobs).
  */
 
 export type ListSource = "generated" | "imported";
@@ -40,18 +40,24 @@ export function MyLists({
   return (
     <div className="lists-inner-account">
       <header className="lists-workhead">
-        <h1 className="lists-worktitle">Your lead lists</h1>
+        <h1 className="lists-worktitle">Your lists</h1>
       </header>
 
-      {building && (
-        <BuildingJobCard jobId={building.jobId} listName={building.listName} />
+      {isEmpty ? (
+        <EmptyState hadFailure={hadFailure} />
+      ) : (
+        <div className="dash-duo dash-duo-lists">
+          {building && (
+            <BuildingJobCard
+              jobId={building.jobId}
+              listName={building.listName}
+            />
+          )}
+          {lists.map((list) => (
+            <ListCard key={list.id} list={list} />
+          ))}
+        </div>
       )}
-
-      {lists.map((list) => (
-        <ListCard key={list.id} list={list} />
-      ))}
-
-      {isEmpty && <EmptyState hadFailure={hadFailure} />}
     </div>
   );
 }
@@ -64,6 +70,11 @@ function SourcePill({ source }: { source: ListSource }) {
   );
 }
 
+/**
+ * Listen-Kachel im Dashboard-Look (.dash-tile), aber nicht verlinkt
+ * (.dash-tile-plain, kein Web-Listen-Detail) und mit Quelle-Pill statt
+ * "Active"-Badge oben rechts.
+ */
 function ListCard({ list }: { list: ListCardData }) {
   const denominator = Math.max(list.totalLeads, 1);
   const pct = Math.round((list.totalDone / denominator) * 100);
@@ -72,23 +83,23 @@ function ListCard({ list }: { list: ListCardData }) {
     : `${list.source === "generated" ? "Built" : "Imported"} ${list.createdAtRelative}`;
 
   return (
-    <section className="lists-listcard">
-      <div className="lists-card-top">
-        <span className="lists-listcard-name">{list.name}</span>
+    <div className="dash-tile dash-tile-plain">
+      <div className="dash-tile-top">
+        <span className="dash-tile-name">{list.name}</span>
         <SourcePill source={list.source} />
       </div>
-      <p className="lists-card-sub">{sub}</p>
-      <div className="lists-card-bar">
+      <p className="dash-tile-sub">{sub}</p>
+      <div className="dash-bar">
         <span style={{ width: `${pct}%` }} />
       </div>
-      <div className="lists-card-foot">
+      <div className="dash-tile-foot">
         <span>
           {list.totalDone.toLocaleString("en-US")} /{" "}
           {list.totalLeads.toLocaleString("en-US")} leads in list
         </span>
         <b>{pct}%</b>
       </div>
-    </section>
+    </div>
   );
 }
 
