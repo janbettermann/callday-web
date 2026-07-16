@@ -39,9 +39,9 @@ export function MyLists({
 
   return (
     <div className="lists-inner-account">
-      <header className="lists-workhead">
-        <h1 className="lists-worktitle">Your lists</h1>
-      </header>
+      <div className="dash-head">
+        <h1 className="dash-greet">Your lists</h1>
+      </div>
 
       {isEmpty ? (
         <EmptyState hadFailure={hadFailure} />
