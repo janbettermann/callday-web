@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import Link from "next/link";
 import type { Metadata } from "next";
 import { AppNav } from "../components/AppNav";
 import { AppShell } from "../components/AppShell";
@@ -393,6 +394,17 @@ export default async function AccountPage() {
               Sign out
             </button>
           </form>
+
+          {/* Legal — dezent am Fuss der Account-Seite. Seit dem Footer-
+              Wegfall (Jan 2026-07-17) die einzige Legal-Erreichbarkeit im
+              eingeloggten Bereich; ueber die Avatar-Pille von jeder Seite
+              1 Klick entfernt (Impressumspflicht). */}
+          <nav className="account-legal" aria-label="Legal">
+            <Link href="/privacy">Privacy</Link>
+            <Link href="/terms">Terms</Link>
+            <Link href="/terms#imprint">Imprint</Link>
+            <a href="mailto:hello@callday.io">hello@callday.io</a>
+          </nav>
         </div>
       </main>
     </AppShell>

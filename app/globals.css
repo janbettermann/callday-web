@@ -871,11 +871,12 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
 }
 
 /* === ACCOUNT PAGE === */
-/* Sticky-Footer-Geruest aller eingeloggten Seiten (AppShell): Flex-Spalte,
-   `main` fuellt den Rest (flex:1), der AppFooter sitzt am Boden — sichtbar
-   bei wenig Content, weggeschoben bei viel. Die einzelnen main-Klassen
-   tragen deshalb KEIN min-height mehr (das kaeme dem Sticky-Footer in die
-   Quere). Die fixe AppNav ist ausserhalb des Flusses und stoert nicht. */
+/* Geruest aller eingeloggten Seiten (AppShell): Flex-Spalte mit
+   min-height:100dvh, `main` (flex:1) fuellt den Viewport. KEIN Footer im
+   eingeloggten Bereich (Jan 2026-07-17, App-Shell-Look wie Figma) — bei
+   wenig Content sitzt der Content oben, darunter bleibt leerer Raum. Die
+   einzelnen main-Klassen tragen deshalb KEIN min-height mehr. Die fixe
+   AppNav ist ausserhalb des Flusses und stoert nicht. */
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -1194,11 +1195,35 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
 .account-signout-link:hover {
   color: var(--ink);
 }
+/* Legal-Zeile am Fuss der Account-Seite — bewusst leise (kein Footer mehr
+   im eingeloggten Bereich, Jan 2026-07-17). Erreichbar bleibt Legal
+   (Impressumspflicht/DSGVO), stechen soll es nicht heraus. */
+.account-legal {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  margin: 36px auto 0;
+}
+.account-legal a {
+  font-size: 12.5px;
+  color: var(--ink-mute);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.account-legal a:hover {
+  color: var(--ink-dim);
+}
 
 @media (max-width: 600px) {
   .account-page {
-    padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 44px) 24px
+    /* h1 naeher an den Header ziehen (Mobile): +44 → +30. */
+    padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 30px) 24px
       80px;
+  }
+  /* Sub-Zeile → erste Card enger an die h1 (Mobile): 40 → 22. */
+  .account-sub {
+    margin-bottom: 22px;
   }
   .account-card {
     padding: 20px;
@@ -2008,20 +2033,6 @@ h2 .accent {
   color: var(--ink-faint);
   letter-spacing: 1.5px;
 }
-/* Account-Bereich-Footer: Legal-Links bewusst leiser (Jan 2026-07-15) —
-   erreichbar bleiben sie (Impressumspflicht/DSGVO), stechen aber nicht
-   heraus. Nur hier via .app-footer — Landing/Legal behalten den
-   Standard-Footer. */
-.app-footer .footer-meta {
-  font-size: 12.5px;
-}
-.app-footer .footer-meta a {
-  color: var(--ink-mute);
-}
-.app-footer .footer-meta a:hover {
-  color: var(--ink-dim);
-}
-
 /* Landing- + Account-Footer (Variante C, ueberarbeitet 2026-07-15): nur das
    Marken-Statement links, Legal-Links rechtsbuendig auf gleicher Hoehe.
    Kein Trenner, kein Logo, deutlich mehr Padding unten als oben. */
@@ -3378,7 +3389,8 @@ h2 .accent {
 }
 @media (max-width: 600px) {
   .lists-page {
-    padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 44px) 24px
+    /* h1 naeher an den Header ziehen (Mobile): +44 → +30. */
+    padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 30px) 24px
       80px;
   }
 }
@@ -4169,6 +4181,21 @@ h2 .accent {
   }
 }
 @media (max-width: 600px) {
+  /* h1 naeher an den Header ziehen (Mobile): +44 → +30. Gilt fuer
+     Dashboard + Calldays (beide .dash-wrap). */
+  .dash-wrap {
+    padding-top: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 30px);
+  }
+  /* Greeting-Block → erste Sektion (Callday-/List-Cards) enger an die h1
+     (Mobile): 40 → 20. Gilt auch fuer /lists (MyLists nutzt .dash-head). */
+  .dash-head {
+    margin-bottom: 20px;
+  }
+  /* Recent lists → Recent Calldays enger (Mobile): 38 → 20. Nur der
+     Sektions-Abstand; die letzte Sektion behaelt ihren Fussabstand. */
+  .dash-sec:not(:last-child) {
+    margin-bottom: 20px;
+  }
   /* Auf Mobile nur 2 Recent Calldays im Dashboard — der 3. Sticker faellt
      weg. Gescoped: die volle /calldays-Historie (auch .dash-duo) bleibt
      unberuehrt. */
