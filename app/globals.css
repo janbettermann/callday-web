@@ -4168,6 +4168,14 @@ h2 .accent {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+@media (max-width: 600px) {
+  /* Auf Mobile nur 2 Recent Calldays im Dashboard — der 3. Sticker faellt
+     weg. Gescoped: die volle /calldays-Historie (auch .dash-duo) bleibt
+     unberuehrt. */
+  .dash-duo-calldays > :nth-child(3) {
+    display: none;
+  }
+}
 @media (max-width: 560px) {
   .dash-duo,
   .dash-duo-lists {

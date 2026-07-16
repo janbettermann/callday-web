@@ -122,7 +122,7 @@ export default async function DashboardPage() {
           </div>
 
           {calldays.length > 0 ? (
-            <div className="dash-duo">
+            <div className="dash-duo dash-duo-calldays">
               {calldays.map((day) => (
                 <CalldaySticker key={day.isoDate} day={day} />
               ))}
