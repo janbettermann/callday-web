@@ -8,7 +8,7 @@ import {
   type DashboardCallday,
 } from "@/lib/dashboard/data";
 import { AppNav } from "../components/AppNav";
-import { AppFooter } from "../components/AppFooter";
+import { AppShell } from "../components/AppShell";
 import {
   CalldaySticker,
   EmptyCalldaySticker,
@@ -45,7 +45,7 @@ export default async function CalldaysPage() {
   ]);
 
   return (
-    <>
+    <AppShell>
       <AppNav active="calldays" initial={initial} />
 
       <main className="dash-wrap">
@@ -69,8 +69,6 @@ export default async function CalldaysPage() {
           </div>
         )}
       </main>
-
-      <AppFooter />
-    </>
+    </AppShell>
   );
 }

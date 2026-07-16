@@ -11,7 +11,7 @@ import {
   type DashboardList,
 } from "@/lib/dashboard/data";
 import { AppNav } from "../components/AppNav";
-import { AppFooter } from "../components/AppFooter";
+import { AppShell } from "../components/AppShell";
 import { CalldaySticker, EmptyCalldaySticker } from "../components/CalldaySticker";
 import { DashboardGreeting } from "./DashboardGreeting";
 
@@ -64,7 +64,7 @@ export default async function DashboardPage() {
   const hasLists = lists.length > 0;
 
   return (
-    <>
+    <AppShell>
       <AppNav active="dashboard" initial={initial} />
 
       <main className="dash-wrap">
@@ -139,9 +139,7 @@ export default async function DashboardPage() {
         </section>
 
       </main>
-
-      <AppFooter />
-    </>
+    </AppShell>
   );
 }
 

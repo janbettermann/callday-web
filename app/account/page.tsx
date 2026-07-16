@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { AppNav } from "../components/AppNav";
-import { AppFooter } from "../components/AppFooter";
+import { AppShell } from "../components/AppShell";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { parseUserAgent } from "@/lib/user-agent";
 import {
@@ -145,7 +145,7 @@ export default async function AccountPage() {
     : null;
 
   return (
-    <>
+    <AppShell>
       <div className="bg-orb bg-orb-1" />
       <div className="bg-orb bg-orb-2" />
       <div className="bg-orb bg-orb-3" />
@@ -395,8 +395,6 @@ export default async function AccountPage() {
           </form>
         </div>
       </main>
-
-      <AppFooter />
-    </>
+    </AppShell>
   );
 }

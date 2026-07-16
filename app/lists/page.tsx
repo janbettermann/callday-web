@@ -5,8 +5,7 @@ import { getServerSupabase } from "@/lib/supabase-server";
 import { buildListName, fetchJobsForUser } from "@/lib/lists/jobs";
 import { fetchAllLists, fetchProfileIdentity } from "@/lib/dashboard/data";
 import { AppNav } from "../components/AppNav";
-import { AppFooter } from "../components/AppFooter";
-import { ListsClient } from "./ListsClient";
+import { AppShell } from "../components/AppShell";
 import { MyLists, type ListCardData } from "./MyLists";
 
 /**
@@ -42,12 +41,22 @@ export default async function ListsPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return <ListsClient />;
-  }
-
   const params = await searchParams;
   const website = typeof params.website === "string" ? params.website : null;
+
+  if (!user) {
+    // /lists ist login-only (Weg A, 2026-07-17): keine eigene ausgeloggte
+    // Listen-Landing mehr (ListsClient stillgelegt). Ein Funnel-Preset
+    // traegt die Generator-Absicht durch Login/Signup; ohne Preset gehen
+    // ausgeloggte Besucher auf die Haupt-Landing.
+    if (website === "without" || website === "with") {
+      redirect(
+        `/login?next=${encodeURIComponent(`/lists/new?website=${website}`)}`,
+      );
+    }
+    redirect("/");
+  }
+
   if (website === "without" || website === "with") {
     redirect(`/lists/new?website=${website}`);
   }
@@ -87,12 +96,11 @@ export default async function ListsPage({
       : false;
 
   return (
-    <>
+    <AppShell>
       <AppNav active="lists" initial={identity.initial} />
       <main className="lists-page">
         <MyLists lists={cards} building={building} hadFailure={hadFailure} />
       </main>
-      <AppFooter />
-    </>
+    </AppShell>
   );
 }

@@ -871,6 +871,24 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
 }
 
 /* === ACCOUNT PAGE === */
+/* Sticky-Footer-Geruest aller eingeloggten Seiten (AppShell): Flex-Spalte,
+   `main` fuellt den Rest (flex:1), der AppFooter sitzt am Boden — sichtbar
+   bei wenig Content, weggeschoben bei viel. Die einzelnen main-Klassen
+   tragen deshalb KEIN min-height mehr (das kaeme dem Sticky-Footer in die
+   Quere). Die fixe AppNav ist ausserhalb des Flusses und stoert nicht. */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+.app-shell > main {
+  flex: 1 1 auto;
+  /* Quer-Achse: volle Shell-Breite fuellen. Sonst kollabiert ein main mit
+     eigenem `margin: 0 auto` (z.B. .dash-wrap) im Flex-Container auf
+     Content-Breite; mit width:100% greift sein max-width + Zentrierung
+     wieder wie vorher (border-box → Padding inklusive, kein Overflow). */
+  width: 100%;
+}
 .account-page {
   position: relative;
   z-index: 1;
@@ -878,7 +896,6 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
      Account-Seiten. */
   padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 44px) 32px
     120px;
-  min-height: 100dvh;
 }
 /* Breite = Nav-Content (.container: 1200px inkl. 2x32px Padding) — die
    Card-Kanten fluchten mit Logo links und Account-Button rechts. */
@@ -3082,7 +3099,6 @@ h2 .accent {
   /* Top-Offset zum h1 = Dashboard (+44), einheitlich. */
   padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 44px) 32px
     120px;
-  min-height: 100dvh;
 }
 .lists-inner {
   max-width: 560px;
