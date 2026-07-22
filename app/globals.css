@@ -2657,6 +2657,50 @@ h2 .accent {
   line-height: 1.45;
 }
 
+/* Play/Pause-Toggle auf den Flow-Videos (Apple-Muster: immer sichtbar,
+   bewusst leise). Ruhezustand halbtransparent, Hover/Fokus voll — auf
+   Touch bleibt der Ruhezustand, der ist gross genug zum Treffen.
+   Existiert auch als Autoplay-Rettung: steht das Video (Stromspar-/
+   Datensparmodus), ist die Animation einen Tap entfernt statt tot. */
+.flow-video-toggle {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.38);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.72;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  z-index: 2;
+}
+.flow-video-toggle:hover,
+.flow-video-toggle:focus-visible {
+  opacity: 1;
+  background: rgba(15, 23, 42, 0.55);
+}
+.flow-video-toggle:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+/* Mobile: waehrend das Video LAEUFT fast wegblenden — dort konkurriert
+   der Button nur mit der Animation und es gibt keinen Hover, der ihn
+   bei Bedarf anhebt. Steht das Video (blockiertes Autoplay, User-Pause),
+   greift wieder die volle Ruhe-Opacity von oben: als Rettungsanker muss
+   er auffindbar bleiben. Touch-Target bleibt unveraendert 32px. */
+@media (max-width: 960px) {
+  .flow-video-toggle[data-playing] {
+    opacity: 0.3;
+  }
+}
+
 /* === Mobile stack — separate DOM tree, hidden on desktop. === */
 .flow-mobile {
   display: none;

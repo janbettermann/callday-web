@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { FlowAnimation } from "./FlowAnimation";
 
 type Step = {
@@ -87,9 +87,74 @@ const STEPS: Step[] = [
  * laid out at a time. `prefers-reduced-motion: reduce` wird in
  * FlowAnimation respektiert: Videos bleiben auf Frame 0 pausiert.
  */
+/**
+ * "Element ist ueberwiegend (>= 50%) im Viewport" — aus zwei Quellen:
+ *
+ *   1. IntersectionObserver (threshold 0.5) — der Normalfall, feuert in
+ *      beide Richtungen beim Kreuzen der Schwelle.
+ *   2. Passiver Scroll/Resize-Listener, der die Sichtbarkeit direkt aus
+ *      getBoundingClientRect berechnet (rAF-gedrosselt).
+ *
+ * Warum doppelt: Mobile Safari's IO ist nachweislich unzuverlaessig
+ * (siehe SiteNav — dort blieb der Intersection-State haengen und wurde
+ * durch einen Scroll-Listener ersetzt). Haengt der IO, korrigiert der
+ * Scroll-Pfad bei der naechsten Scroll-Bewegung in beide Richtungen —
+ * ein Video, das faelschlich steht, startet; eines, das faelschlich
+ * laeuft, pausiert. Beide Quellen schreiben denselben State, die
+ * juengere Messung gewinnt.
+ *
+ * Ein display:none-Element (der jeweils andere Breakpoint-Tree) hat
+ * rect.height 0 und meldet konsistent "nicht sichtbar".
+ */
+function useMostlyInView<T extends HTMLElement>(
+  ref: RefObject<T | null>,
+): boolean {
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const obs = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { threshold: 0.5 }
+    );
+    obs.observe(el);
+
+    let rafPending = false;
+    const check = () => {
+      rafPending = false;
+      const rect = el.getBoundingClientRect();
+      if (rect.height <= 0) {
+        setInView(false);
+        return;
+      }
+      const viewportH = window.innerHeight;
+      const visiblePx = Math.min(rect.bottom, viewportH) - Math.max(rect.top, 0);
+      setInView(visiblePx / rect.height >= 0.5);
+    };
+    const onScroll = () => {
+      if (!rafPending) {
+        rafPending = true;
+        requestAnimationFrame(check);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    check();
+
+    return () => {
+      obs.disconnect();
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [ref]);
+
+  return inView;
+}
+
 export function FlowTabs() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isInView, setIsInView] = useState(false);
   const desktopRef = useRef<HTMLDivElement>(null);
 
   /**
@@ -100,24 +165,13 @@ export function FlowTabs() {
    * Klick, nie automatisch.
    *
    * Nur der Desktop-Tree wird beobachtet — auf Mobile ist er
-   * display:none und intersected nie. Die Mobile-Karten steuern ihre
-   * Sichtbarkeit selbst (eigener Observer pro Karte in MobileFlowCard).
-   * Threshold 0.5 = halbe Sektion im Viewport: empirischer Sweet-Spot,
-   * bei dem die rechte Animations-Spalte garantiert vollstaendig
-   * sichtbar ist bevor wir play druecken. IntersectionObserver feuert
-   * in beide Richtungen wenn die Threshold gekreuzt wird, also auch
-   * beim Verlassen — kein Disconnect.
+   * display:none und misst hoehe 0. Die Mobile-Karten steuern ihre
+   * Sichtbarkeit selbst (eigener Hook pro Karte in MobileFlowCard).
+   * 50%-Schwelle: empirischer Sweet-Spot, bei dem die rechte
+   * Animations-Spalte garantiert vollstaendig sichtbar ist bevor wir
+   * play druecken.
    */
-  useEffect(() => {
-    const el = desktopRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => setIsInView(entry.isIntersecting),
-      { threshold: 0.5 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
+  const isInView = useMostlyInView(desktopRef);
 
   const handleSelect = (i: number) => {
     setActiveIndex(i);
@@ -176,10 +230,16 @@ export function FlowTabs() {
                 className="flow-anim"
                 data-active={active || undefined}
                 data-has-animation={s.hasAnimation || undefined}
-                role="img"
-                aria-label={
-                  s.hasAnimation ? s.label : `${s.label}, animation placeholder`
-                }
+                // role="img" nur fuer den Text-Placeholder: Es flacht den
+                // Subtree fuer Screenreader ab — auf Animations-Steps
+                // wuerde es den Play/Pause-Toggle unerreichbar machen.
+                // Das dekorative Video ist eh aria-hidden.
+                {...(s.hasAnimation
+                  ? {}
+                  : {
+                      role: "img" as const,
+                      "aria-label": `${s.label}, animation placeholder`,
+                    })}
               >
                 {s.hasAnimation ? (
                   <FlowAnimation
@@ -214,24 +274,13 @@ export function FlowTabs() {
  * Sichtbarkeit und spielt die Animation nur, waehrend die Karte
  * ueberwiegend sichtbar ist — beim Rausscrollen pausiert das Video
  * auf Frame 0 (macht VideoStage), beim Reinscrollen startet die
- * Story von vorn. Threshold 0.5: die Media-Area sitzt oben in der
+ * Story von vorn. 50%-Schwelle: die Media-Area sitzt oben in der
  * Karte und ist bei halber Kartensichtbarkeit bereits komplett im
  * Viewport, egal aus welcher Scroll-Richtung.
  */
 function MobileFlowCard({ step }: { step: Step }) {
   const ref = useRef<HTMLElement>(null);
-  const [inView, setInView] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => setInView(entry.isIntersecting),
-      { threshold: 0.5 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
+  const inView = useMostlyInView(ref);
 
   return (
     <article className="flow-card" ref={ref}>
