@@ -89,7 +89,9 @@ export function ConfirmCard() {
     // Email ist jetzt verifiziert — TestFlight-Mail rausschicken.
     void sendTestflightInviteMail("ConfirmCard");
 
-    router.push("/account?welcome=signup");
+    // Funnel-Einstiege (z. B. /lists) geben ihr Ziel im Handoff mit;
+    // Default ist das Dashboard (Post-Login-Startseite seit 2026-07-15).
+    router.push(handoff?.next ?? "/dashboard");
   }
 
   /**

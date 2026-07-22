@@ -24,6 +24,12 @@ export type SignupConfirmVariant = "fresh" | "welcome-back";
 export interface SignupConfirmHandoff {
   email: string;
   variant: SignupConfirmVariant;
+  /**
+   * Interner Pfad, auf dem der User nach erfolgreichem Confirm landet.
+   * Gesetzt von Einstiegen mit eigenem Funnel (z. B. /lists); ohne Wert
+   * gilt der Default /dashboard (siehe ConfirmCard).
+   */
+  next?: string;
 }
 
 export function writeSignupConfirmHandoff(handoff: SignupConfirmHandoff) {
@@ -46,6 +52,12 @@ export function readSignupConfirmHandoff(): SignupConfirmHandoff | null {
     return {
       email: parsed.email,
       variant: parsed.variant === "welcome-back" ? "welcome-back" : "fresh",
+      // Nur interne Pfade — schuetzt gegen Open-Redirects, falls der
+      // sessionStorage-Wert manipuliert wurde.
+      next:
+        typeof parsed.next === "string" && parsed.next.startsWith("/")
+          ? parsed.next
+          : undefined,
     };
   } catch {
     return null;

@@ -1,9 +1,16 @@
 # Callday Lists — Web-Lead-Generator + Funnel — Spec
 
-> Status: **Planungs-Spec (2026-07-09), noch nicht implementiert.**
-> **Post-Launch Fast-Follow** — nicht launch-blockierend (die App launcht mit dem
-> jetzigen CSV-Import wie sie ist; den kritischen Launch-Pfad Gate → RC-E2E →
-> Native-Build → Submission nicht anfassen).
+> Status: **v1 GEBAUT (2026-07-12) auf Branch `lists-generator`, E2E-verifiziert
+> gegen echte Outscraper-API + Prod-DB.** Merge in `main` = bewusste
+> Go-Live-Entscheidung **nach dem App-Launch** (Post-Launch Fast-Follow,
+> nicht launch-blockierend — den kritischen Launch-Pfad nicht anfassen).
+>
+> Gebaut: `/lists` (3 Zustaende, auth-aware), `/api/lists/{generate,webhook,
+> status,download}`, `lib/lists/*` (Outscraper-Client, Callable-Pipeline,
+> Job-Verarbeitung), `emails/list-ready.tsx`, Migration `0048_lead_gen_jobs`
+> (App-Repo, deployed), SignupForm `nextPath`-Prop. Offen vor Merge:
+> `OUTSCRAPER_API_KEY` in Vercel, App-CTA von /account auf App-Store-Link
+> umstellen, SignupForm-Card-Copy (TestFlight-Text) fuer Launch pruefen.
 
 ## 1. Was + Warum (Strategie)
 
@@ -42,6 +49,66 @@ zweierlei:
   - Per Next.js-Rewrites/Domain-Config aus dem Subpath heraushebbar — **keine
     Einbahnstraße** (auch ein voll-neutraler Brand bleibt offen, falls Daten je
     zeigen, dass der Callday-Name Cold-Call-Sucher abschreckt — unwahrscheinlich).
+
+## 2b. Architektur-Update 2026-07-13 (v2): Listen-Welt unter /lists, /account zeigt nur hin
+
+Ersetzt die Vormittags-Entscheidung „Generator in der Account-Sektion"
+noch am selben Tag (Jan): /account soll Verwaltungsseite bleiben und
+nicht mit Produkt-Features wachsen — die Listen-Welt lebt komplett
+unter `/lists` (haelt auch den spaeteren Subdomain-Spin-out §2 als
+sauberen Schnitt offen).
+
+- **`/lists` ausgeloggt** — unveraendert die Akquise-Landing
+  (Message-Match fuer Affiliate-/SEO-Traffic; `ListsClient`). Signup
+  fuehrt jetzt direkt in den Generator (`nextPath=/lists/new`,
+  Presets reisen mit).
+- **`/lists` eingeloggt** — die Listen-Uebersicht (`MyLists`),
+  server-gerendert (SSR-Auth wie /account, kein Client-Swap).
+  **Karten-Redesign 2026-07-16 (Jan):** Karten im Dashboard-Design
+  (`fetchAllLists` liest `lead_lists`, Demo via `is_sample` aus,
+  Progress-Logik mit dem Dashboard geteilt) — Name, Quelle-Pill oben
+  rechts (`Generated` = hat einen Generator-Job / `Imported` = App-
+  Datei-Import), Fortschrittsbalken, „x / y leads in list". Ein
+  laufender Job sitzt als pollende Building-Card oben (pulsierender
+  Punkt + „Building your list…", durchlaufende Ladeanimation im Balken
+  gleicher Groesse). **Raus:** In-Page-„New list"-Button (die AppNav
+  traegt ihn), Subtext unter h1, Download-Aktionen, „Call them with the
+  app"-Card, Synced-Badge. Filter-Toggles (all/synced/imported) bewusst
+  weggelassen — bei „alles synced" haetten sie leeren/identischen
+  Inhalt; die Quelle-Pill traegt die Info stattdessen pro Karte. Kommt
+  ein eingeloggter Besucher mit `?website=`-Preset (Affiliate-Link =
+  Generate-Intent), wird er zu /lists/new durchgereicht.
+  - **Offen (Jan 2026-07-16, bewusst vertagt):** Fehlgeschlagene
+    Generierung ist **kein** eigener Karten-Zustand — sie erscheint nur
+    noch als Empty-State-Hinweis (wenn sonst keine Liste da ist). Spaeter
+    ggf. vierter Zustand: rote `Failed`-Pill + „Retry" statt Balken.
+- **`/lists/new`** — der Generator als eigene Workspace-Seite
+  (`GeneratorClient`): Konsolen-Layout (Formular links, Live-Summary
+  rechts, die spaeter Credits-Kosten + Enricher-Zeilen traegt),
+  How-it-works-Pipeline-Strip; Building-State zeigt dieselben Stufen
+  ehrlich zustandsgesteuert (pending = Scan, processing = Pipeline,
+  keine Fake-Timer). **Eine URL, keine Ready-Ansicht** (Jan-Entscheidung
+  2026-07-14): ist die Free-Liste verbraucht (`ready`), bleibt der
+  Generator sichtbar, aber gesperrt — Formular ausgegraut
+  (`.lists-console.is-locked`), darueber Hinweis-Karte warum + Link zu
+  /lists; Client-Guard ist nur Gurt, den Cap erzwingt weiter der
+  partial unique index (409). Wird der Job in derselben Session fertig,
+  leitet die Seite zu /lists weiter — die fertigen Listen wohnen dort
+  (Download-Buttons seit dem Karten-Redesign 2026-07-16 aus der UI raus,
+  `/api/lists/download` bleibt bestehen). Die fruehere Ready-Ansicht
+  samt LeadPreviewCard (§13b) ist ersatzlos raus, Git-History als
+  Re-Impl-Vorlage.
+- **/account** (`LeadListsSection`, jetzt Server-Component ohne
+  Polling) — kompakter Zeiger statt Generator: keine Liste/failed →
+  Promo-Card („Get your first lead list — free" → /lists/new, haelt
+  das Leere-App-Problem fuer App-Signups geloest — ein Klick mehr,
+  Versprechen bleibt); Job laeuft → Status-Zeile → /lists; Liste
+  fertig → Listen-Zeile + „View your lists".
+- **Zustandsgesteuert statt herkunftsgesteuert** gilt weiter — beide
+  Funnel sehen dieselben Zustaende, nur eben auf /lists(/new) statt
+  auf /account.
+- Offen (bewusst nach hinten gestellt): „first list free"-Kommunikation
+  auf der App-Landing (Jan macht Copy/Platzierung separat).
 
 ## 3. Front-Door (auth-aware, ein Konto)
 
@@ -92,6 +159,14 @@ eine Liste wollen).
   (z. B. 100–250 vs. 500) tradet Hook-Stärke gegen Kosten-/Leak-Exposure.
   Kleiner aktiviert immer noch („meine Leads sind schon in der App"), kostet aber
   weniger pro Nicht-Konvertierer. Mit Conversion-Daten tunen (siehe §11).
+- **Re-affirmiert 2026-07-12:** Die Idee „Download weg, Liste nur in der
+  App" (mehr Install-Druck) wurde geprüft und **verworfen** — Bait-
+  Wahrnehmung vergiftet Affiliate-Glaubwürdigkeit + Word-of-Mouth
+  (Affiliates bewerben nichts, was ihre Kommentarspalte zerlegt),
+  Markt-Standard ist Liste=Datei, und Desktop-Traffic sähe eine
+  Sackgasse. Der App-Push läuft stattdessen über die Abo-Credits (§10):
+  Der Generator wird für Abonnenten zum wiederkehrenden Abo-Feature —
+  Zwang durch Wert ersetzt.
 
 ## 6. Outscraper-Integration (verifiziert aus OpenAPI v0.4.3)
 
@@ -153,26 +228,58 @@ Insert als neue `lead_list` (Name = Query, z. B. „Zahnärzte Köln") + zugehö
   4. UI zeigt **Pending-State** („Liste wird gebaut, ~1–3 Min") und pollt/lauscht
      (Supabase Realtime), bis „ready".
 
-## 9. Sync — WATCH-POINT #1 (technisch entscheidend)
+## 9. Sync — ✅ VERIFIZIERT (2026-07-11): Pull existiert bereits
 
-Die Mobile-App ist **offline-first (lokale SQLite) ← Supabase-Sync**. Eine im
-Web erzeugte Liste liegt zunächst nur in Supabase → **die App muss
-server-erzeugte Listen RUNTERZIEHEN.** Wenn der aktuelle Sync push-dominant ist
-(Device → Supabase), ist **das Pull-für-server-erzeugte-Listen genau das Stück,
-das gebaut werden muss.** Vor allem anderen im Sync-Pfad verifizieren — sonst
-generiert der User im Web, aber am Handy kommt nichts an. (Related Memory:
-`feedback_local_db_single_tenant`.)
+Die Mobile-App ist **offline-first (lokale SQLite) ← Supabase-Sync**. Der
+ursprüngliche Watch-Point („wenn der Sync push-dominant ist, muss der Pull erst
+gebaut werden") ist **im App-Code verifiziert und erledigt**:
+`utils/sync/pull-from-cloud.ts` läuft bei jedem Boot + Foreground-Wechsel und
+zieht `lead_lists`, `leads`, `call_outcomes`, `notes` vollständig per
+`INSERT OR REPLACE` in die lokale DB (paginiert, orphan-defensiv). Eine
+server-erzeugte Liste landet also **ohne Sync-Neubau** beim nächsten
+App-Öffnen auf dem Gerät.
 
-## 10. Monetarisierung / Billing
+Was der Web-Insert dafür korrekt setzen muss:
 
-- **Gratis:** 1 Liste/Konto (im Funnel).
-- **Bezahlte Folge-Listen:** à-la-carte **via Stripe im Web** — **kein
-  Apple-Cut.** (In-App-Consumables auf iOS = 15–30 % IAP + Regeln; deshalb ist
-  der Web-Kanal der bessere Ort fürs à-la-carte-Listen-Geld.) Stripe wurde für
-  den Launch rausgenommen (Apple-IAP-only) → **Wieder-Einführung für Web-Listen
-  ist eine bewusste Post-Launch-Entscheidung**, deferred.
-- **Haupt-Umsatz bleibt das App-Abo** ($14.99/mo). Listen sind ein Zweitstrom +
-  Akquise, nicht der Kern.
+- richtige `user_id` (RLS + Pull-Scope) und `is_sample = false`
+- Legacy-Batch-Defaults wie beim App-Import: `batch_size = total_leads`,
+  `current_batch = 1`, `total_batches = 1`, `batch_number = 1`
+- `position_in_batch` = Import-Reihenfolge (Sort-Order in Stack + Listview)
+
+**Timing-Erwartung:** „gesynct" = beim nächsten App-Start/Foreground, kein
+Live-Push aufs Gerät. Für den Funnel reicht das (Install → Open → Liste da);
+Live-Erscheinen bei offener App bräuchte einen Extra-Trigger (Realtime oder
+Push-Notification → Pull). (Related Memory: `feedback_local_db_single_tenant`.)
+
+## 10. Monetarisierung — Abo-Credits (ENTSCHEIDUNG 2026-07-12, ersetzt Stripe-à-la-carte)
+
+Folge-Listen laufen NICHT über Einzelkäufe, sondern als **Abo-Benefit**:
+Callday-Abonnenten bekommen **500 Generator-Leads pro Monat** als Credits.
+
+- **Warum statt Stripe à la carte:** braucht **keine Web-Zahlung** — das
+  Abo läuft wie geplant über Apple-IAP, die Credits sind ein Entitlement
+  daraus. Die „Stripe-Wiedereinführung?"-Frage stirbt damit komplett.
+  COGS trivial: 500 Leads ≤ ~$1,50 gegen $14.99 Abo (<10 %, real weniger
+  — Stadt-Pools sind kleiner, und nicht jeder schöpft aus).
+- **Stacking als Churn-Bremse:** ungenutzte Credits rollen über — Loss
+  Aversion (Kündigen = gesammelte Credits verlieren), und es entschärft
+  nebenbei das bewusst fehlende Pause-Feature (ruhige Monate sammeln
+  wenigstens Wert an). **Rollover-Cap: 3 Monatsrationen (1.500)** — für
+  die Lesbarkeit des Versprechens, nicht wegen der Kosten.
+- **Zahl: mit 500 starten, nicht 1.000** — erhöhen ist später ein
+  Geschenk, senken ein Skandal.
+- **Kommunikation von Anfang an** (Jans Bedingung): Paywall-Bullet
+  („500 fresh leads every month"), Import-Trigger, Account-Listen-Card
+  („Need another list?" wird für Abonnenten zum echten Generate-Button).
+- **Free-User:** unverändert 1 Gratis-Liste/Konto (§5) — Funnel bleibt.
+- **Verbrauchseinheit:** gelieferte Leads pro Job (lead_count) — dieselbe
+  Einheit, nach der Outscraper uns berechnet (validiert §12b/13b).
+- **Umsetzung (Post-Launch, ~2–3 Tage, erst NACH IAP-Verdrahtung):**
+  Credits-Ledger (Tabelle + monatliche Gutschrift), Abo-Status web-seitig
+  (RevenueCat-Webhook → profiles), Metering in der Generate-Route,
+  Credit-Anzeige in Account-Card + /lists.
+- **Haupt-Umsatz bleibt das App-Abo** — Credits machen das Abo wertiger;
+  Listen sind bewusst kein eigener Umsatzstrom mehr.
 
 ## 11. Zielgruppen-Qualität + Unit Economics — WATCH-POINT #2
 
@@ -202,7 +309,63 @@ mit Listen (breites Publikum zahlt für Listen, unabhängig von Callday) wäre e
 wirklich *zahlen* (Instinkt: die meisten nehmen gratis und gehen). Für v1 nicht
 chasen; Fokus = qualifizierter Cold-Calling-Traffic.
 
-## 12. Recht / Compliance
+## 12. Affiliate-Synergie
+
+Der Funnel upgradet das Affiliate-Programm — Affiliates bekommen einen viel
+bewerbbareren Haken.
+
+- **Lead-Magnet statt App-Pitch:** „kostenlose Cold-Calling-Leads in 2 Minuten"
+  ist im Social-Content (dem Affiliate-Kanal) massiv teilbarer/klickbarer als
+  „lad die Calling-App". Besserer Content-Angle („so zieh ich mir gratis Leads")
+  und zieht die qualifizierte (Cold-Calling-)Zielgruppe = genau die, die
+  konvertiert.
+- **Ganzer-Funnel-Monetarisierung:** Affiliate-Link → Listen-Tool → Signup setzt
+  `referred_by_affiliate_id` (geteilte Auth) → der Affiliate verdient 50 %
+  recurring, sobald der User zum zahlenden Callday-Abo wird. Der einfache
+  Gratis-Haken zahlt auf die bestehende Provision ein.
+
+**Zwei Dinge, die dafür sitzen müssen:**
+
+1. **Attribution muss durch den `/lists`-Signup fließen.** Die Zuordnung wird
+   beim Web-Signup über `/a/[slug]` gesetzt (siehe App-Repo-Spec-Kontext /
+   `affiliate-payouts.md` §3) — der Listen-Tool-Signup muss den Referral-Cookie/
+   -Param genauso respektieren, sonst kriegt der Affiliate den Signup nicht
+   gutgeschrieben. **Konkreter Integrationspunkt.**
+2. **Free-Listen-Kosten × Affiliate-Volumen (Watch-Point-Interaktion):**
+   Affiliate-getriebene Gratis-Listen kosten *dich* Outscraper-Geld pro Signup,
+   und Affiliates sind auf Volumen incentiviert. Die Provision zahlt nur bei
+   Conversion (kein Bleed für Nicht-Konvertierer), aber die Free-Listen-Kosten
+   fallen bei *jedem* Affiliate-Signup an. Der 1er-Cap (§5) + Per-Affiliate-
+   Monitoring (Dashboard zeigt Sign-ups vs. Activated) fangen das ab — beobachten,
+   falls ein Affiliate viel Low-Quality-Volumen reindrückt.
+
+## 12b. Meta-Ads-Experiment (Post-Launch, Jan-Decision 2026-07-12)
+
+Der Lead-Magnet taugt fuer Paid Social (demobarer Sofort-Wert,
+Screen-Recording-Creatives, Preset-Link `/lists?website=without` + UTM
+als Landing). **Ads ergaenzen die Affiliates, ersetzen sie nicht** —
+entgegengesetzte Risikoprofile: Affiliate = 0 € bis zur Conversion
+(50 % recurring pro Erfolg), Meta = Kosten pro Versuch. Owned-Acquisition
+wird erst bei bewiesenen Funnel-Zahlen strukturell guenstiger.
+
+**Voraussetzungen bevor Budget fliesst:**
+1. App-Launch (gleiche Gate wie Affiliate-Bewerbung).
+2. **Arbeitspaket Tracking:** Meta-Pixel/CAPI auf callday.io mit
+   Conversion-Events (Signup, Liste generiert). Achtung: Site ist
+   bisher bewusst cookieless — Pixel braucht in DACH ein
+   Consent-Banner (eigenes Paket). Ad→App-Store→Abo-Attribution ist
+   auf iOS strukturell loechrig → auf Web-Events optimieren,
+   Abo-Conversion als Kohorten-Wert in RevenueCat gegenpruefen.
+3. **Klein testen statt Kampagne:** 10–20 €/Tag, 3–4 Creatives
+   („ohne Website"-Hook vs. generischer Listen-Hook), 2 Wochen.
+   Skalieren erst bei Payback < ~3 Monaten
+   (CPL × Signup→Install × Trial→Paid gegen 14,99 $/mo).
+
+**Synergie:** Affiliate-Content ist das Creative-Labor — organisch
+funktionierende Creator-Videos per Whitelisting/Spark-Ads zur Anzeige
+machen (schlaegt selbstgebaute Ads fast immer).
+
+## 13. Recht / Compliance
 
 - **Cold-Calling-Regeln (DE §7 UWG):** B2B braucht mutmaßliche Einwilligung, B2C
   praktisch verboten. Leads liefern verschiebt die Pflicht nicht — sie bleibt
@@ -212,16 +375,190 @@ chasen; Fokus = qualifizierter Cold-Calling-Traffic.
   B2B-Geschäftsdaten — sauber dokumentieren; AGB-Anwalt drüber (ohnehin für das
   Affiliate-Onboarding im Loop).
 
-## 13. Bewusst NICHT v1 / offen
+## 13b. Website-Filter + Anreicherung (gebaut 2026-07-12)
+
+- **Website-Filter** im Generator-Form — der Ziel-Filter fuer die
+  KI-Website-Builder- und Agentur-Zielgruppe. Client-seitig in der
+  Pipeline (Outscrapers Quick-Filter sind UI-only, API unterstuetzt
+  sie nicht — Staff-bestaetigt im Outscraper-Forum).
+  Affiliate-Link-Preset: `/lists?website=without` waehlt den Filter
+  vor. **Seit 2026-07-15 Dropdown statt Chips** (Jan-Entscheidung
+  gegen meine Chips-Empfehlung, bewusst getroffen) mit den
+  eindeutigen „Only…"-Labels („With and without website / Only
+  without website / Only with website"). Default bleibt „With and
+  without" — „Only with website" als Default wurde geprueft und
+  VERWORFEN (haette im Beauty-Salon-Testlauf 38 % anrufbarer Betriebe
+  gekostet, fuer einen E-Mail-Bonus der ~25 % der Leads hilft). Die
+  Wirkung der Wahl spiegelt das Summary-Panel. **Rating-Filter
+  (gut/schlecht bewertet) wurde diskutiert und bewusst rausgelassen**
+  (2026-07-15) — waere gratis via `google_rating` client-seitig
+  machbar, liegt im Backlog (Undershoot-Wechselwirkung + Umgang mit
+  Betrieben ohne Rating dann mitentscheiden).
+- **Gratis-Anreicherung aus dem Basis-Response:** `google_rating`
+  (auf der Pre-Call-Card via custom_field_defs enabled=true),
+  `opening_hours` + `google_profile_claimed` (leise als Custom Fields).
+  Shape identisch zum CSV-Import (App types/lead-list.ts).
+- **Leadcard-Preview im Ready-State** *(2026-07-14 wieder entfernt:
+  der Ready-State ist der One-URL-Entscheidung in §2b gewichen —
+  LeadPreviewCard + `preview` im Status-Endpoint liegen in der
+  Git-History als Re-Impl-Vorlage, falls die Karte mal auf /lists
+  oder der Landing wiederkommt)*: erster echter Lead als stilisierte
+  Callday-Karte (Stack-Optik, Rating-Zeile) — verkauft das Erlebnis,
+  nicht nur die Daten.
+- **Backlog (App-Seite, Post-Launch):** „No website"-Filter als
+  zusaetzliche FilterPill in der Listen-Ansicht der App (Jan-Idee
+  2026-07-12) — Filter gehoeren in den Browse-Modus, NICHT in den
+  Karten-Stack (Anti-Prokrastination). Daten liegen lokal
+  (leads.website), kein Sync-Thema. Bei groesseren Maerkten +
+  Filter-Undershoot: `skipPlaces`-Pagination als Tiefenscan-Ausbau.
+- **Geplante Optimierung: Zwei-Phasen-Fetch fuer gefilterte
+  DACH-Laeufe** (Jan-Einwand 2026-07-12, berechtigt): Client-Filter
+  bezahlt den vollen Raw-Scan — bei 5 % Trefferquote ~$1,20 pro Liste
+  fuer 20 Leads; auf Kampagnen-Volumen (1.000 Listen/Monat) vierstellig
+  vermeidbar. Loesung OHNE en-Zwang: (1) `language=en` + Server-Filter
+  → nur Treffer werden geliefert/berechnet, nur `place_id`s verwenden;
+  (2) place_ids als Batch-Query mit `language=de` nachladen (bis 1.000
+  Queries/Request) → deutsche Labels, City-Sort intakt. Extremfall
+  $0,12 statt $1,20. Preis: zweite Async-Stufe im Job (Latenz +
+  State). **Trigger:** vor DACH-Meta-Kampagne ODER >~200 gefilterte
+  DACH-Listen/Monat in lead_gen_jobs. **Billing-Annahme VALIDIERT (2026-07-12, Jans
+  Usage-Dashboard):** El-Paso-Filter-Lauf (15 Treffer bei Scan-Limit
+  500) wurde mit exakt 15 Records abgerechnet; Fahrschulen-Koeln
+  (unfiltered, DE) mit 119 = zurueckgegebene Records. Outscraper
+  berechnet IMMER das Gelieferte, nie das Scan-Limit — die
+  Zwei-Phasen-Oekonomie rechnet exakt wie geplant.
+
+## 13c. Email-Enrichment — Testlauf-Erkenntnisse (2026-07-12)
+
+Live-Test `enrichment=leads_n_contacts` (10 Fahrschulen Koeln, echte
+API). Ergebnis: funktioniert, gehoert als **bezahltes Add-on** auf
+Folge-Listen — mit vier Erkenntnissen fuer die Umsetzung:
+
+1. **Preis verifiziert:** $3/1.000 **Domains** (Abrechnungseinheit ist
+   die gecrawlte Website, nicht der Lead). Leads ohne Website kosten
+   nichts und liefern nichts — fuer „ohne Website"-Listen ist das
+   Add-on strukturell wertlos (dort ist Telefon der einzige Kanal =
+   Callday-Verkaufsargument). Voll angereicherter Lead inkl.
+   Verifikation (~$3/1k Mails extra): unter 1 Cent.
+2. **Zeilen-Explosion:** Mit Enrichment liefert Outscraper EINE ZEILE
+   PRO GEFUNDENER E-MAIL (10 Firmen → 19 Zeilen). Pipeline muss auf
+   einen Lead zurueckfalten: primaere Mail waehlen, weitere Mails in
+   ein Custom Field.
+3. **Domain-Rauschen:** Der Crawler sammelt ALLE Adressen einer Domain
+   und ordnet sie jedem Eintrag auf dieser Domain zu (Filial-Mails
+   landen bei der falschen Filiale; Webagentur-/Partner-Adressen aus
+   dem Footer tauchen auf). Noetig: Plausibilitaets-Stufe — Adressen
+   bevorzugen, deren Domain zur Lead-Website passt.
+4. **Copy-Vorsicht:** Personen-Namen mit Rolle kamen NICHT mit
+   (`name_for_emails` = bereinigter Firmenname). Dafuer tauchen echte
+   private Inhaber-Postfaecher auf (GMX-Fund im Test). Versprechen
+   fuers Add-on: „E-Mails direkt von der Firmen-Website, inkl.
+   persoenlicher Postfaecher wo vorhanden" — NICHT „Decision-Maker-
+   Namen", bis ein groesserer Test Namens-Ausbeute belegt.
+
+## 13d. Enrichment-Endstand + Phasenplan (Jan-Entscheidungen 2026-07-15)
+
+Ersetzt die „bezahltes Add-on"-Rahmung aus §13c: **Leads & Contacts
+laeuft IMMER, auch auf der Free-Liste. Keine Enricher-Auswahl, nie
+Kacheln.** Grundlage: 285-Zeilen-Analyse eines 6-Enricher-Laufs
+(Beauty Salons US, 200 Betriebe) — SimilarWeb/BuiltWith/Company
+Insights/Emails Validator liefern fuer Kaltakquise Rauschen
+(107 von 213 Spalten Tech/Traffic-Muell, Insights matcht Plattformen
+statt Betriebe, 66 % der Kosten bei 3 % Nutzwert). Ein
+Kaltakquisiteur kann eine Enricher-Auswahl nicht qualifiziert
+treffen — abgewaelzte Entscheidung, keine Freiheit. Whitepages
+Phones geparkt als spaeteres Credits-Upsell („Wer hebt ab?").
+Emails Validator bleibt als SERVER-seitiges Werkzeug in der
+Hinterhand (20 % der gefundenen Adressen INVALID, ZInfo-Quelle 52 %) —
+falls Prefill-Qualitaet enttaeuscht, Validator nur auf den
+Prefill-Kandidaten, nie als Nutzerentscheidung.
+
+**E-Mail-Feld-Konzept** (Zweck: geschlossene Frage am Telefon fuer
+die Meeting-Bestaetigung — „Ist jeannie@… noch richtig?"):
+
+- Aggregation nach `place_id` ZUERST (faengt die Zeilen-Explosion,
+  85 Dubletten im Testlauf), Kandidaten sammeln (Adresse + Quelle),
+  Quellen serverseitig auf Enum normalisieren
+  (`website | facebook | linkedin | directory | guessed | other`).
+- Prefill-Prioritaet: (1) Domain == Website-Domain, (2) Freemail mit
+  konservativem Firmennamen-Match, (3) sonst LEER. `guessed`/
+  Fremd-Domains nie vorbefuellen; gilt auch fuer Einzel-Kandidaten
+  (eine einzelne `domainnames@regiscorp.com` gehoert nicht ins Feld).
+  Platzhalter-Blacklist (`hi@mystore.com`-Square-Template).
+- Realistische Erwartung: ~20–25 % der Leads bekommen einen Prefill
+  (37/200 Domain-Match im Test; ohne Website 0 % E-Mails, mit
+  Website 79 % ≥1). Der Hauptfall ist das leere Eingabefeld.
+
+**Phasenplan:**
+
+- **Phase 0 (✅ 2026-07-15):** Website-Filter als Dropdown mit
+  „Only…"-Labels; Google-Maps-Quelle in Landing-Sub + Metadata
+  („We scan Google Maps…"). KEIN „Scraper" in Titel/Pille/Nav, kein
+  Google-Pin-Asset (Marken-/Optik-Entscheidung).
+- **Design-Update Formular (✅ 2026-07-15, Jan):** Generator im
+  v2-Card-Look — weisse, umrandete Felder statt grauer beta-Insets
+  (scoped auf `.lists-console-form`; Landing-/Auth-Formulare behalten
+  den iOS-Settings-Look), ein Formular als Card. **Live-Summary
+  (Checkmark-Liste + Price-Free) und How-it-works-Strip ersatzlos
+  raus** — Mobile-first-Argument: das Panel saesse dort eh unterm
+  Formular; eleganter loesen, wenn Credits-/Enricher-Zeilen wirklich
+  kommen. Die ehrliche E-Mail-Notiz lebt jetzt als
+  `.lists-field-hint` direkt unterm Website-Dropdown (nur bei „Only
+  without website").
+- **Phase 0b (✅ 2026-07-15):** Kategorien-Autocomplete fuers
+  Industry-Feld (`IndustryAutocomplete` + `lib/lists/gmb-categories.ts`).
+  Bewusst KURATIERTE ~280er-Liste im GMB-Stil (englisch, singular)
+  statt der vollen ~4.000er-GMB-Liste — Cold-Calling-taugliche
+  Branchen, kein Bahnhofs-Rauschen. Freitext bleibt immer gueltig
+  (Query ist Text-Suche); Haekchen = erkannte Kategorie, pur aus dem
+  Wert abgeleitet. Chips (INDUSTRY_SUGGESTIONS) auf GMB-Singular
+  ausgerichtet, damit sie das Haekchen treffen; Chips leben jetzt in
+  der Komponente (suggestions-Prop).
+- **Phase 1 (✅ 2026-07-15):** `leads_n_contacts` immer an (ein
+  Request-Pfad, `enrichments` in startGoogleMapsSearch), Aggregation
+  nach place_id + Prioritaetsregeln in `lib/lists/emails.ts` (pure,
+  getestet), Prefill in `lead.email` (kein Schema-Change,
+  `schema_field_sources.email` ergaenzt), Summary-Zeile („Emails
+  where we find them" / „No emails — these businesses have no
+  website"). **Live verifiziert** (3 Mini-Laeufe, Cent-Bereich):
+  API liefert `email`/`source`/`place_id` pro Zeile (Shape wie
+  UI-XLSX), Felder ueberleben den `fields`-Filter, E2E ueber die
+  echten lib-Funktionen: 26 Zeilen → 8 Leads, 5/8 Prefill
+  (Physio Boise; B2B-Vertical deutlich ueber Beauty-Quote).
+  Nebenbefunde: (a) `full_name` kommt bei linkedin/appolo-Quellen
+  MIT (widerspricht §13c-Notiz „keine Personen-Namen" — war
+  de-Markt); contact_name-Prefill waere moeglich, bewusst NICHT in
+  Phase 1. (b) `raw_count` am Job zaehlt jetzt Enrichment-Zeilen,
+  nicht Betriebe (Vergleich raw vs. lead_count entsprechend lesen).
+- **Beobachtungs-Gate:** 2–3 echte Listen — Prefill-Quote und
+  -Fehlerrate messen. Nur bei Bedarf weiter.
+- **Phase 2 (Cross-Repo, 1–2 Tage, NUR nach Gate):**
+  `leads.email_candidates` (jsonb, additiv, nur Cloud→App-lesend),
+  lokale Migration + Sync-Pull + Shape-Contract beidseitig,
+  Kandidaten-Auswahl-Sheet im Post-Call-Meeting-Form (Source-Label
+  klein unter jeder Adresse, kein natives Picker-Experiment),
+  XLSX-Kandidaten-Spalten.
+
+**Bewusst verworfen** (nicht wieder aufrollen ohne neue Datenlage):
+Enricher-Kacheln/-Auswahl; „Only with website" als Default;
+„Google Maps Scraper" als Seitentitel/Pille (SEO-Keyword gehoert in
+einen Blog-Artikel, nicht in den Produkttitel); Rating-Filter v1;
+Outscraper-Tool-UI-Elemente (Unlimited-Toggle, Exact-Match,
+Duplicate-Keep, Export-Format-Wahl, API-Request-Drawer, Task-Tags).
+
+## 14. Bewusst NICHT v1 / offen
 
 - **Kein volles zweites Marketing-Site-Ding** — das ist die Spin-out-Phase
   (eigene Subdomain/Brand).
-- **Outscraper-Preis** live bestätigen (§6).
-- **Stripe-Wiedereinführung** für Folge-Listen: Post-Launch (§10).
-- **Email-Enrichment** (`leads_n_contacts`) optional + teurer — später zuschaltbar.
+- **Outscraper-Preis** live bestätigen (§6). ✅ erledigt (§12b/13c).
+- ~~**Stripe-Wiedereinführung** für Folge-Listen~~ — **GESTRICHEN
+  2026-07-12:** Folge-Listen laufen als Abo-Credits (§10), keine
+  Web-Zahlung nötig.
+- ~~**Email-Enrichment** (`leads_n_contacts`) optional + teurer — später zuschaltbar~~ —
+  **ERSETZT 2026-07-15:** laeuft immer, auch Free-Liste, nie als Auswahl (§13d).
 - **Raw-CSV bei bezahlten Listen** ist Standard; bei der Gratis-Liste auch (§5).
 
-## 14. Verweise
+## 15. Verweise
 
 - Pricing/Paywall-Kette: Memory `project_pricing_strategy`, App-Repo
   `specs/paywall-first-call-gate.md`.

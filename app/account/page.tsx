@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import Link from "next/link";
 import type { Metadata } from "next";
-import { CalldayLogo } from "../components/CalldayLogo";
+import { AppNav } from "../components/AppNav";
+import { AppShell } from "../components/AppShell";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { parseUserAgent } from "@/lib/user-agent";
 import {
@@ -11,6 +12,8 @@ import {
   signOutAction,
 } from "./actions";
 import { ResendTestFlightButton } from "./ResendTestFlightButton";
+import { LeadListsSection } from "./LeadListsSection";
+import { avatarInitial } from "@/lib/dashboard/data";
 
 export const metadata: Metadata = {
   title: "Your account · Callday",
@@ -122,11 +125,6 @@ export default async function AccountPage() {
     referred_by_affiliate_id: null,
   };
 
-  // Nur echte Namen (kommen von Apple/Google-OAuth). Email-Signups haben
-  // keinen Namen — dann NICHT den Email-Localpart als "Name" zeigen (sah aus
-  // wie "Hi jan.bettermann11+628."), sondern ein generisches Welcome.
-  const firstName = profile.name?.trim().split(/\s+/)[0] || null;
-
   const hasActiveSubscription =
     profile.subscription_status === "active" ||
     profile.subscription_status === "trialing";
@@ -143,28 +141,25 @@ export default async function AccountPage() {
     : null;
 
   return (
-    <>
+    <AppShell>
       <div className="bg-orb bg-orb-1" />
       <div className="bg-orb bg-orb-2" />
       <div className="bg-orb bg-orb-3" />
 
-      <nav className="site-nav" data-scrolled="true">
-        <div className="container nav-inner">
-          <Link href="/" className="logo" style={{ textDecoration: "none" }}>
-            <CalldayLogo size={32} />
-            Callday
-          </Link>
-        </div>
-      </nav>
+      <AppNav
+        active="account"
+        initial={avatarInitial(profile.name, profile.email)}
+      />
 
       <main className="account-page">
         <div className="account-inner">
-          <h1 className="account-headline">
-            {firstName
-              ? `Welcome to the beta, ${firstName}.`
-              : "Welcome to the beta"}
-          </h1>
-          <p className="account-sub">You call. Callday handles the rest.</p>
+          <h1 className="account-headline">Account</h1>
+
+          {/* Lead-Listen: kompakter Zeiger auf die Listen-Welt (/lists +
+              /lists/new) — Promo/Status/Zeile je nach Zustand, siehe
+              LeadListsSection. Bewusst VOR der TestFlight-Card:
+              Schritt 1 Liste, Schritt 2 App. */}
+          <LeadListsSection userId={user.id} />
 
           {/* Install-/Onboarding-Card — immer sichtbar: direkt nach dem Signup
               UND wenn ein Rueckkehrer (neues Handy) die App neu laden muss. */}
@@ -389,24 +384,19 @@ export default async function AccountPage() {
               Sign out
             </button>
           </form>
-        </div>
-      </main>
 
-      <footer className="site-footer">
-        <div className="container footer-inner">
-          <div className="logo">
-            <CalldayLogo size={28} />
-            Callday
-          </div>
-          <div className="footer-tagline">MAKE TODAY A CALLDAY.</div>
-          <div className="footer-meta">
+          {/* Legal — dezent am Fuss der Account-Seite. Seit dem Footer-
+              Wegfall (Jan 2026-07-17) die einzige Legal-Erreichbarkeit im
+              eingeloggten Bereich; ueber die Avatar-Pille von jeder Seite
+              1 Klick entfernt (Impressumspflicht). */}
+          <nav className="account-legal" aria-label="Legal">
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
             <Link href="/terms#imprint">Imprint</Link>
             <a href="mailto:hello@callday.io">hello@callday.io</a>
-          </div>
+          </nav>
         </div>
-      </footer>
-    </>
+      </main>
+    </AppShell>
   );
 }

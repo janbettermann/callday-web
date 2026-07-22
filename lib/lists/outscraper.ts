@@ -1,0 +1,176 @@
+/**
+ * Outscraper-API-Client (Google-Maps-Search) — strikt server-seitig,
+ * der API-Key darf nie in Client-Bundles landen.
+ *
+ * Async-Flow: startGoogleMapsSearch schickt den Job mit async=true +
+ * webhook ab und liefert die Request-ID. Ergebnisse holen wir immer
+ * authenticated ueber getRequestResults (Outscraper haelt sie ~4h vor)
+ * — auch im Webhook-Handler: der Webhook ist nur der "fertig"-Ping,
+ * seinem Payload vertrauen wir nicht.
+ */
+
+const OUTSCRAPER_BASE_URL = "https://api.outscraper.cloud";
+
+/**
+ * Feldnamen live verifiziert (2026-07-12, echter API-Response): Website
+ * heisst `website`, die volle Adresse `address`. Die OpenAPI-Doku nennt
+ * teils `site`/`full_address` — beide bleiben als Fallback im Type und
+ * Mapping, falls Outscraper das Shape je zurueckdreht.
+ */
+export interface OutscraperPlace {
+  query?: string;
+  name?: string;
+  phone?: string;
+  website?: string;
+  site?: string;
+  address?: string;
+  full_address?: string;
+  category?: string;
+  business_status?: string;
+  /** Google-Rating, z. B. 4.7 (live verifiziert: number). */
+  rating?: number | string;
+  /** Anzahl Google-Reviews. */
+  reviews?: number;
+  /** Oeffnungszeiten, Tage lokalisiert: { "Montag": ["08:00-16:00"], ... } */
+  working_hours?: Record<string, string[] | string>;
+  /** Google-Business-Profil beansprucht/verifiziert. */
+  verified?: boolean;
+  /** Google-Place-ID — Gruppierungs-Schluessel gegen die Zeilen-
+   *  Explosion des leads_n_contacts-Enrichments (eine Zeile pro
+   *  gefundener E-Mail; live verifiziert 2026-07-15). */
+  place_id?: string;
+  /** E-Mail dieser Enrichment-Zeile (nur mit enrichment gesetzt). */
+  email?: string;
+  /** Fundort der E-Mail: 'fb', 'linkedin', 'appolo', 'ai-research'
+   *  oder eine volle URL — Normalisierung in lib/lists/emails.ts. */
+  source?: string;
+}
+
+export type OutscraperResultStatus = "pending" | "success" | "failed";
+
+export interface OutscraperResults {
+  status: OutscraperResultStatus;
+  places: OutscraperPlace[];
+}
+
+/** Felder eingrenzen — kleinerer Payload, schnellere Antwort. Rating/
+ *  Reviews/Hours/Verified sind im Basis-Preis enthalten und werden als
+ *  Custom Fields an die Leads gehaengt (Icebreaker + Call-Timing).
+ *  place_id/email/source gehoeren zum leads_n_contacts-Enrichment —
+ *  live verifiziert (2026-07-15): sie ueberleben den fields-Filter. */
+const RESULT_FIELDS =
+  "query,name,phone,website,site,address,full_address,category,business_status,rating,reviews,working_hours,verified,place_id,email,source";
+
+function getApiKey(): string {
+  const key = process.env.OUTSCRAPER_API_KEY;
+  if (!key) throw new Error("OUTSCRAPER_API_KEY is not set");
+  return key;
+}
+
+interface StartSearchOptions {
+  query: string;
+  limit: number;
+  region: string;
+  language: string;
+  webhookUrl: string;
+  /**
+   * Server-seitige Quick-Filter (only_without_website, with_phone, …).
+   * WICHTIG: Outscraper unterstuetzt sie nur bei language=en — der
+   * Aufrufer (generate-Route) setzt sie deshalb nur fuer en-Maerkte;
+   * fuer de/fr/… filtert die Pipeline client-seitig, damit Kategorien
+   * und Ortsnamen lokalisiert bleiben.
+   */
+  filters?: string[];
+  /**
+   * Enricher (z. B. leads_n_contacts). Achtung Antwort-Shape: mit
+   * Enrichment liefert Outscraper EINE ZEILE PRO E-MAIL — die
+   * Pipeline gruppiert per place_id zurueck auf einen Lead.
+   */
+  enrichments?: string[];
+}
+
+/** Startet den async Google-Maps-Search-Job, gibt die Request-ID zurueck. */
+export async function startGoogleMapsSearch(
+  options: StartSearchOptions,
+): Promise<string> {
+  const params = new URLSearchParams({
+    query: options.query,
+    limit: String(options.limit),
+    async: "true",
+    language: options.language,
+    region: options.region,
+    webhook: options.webhookUrl,
+    fields: RESULT_FIELDS,
+  });
+  for (const filter of options.filters ?? []) {
+    params.append("filters", filter);
+  }
+  for (const enrichment of options.enrichments ?? []) {
+    params.append("enrichment", enrichment);
+  }
+
+  const response = await fetch(
+    `${OUTSCRAPER_BASE_URL}/google-maps-search?${params.toString()}`,
+    { headers: { "X-API-KEY": getApiKey() }, cache: "no-store" },
+  );
+  if (!response.ok) {
+    throw new Error(
+      `Outscraper start failed: ${response.status} ${await safeText(response)}`,
+    );
+  }
+
+  const payload = (await response.json()) as { id?: string };
+  if (!payload.id) {
+    throw new Error("Outscraper start returned no request id");
+  }
+  return payload.id;
+}
+
+/**
+ * Ergebnis-Lookup per Request-ID. Outscrapers data-Shape ist ein Array
+ * pro Query (wir schicken genau eine) — beide Formen (nested/flach)
+ * werden auf eine flache Place-Liste normalisiert.
+ */
+export async function getRequestResults(
+  requestId: string,
+): Promise<OutscraperResults> {
+  const response = await fetch(
+    `${OUTSCRAPER_BASE_URL}/requests/${encodeURIComponent(requestId)}`,
+    { headers: { "X-API-KEY": getApiKey() }, cache: "no-store" },
+  );
+  if (!response.ok) {
+    throw new Error(`Outscraper request lookup failed: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as {
+    status?: string;
+    data?: unknown;
+  };
+  const status = normalizeStatus(payload.status);
+  if (status !== "success") return { status, places: [] };
+
+  return { status, places: flattenPlaces(payload.data) };
+}
+
+function normalizeStatus(raw: string | undefined): OutscraperResultStatus {
+  const value = (raw ?? "").toLowerCase();
+  if (["success", "finished", "completed"].includes(value)) return "success";
+  if (value.includes("error") || value.includes("fail")) return "failed";
+  return "pending";
+}
+
+function flattenPlaces(data: unknown): OutscraperPlace[] {
+  if (!Array.isArray(data)) return [];
+  if (data.length > 0 && Array.isArray(data[0])) {
+    return (data as OutscraperPlace[][]).flat();
+  }
+  return data as OutscraperPlace[];
+}
+
+async function safeText(response: Response): Promise<string> {
+  try {
+    return (await response.text()).slice(0, 300);
+  } catch {
+    return "";
+  }
+}

@@ -1,0 +1,162 @@
+/**
+ * POST /api/lists/generate — startet einen Lead-Generator-Job.
+ *
+ * Auth: eingeloggter User (SSR-Cookie-Session). Free-Cap (1 Gratis-Liste
+ * pro Konto) wird DB-seitig vom partial unique index erzwungen — der
+ * 23505-Fall wird hier in ein sauberes 409 uebersetzt.
+ *
+ * Der Outscraper-Webhook zeigt auf /api/lists/webhook mit Job-ID +
+ * per-Job-Secret in der URL; die Ergebnisse selbst holt die Verarbeitung
+ * authenticated bei Outscraper (siehe lib/lists/jobs.ts).
+ */
+
+import { NextRequest } from "next/server";
+import { randomBytes } from "crypto";
+import { createSupabaseSSR } from "@/lib/supabase-ssr";
+import { getServerSupabase } from "@/lib/supabase-server";
+import {
+  OUTSCRAPER_FETCH_LIMIT,
+  OUTSCRAPER_MAX_SCAN_LIMIT,
+} from "@/lib/lists/config";
+import { findCountry } from "@/lib/lists/countries";
+import { startGoogleMapsSearch } from "@/lib/lists/outscraper";
+import {
+  WEBSITE_FILTER_MODES,
+  type WebsiteFilterMode,
+} from "@/lib/lists/pipeline";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const FIELD_MAX_LENGTH = 60;
+
+/**
+ * Freitext-Feld saeubern: Kommas/Zeilenumbrueche raus (die Query wird
+ * komma-separiert an Outscraper gebaut), Whitespace normalisieren.
+ */
+function cleanField(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const cleaned = value
+    .replace(/[,\n\r\t]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned.length >= 2 && cleaned.length <= FIELD_MAX_LENGTH
+    ? cleaned
+    : null;
+}
+
+export async function POST(request: NextRequest) {
+  const supabase = await createSupabaseSSR();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return Response.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "invalid_payload" }, { status: 400 });
+  }
+
+  const { industry, city, country, website } = (body ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const cleanIndustry = cleanField(industry);
+  const cleanCity = cleanField(city);
+  const countryConfig = findCountry(country);
+  if (!cleanIndustry || !cleanCity || !countryConfig) {
+    return Response.json({ error: "invalid_input" }, { status: 400 });
+  }
+  const websiteFilter: WebsiteFilterMode = WEBSITE_FILTER_MODES.includes(
+    website as WebsiteFilterMode,
+  )
+    ? (website as WebsiteFilterMode)
+    : "any";
+
+  const admin = getServerSupabase();
+  const webhookSecret = randomBytes(24).toString("base64url");
+  const query = `${cleanIndustry}, ${cleanCity}`;
+
+  const { data: job, error: insertError } = await admin
+    .from("lead_gen_jobs")
+    .insert({
+      user_id: user.id,
+      params: {
+        industry: cleanIndustry,
+        city: cleanCity,
+        country: countryConfig.code,
+        website: websiteFilter,
+      },
+      query,
+      webhook_secret: webhookSecret,
+      is_free: true,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !job) {
+    if (insertError?.code === "23505") {
+      return Response.json({ error: "free_list_used" }, { status: 409 });
+    }
+    console.error("[lists/generate] job insert failed", insertError);
+    return Response.json({ error: "job_create_failed" }, { status: 500 });
+  }
+
+  const webhookUrl = `${request.nextUrl.origin}/api/lists/webhook?job=${job.id}&secret=${webhookSecret}`;
+
+  // Server-seitige Quick-Filter gibt es nur bei language=en (API-
+  // Constraint). Fuer en-Maerkte lassen wir Outscraper vorfiltern —
+  // tiefere Ausbeute, weniger verworfene (bezahlte) Records. Fuer
+  // lokalisierte Maerkte (de/fr/…) filtert die Pipeline client-seitig;
+  // sie laeuft als Garantie-Netz ohnehin immer.
+  const serverFilters: string[] = [];
+  if (countryConfig.language === "en") {
+    serverFilters.push("with_phone", "operational_only");
+    if (websiteFilter === "without") serverFilters.push("only_without_website");
+    if (websiteFilter === "with") serverFilters.push("only_with_website");
+  }
+
+  // Bei aktivem Website-Server-Filter zaehlt das Limit gescannte
+  // Plaetze (nicht Treffer) — dann volle Scan-Tiefe, zurueck kommen
+  // ohnehin nur die Matches.
+  const scanLimit =
+    serverFilters.length > 0 && websiteFilter !== "any"
+      ? OUTSCRAPER_MAX_SCAN_LIMIT
+      : OUTSCRAPER_FETCH_LIMIT;
+
+  try {
+    const requestId = await startGoogleMapsSearch({
+      query,
+      limit: scanLimit,
+      region: countryConfig.code,
+      language: countryConfig.language,
+      webhookUrl,
+      filters: serverFilters,
+      // Ein Enricher, immer an, auch Free (§13d) — E-Mails fuer den
+      // Prefill; abgerechnet pro Domain, Betriebe ohne Website gratis.
+      enrichments: ["leads_n_contacts"],
+    });
+    await admin
+      .from("lead_gen_jobs")
+      .update({ outscraper_request_id: requestId })
+      .eq("id", job.id);
+  } catch (err) {
+    console.error("[lists/generate] outscraper start failed", err);
+    // failed gibt den Free-Slot wieder frei (partial index exkludiert failed).
+    await admin
+      .from("lead_gen_jobs")
+      .update({
+        status: "failed",
+        error: "outscraper_start_failed",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", job.id);
+    return Response.json({ error: "generator_unavailable" }, { status: 502 });
+  }
+
+  return Response.json({ jobId: job.id });
+}

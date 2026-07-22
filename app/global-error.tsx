@@ -13,6 +13,7 @@
  * verfügbare Components/Context.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 
 interface GlobalErrorProps {
@@ -22,8 +23,8 @@ interface GlobalErrorProps {
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    // Errors hier loggen — irgendwann an Sentry/etc. weitergeben.
-    // Aktuell nur console.error damit's in Vercel-Logs auftaucht.
+    Sentry.captureException(error);
+    // Zusaetzlich in die Vercel-Logs.
     console.error("[global-error]", error);
   }, [error]);
 

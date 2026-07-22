@@ -69,15 +69,28 @@ function isUserAlreadyRegistered(error: {
  * Der OTP-Code-Step lebt seit 2026-07-05 auf der eigenen Route /confirm
  * (Email-Handoff via sessionStorage, siehe lib/signup-confirm.ts) — der
  * fruehere In-Place-Swap war nicht reload-fest und als Funnel-Step
- * unsichtbar. Nach erfolgreichem Confirm landet der User auf
- * /account?welcome=signup — siehe TestFlight-Recovery-Section in /account.
+ * unsichtbar. Nach erfolgreichem Confirm landet der User auf dem
+ * Dashboard (Post-Login-Startseite seit 2026-07-15).
  */
 
 type Status = "idle" | "submitting" | "error";
 
+// Post-Signup-Landing: das Dashboard ist seit 2026-07-15 die Startseite
+// des eingeloggten Bereichs. (Der App-Install-Nudge, frueher die
+// welcome=signup-Card auf /account, zieht spaeter als Dashboard-Zustand
+// nach — bis dahin fuehrt der Funnel list-first.)
+const DEFAULT_NEXT_PATH = "/dashboard";
+
 interface Props {
   /** Affiliate-Slug fuer Attribution — nur auf /a/[slug] gesetzt. */
   slug?: string;
+  /**
+   * Interner Pfad nach abgeschlossenem Sign-Up (OAuth via login_next-
+   * Cookie, Email/PW via /confirm-Handoff). Einstiege mit eigenem
+   * Funnel (z. B. /lists) setzen das, damit der User dorthin
+   * zurueckkommt; Default ist das Dashboard.
+   */
+  nextPath?: string;
 }
 
 // 5 Minuten = OAuth-Round-Trip-Realismus. Vorher waren das 10 Min,
@@ -92,7 +105,7 @@ function setSignupCookie(name: string, value: string) {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${SIGNUP_COOKIE_MAX_AGE_S}; samesite=lax`;
 }
 
-export function SignupForm({ slug }: Props) {
+export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -114,7 +127,7 @@ export function SignupForm({ slug }: Props) {
     // Markiert den PKCE-Exchange als Sign-Up-Form-Ursprung — /auth/callback
     // schickt dann die TestFlight-Mail fuer frische Profile.
     setSignupCookie("signup_flow", "1");
-    setSignupCookie("login_next", "/account?welcome=signup");
+    setSignupCookie("login_next", nextPath);
 
     const supabase = createSupabaseBrowser();
     const origin = window.location.origin;
@@ -178,6 +191,7 @@ export function SignupForm({ slug }: Props) {
         writeSignupConfirmHandoff({
           email: cleanEmail,
           variant: "welcome-back",
+          next: nextPath,
         });
         router.push("/confirm");
         return;
@@ -194,15 +208,19 @@ export function SignupForm({ slug }: Props) {
     // TestFlight) was verwirrend ist + Typo-Emails kriegen unnoetig
     // TestFlight-Links.
     if (!data.session) {
-      writeSignupConfirmHandoff({ email: cleanEmail, variant: "fresh" });
+      writeSignupConfirmHandoff({
+        email: cleanEmail,
+        variant: "fresh",
+        next: nextPath,
+      });
       router.push("/confirm");
       return;
     }
 
     // Auto-confirmed (z.B. dev-Env oder Confirmation off) → TestFlight-Mail
-    // jetzt senden, dann zu /account.
+    // jetzt senden, dann weiter zum Ziel-Pfad.
     void sendTestflightInviteMail("SignupForm");
-    router.push("/account?welcome=signup");
+    router.push(nextPath);
   }
 
   // === Render: Sign-Up ===
@@ -293,7 +311,7 @@ export function SignupForm({ slug }: Props) {
       <div className="login-switch-mode">
         Already have an account?{" "}
         <Link
-          href={`/login?next=${encodeURIComponent("/account")}`}
+          href={`/login?next=${encodeURIComponent(nextPath)}`}
           className="login-text-link login-text-link-strong"
         >
           Sign in

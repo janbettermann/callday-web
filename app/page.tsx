@@ -1,12 +1,24 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
-import { CalldayLogo } from "./components/CalldayLogo";
+import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { FaqAccordion } from "./components/FaqAccordion";
 import { FlowTabs } from "./components/FlowTabs";
 import { BetaCta } from "./components/BetaCta";
 import { HeroCta } from "./components/HeroCta";
+import { PhoneMockup } from "./components/PhoneMockup";
 import { SiteNav } from "./components/SiteNav";
 
-export default function Home() {
+export default async function Home() {
+  // Eingeloggte gehoeren in die Web-App, nicht auf den Pitch: die Homepage
+  // leitet sie direkt aufs Dashboard (Jan-Entscheidung 2026-07-17). Greift
+  // NUR hier (/) — /a/[slug], /lists, Legal regeln ihren eingeloggten
+  // Zustand selbst; ausgeloggte Besucher + Crawler sehen die Landing normal.
+  const supabase = await createSupabaseSSR();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) redirect("/dashboard");
+
   return (
     <>
       <div className="bg-orb bg-orb-2" />
@@ -14,28 +26,62 @@ export default function Home() {
       {/* === NAV === */}
       <SiteNav />
 
-      {/* === HERO — compact, mobile-first, no device mockup ===
-          The product visual now lives in the animated 3-step flow directly
-          below, so the hero stays small and gets the visitor scrolling fast. */}
+      {/* === HERO — split ab 960px: Copy links, Geraet rechts ===
+          Der Pre-Call-Screen steht bewusst direkt im Hero: Besucher sollen
+          sofort sehen WAS die App tut und DASS sie mobil ist (Jan-Entscheidung
+          2026-07-18 — loest die fruehere "kein Mockup, Hero klein halten"-
+          Regel ab). Die animierte 3-Schritt-Flow darunter bleibt der
+          Erklaerteil; die Hero liefert nur den statischen Hook.
+          Unter 960px bleibt die zentrierte Einspalter-Hero unveraendert,
+          das Geraet rutscht dort unter die CTA. */}
       <section className="hero hero-light">
-        <div className="container hero-inner">
-          <div className="pill reveal">
-            <span className="pill-dot" />
-            Make today a Callday.
+        <div className="container hero-inner hero-split">
+          <div className="hero-copy">
+            <div className="pill reveal">
+              <span className="pill-dot" />
+              Make today a Callday.
+            </div>
+
+            <h1 className="reveal delay-1">
+              Less avoiding.
+              <br />
+              More <span className="accent">dialing</span>.
+            </h1>
+
+            <p className="hero-sub reveal delay-2">
+              Cold callers don&apos;t lose to bad scripts. They lose to
+              procrastination. Callday keeps you on the phone, one tap at a
+              time.
+            </p>
+
+            <HeroCta />
           </div>
 
-          <h1 className="reveal delay-1">
-            Less avoiding.
-            <br />
-            More <span className="accent">dialing</span>.
-          </h1>
+          <div className="hero-visual reveal">
+            {/* BEWUSSTE ABWEICHUNG vom App-Label — bitte nicht "korrigieren":
+                Der Screenshot zeigt die grüne Status-Pille als "NEW LEAD",
+                die App selbst beschriftet sie mit "NEW". Grund: Auf der
+                Landing Page hat ein Erstbesucher zwei Sekunden, da ist das
+                Substantiv selbsterklärender. In der App wäre "LEAD"
+                redundant (man steht auf einer Lead-Karte) und würde das
+                Gegenstück "NOT REACHED" asymmetrisch machen.
 
-          <p className="hero-sub reveal delay-2">
-            Cold callers don&apos;t lose to bad scripts. They lose to
-            procrastination. Callday keeps you on the phone, one tap at a time.
-          </p>
-
-          <HeroCta />
+                Screenshot neu aufnehmen (Rezept):
+                 1. dealswipe-app → `leadHeaderPill()` in
+                    components/shared/LeadStatusPill.tsx: Label temporär auf
+                    "NEW LEAD" stellen.
+                 2. Aufnahme aus einer NORMALEN Liste mit Fantasie-Leads —
+                    nicht aus der Demo-Liste (dort gewinnt "DEMO LEAD") und
+                    keine echten Kundendaten (die Seite ist öffentlich).
+                 3. Label sofort wieder auf "NEW" zurückstellen.
+                Die Jitter-Animation in Step 02 muss dieselbe Beschriftung
+                tragen, sonst ist die Seite in sich inkonsistent. */}
+            <PhoneMockup
+              src="/hero-precall-iphone.png"
+              alt="Callday auf dem iPhone: die Pre-Call-Karte eines Leads mit „New lead“-Markierung, Website- und Google-Profil-Link, Standort- und Branchenangaben und großem Call-Button."
+              priority
+            />
+          </div>
         </div>
       </section>
 
@@ -220,13 +266,9 @@ export default function Home() {
       </section>
 
       {/* === FOOTER === */}
-      <footer className="site-footer">
-        <div className="container footer-inner">
-          <div className="logo">
-            <CalldayLogo size={28} />
-            Callday
-          </div>
-          <div className="footer-tagline">MAKE TODAY A CALLDAY.</div>
+      <footer className="site-footer site-footer-brand">
+        <div className="container footer-brand-row">
+          <p className="footer-tagline-big">Make today a Callday.</p>
           <div className="footer-meta">
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
