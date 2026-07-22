@@ -140,6 +140,11 @@ export async function deleteAccountAction(formData: FormData) {
  */
 export async function signOutAction() {
   const supabase = await createSupabaseSSR();
-  await supabase.auth.signOut();
+  // Nur die Session DIESES Browsers beenden. Der supabase-js-Default ist
+  // "global" und entwertet alle Sessions des Users serverseitig — der
+  // Web-Logout hat damit die iPhone-App mit ausgeloggt (Auth-Log
+  // 2026-07-21: Logout von Vercel-IP, danach "Refresh Token Not Found"
+  // der App). "Ueberall abmelden" waere ein eigenes Security-Feature.
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/");
 }
