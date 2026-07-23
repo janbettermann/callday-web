@@ -157,9 +157,13 @@ export default async function Home() {
 
             <div className="feature-card">
               <div className="feature-icon">
+                {/* Quadratische Karte statt 18x13-Querformat (Jan
+                    2026-07-23) — das flache Rechteck mit Strich oben las
+                    sich wie eine Kreditkarte. 26px: das 16er-Quadrat hat
+                    viel Luft in der ViewBox. */}
                 <svg
-                  width={24}
-                  height={24}
+                  width={26}
+                  height={26}
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="#3564e0"
@@ -167,8 +171,8 @@ export default async function Home() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <rect x={3} y={6} width={18} height={13} rx={2} />
-                  <path d="M3 10h18" />
+                  <rect x={4} y={4} width={16} height={16} rx={3} />
+                  <path d="M4 9.5h16" />
                 </svg>
               </div>
               <h3>One lead card at a time.</h3>
