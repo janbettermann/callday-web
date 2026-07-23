@@ -2438,10 +2438,17 @@ h2 .accent {
   .feature-grid {
     grid-template-columns: 1fr;
   }
+  /* Kompakteres Karten-Innenpadding auf Mobile (Jan 2026-07-23) —
+     36/32px frisst auf Phone-Breiten zu viel vom Inhalt. Unten 40px
+     Luft; nur die Generator-Karte (wide) bleibt rundum bei 20px. */
+  .feature-card {
+    padding: 20px 20px 40px;
+  }
   .feature-card-wide {
     flex-direction: column;
     align-items: stretch;
     gap: 28px;
+    padding: 20px;
   }
   .steps {
     grid-template-columns: 1fr;
