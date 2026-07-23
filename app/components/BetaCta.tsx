@@ -31,7 +31,7 @@ export function BetaCta({ slug }: { slug?: string }) {
           <>
             Stop avoiding.
             <br />
-            Start dialing.
+            Start <span className="accent">dialing.</span>
           </>
         )}
       </h2>
