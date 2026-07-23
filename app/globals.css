@@ -1973,7 +1973,9 @@ h2 .accent {
 .big-cta h2 {
   margin-left: auto;
   margin-right: auto;
-  margin-bottom: 28px;
+  /* Mehr Luft unter der Headline (Jan 2026-07-23): setzt den Titel
+     hoeher ab, groesserer Abstand zur Signup-Card. */
+  margin-bottom: 44px;
 }
 .big-cta .section-sub {
   margin-left: auto;

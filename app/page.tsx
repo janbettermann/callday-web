@@ -213,9 +213,9 @@ export default async function Home() {
               </div>
               <h3>Booked. Synced. Sent.</h3>
               <p>
-                One tap to log a meeting. Calendar event, confirmation email,
-                Zoom link, all sent before you reach the next lead. No app
-                switching. No detour.
+                One tap to log a meeting. Calendar event set, confirmation
+                email sent, reminder email scheduled, all done before you
+                reach the next lead. No app switching. No detour.
               </p>
             </div>
 

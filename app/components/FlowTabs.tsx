@@ -48,7 +48,7 @@ const STEPS: Step[] = [
   {
     num: "03",
     title: "Booked in two taps",
-    copy: "Meeting? Two taps, calendar event + confirmation email fire before the next lead lands.",
+    copy: "Meeting? Two taps, calendar event & confirmation email fire before the next lead lands.",
     badge: "Animation 03",
     label: "Booked. Synced. Sent.",
     desc: "A booked meeting cascades into a calendar event and a confirmation email, auto-fired before the next lead.",
