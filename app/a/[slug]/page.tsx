@@ -141,21 +141,16 @@ export default async function AffiliateLanding({
       <section className="social-proof">
         <div className="container">
           <div className="stats-block">
+            {/* Zweiergespann statt 1-2-0-Trio (Jan 2026-07-23): die
+                "2 taps"-Zelle doppelte woertlich den Flow-Step-03-Titel
+                ("Booked in two taps"). 1 tap vs 0 tabs — ein Tap fuers
+                Wesentliche, null Tabs fuer alles andere. */}
             <div className="stats-row">
               <div className="stat-cell">
                 <div className="stat-num">
                   1<span className="unit">tap</span>
                 </div>
                 <div className="stat-label">to your next call</div>
-              </div>
-              <div className="stat-divider" />
-              <div className="stat-cell">
-                <div className="stat-num">
-                  2<span className="unit">taps</span>
-                </div>
-                <div className="stat-label">
-                  booked meeting → calendar + email sent
-                </div>
               </div>
               <div className="stat-divider" />
               <div className="stat-cell">

@@ -1501,30 +1501,37 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
   background: rgba(26, 29, 38, 0.1);
   align-self: stretch;
 }
+/* Seit dem Zweiergespann (Jan 2026-07-23) tragen die zwei Zahlen die
+   Sektion allein — Hero-h1-Skala (bis 76px am Desktop, 56px auf Phone)
+   statt fixer 56px, Label enger dran (14px), damit Zahl + Label als
+   ein zentriertes Gewicht in der Karte sitzen. Tracking in em, damit
+   es mit der Groesse skaliert. */
 .stat-num {
   font-family: var(--font-geist-sans), sans-serif;
-  font-size: 56px;
+  font-size: clamp(56px, 6vw, 76px);
   font-weight: 700;
   color: var(--ink);
-  letter-spacing: -2.5px;
+  letter-spacing: -0.045em;
   line-height: 1;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 .stat-num .unit {
-  font-size: 56px;
+  font-size: 1em;
   background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 700;
-  margin-left: 6px;
-  letter-spacing: -2.5px;
+  margin-left: 0.11em;
+  letter-spacing: -0.045em;
 }
 .stat-label {
   font-size: 15px;
   color: var(--ink-dim);
   line-height: 1.5;
-  max-width: 240px;
+  /* 360px statt 240px seit dem Zweiergespann (Jan 2026-07-23): mit nur
+     zwei Zellen hat der lange "0 tabs"-Label Platz fuer eine Zeile. */
+  max-width: 360px;
   margin: 0 auto;
 }
 
@@ -2468,6 +2475,15 @@ h2 .accent {
   .stat-cell {
     padding: 24px 0;
   }
+  /* Jan 2026-07-23: im gestapelten Layout ruecken die Zellen an die
+     Kartenraender — "1 tap" etwas hoeher, "0 tabs" etwas tiefer; die
+     Abstaende zum Divider in der Mitte bleiben unveraendert. */
+  .stat-cell:first-child {
+    padding-top: 12px;
+  }
+  .stat-cell:last-child {
+    padding-bottom: 12px;
+  }
 }
 
 @media (max-width: 600px) {
@@ -2785,7 +2801,9 @@ h2 .accent {
     padding: 56px 0 32px;
   }
   .social-proof {
-    padding-top: 32px;
+    /* 64 statt 32 (Jan 2026-07-23): mehr Luft zwischen der dritten
+       Flow-Animations-Karte und der Stats-Karte auf Phones. */
+    padding-top: 64px;
   }
 }
 
