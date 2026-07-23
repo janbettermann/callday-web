@@ -44,38 +44,39 @@ export function GeneratorFeatureCard() {
       </div>
 
       <div className="feature-gen-visual" aria-hidden="true">
-        <div className="feature-gen-toolbar">
-          <div className="feature-gen-chips">
-            <span className="feature-gen-chip">Dentists</span>
-            <span className="feature-gen-chip">Cologne</span>
-          </div>
-          <span className="feature-gen-btn">
-            Generate list
-            <svg
-              width={13}
-              height={13}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1={12} y1={15} x2={12} y2={3} />
-            </svg>
-          </span>
+        <div className="feature-gen-chips">
+          <span className="feature-gen-chip">Dentists</span>
+          <span className="feature-gen-chip">Cologne</span>
         </div>
         <div className="feature-gen-lead">
           <GoogleGlyph />
-          <span className="feature-gen-bar" style={{ flexGrow: 1 }} />        </div>
+          <span className="feature-gen-bar" style={{ flexGrow: 1 }} />
+        </div>
         <div className="feature-gen-lead">
           <GoogleGlyph />
-          <span className="feature-gen-bar" style={{ flexGrow: 0.72 }} />        </div>
+          <span className="feature-gen-bar" style={{ flexGrow: 0.72 }} />
+        </div>
         <div className="feature-gen-lead">
           <GoogleGlyph />
-          <span className="feature-gen-bar" style={{ flexGrow: 0.88 }} />        </div>
+          <span className="feature-gen-bar" style={{ flexGrow: 0.88 }} />
+        </div>
+        <span className="feature-gen-btn">
+          Generate list
+          <svg
+            width={13}
+            height={13}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1={12} y1={15} x2={12} y2={3} />
+          </svg>
+        </span>
       </div>
     </div>
   );
