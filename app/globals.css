@@ -48,6 +48,7 @@
   --sun-tint: rgba(251, 191, 36, 0.12);
 
   --green: #10b981;
+  --green-light: #6ee7b7;
   --green-deep: #047857;
   --amber: #f59e0b;
   --red: #dc2626;
@@ -179,6 +180,13 @@ body::before {
   padding: 0 32px;
   position: relative;
   z-index: 1;
+}
+/* Breakout-Variante fuer die Flow-Sektion (einzige Nutzerin, 2026-07-23):
+   breiter als der Seiten-Standard, damit die drei Animations-Kacheln
+   groesser rendern. Nicht fuer Text-Sektionen verwenden — deren
+   Zeilenlaenge ist auf die 1200px getunt. */
+.container-wide {
+  max-width: 1360px;
 }
 
 /* === NAV ===
@@ -349,8 +357,8 @@ body::before {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, var(--sun-light), var(--sun));
-  box-shadow: 0 0 10px rgba(251, 191, 36, 0.55);
+  background: radial-gradient(circle at 35% 35%, var(--green-light), var(--green));
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
   animation: pulse 2.4s ease-in-out infinite;
   flex-shrink: 0;
 }
@@ -1464,7 +1472,7 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
   position: relative;
   border-radius: 24px;
   padding: 56px 48px;
-  /* Helle Karte im Stil der .flow-layout-Card — seit dem Light-Hero
+  /* Helle Karte im Stil der .flow-card — seit dem Light-Hero
      (2026-07-04) gibt es keinen dunklen Hero mehr, dessen Navy dieser
      Block als Bookend spiegeln koennte. Der blaue Radial oben bleibt
      als dezentes Echo des Hero-Spotlights. */
@@ -1558,6 +1566,17 @@ h2 .accent {
   line-height: 1.55;
   margin-bottom: 64px;
 }
+/* Responsiver Zeilenumbruch: nur auf Phone-Breiten aktiv. Einsatz:
+   kontrollierte Headline-Umbrueche wie "Built to / fight the flinch."
+   (Jan 2026-07-23) statt des zufaelligen natuerlichen Umbruchs. */
+.br-mobile {
+  display: none;
+}
+@media (max-width: 600px) {
+  .br-mobile {
+    display: inline;
+  }
+}
 .section-sub strong {
   color: var(--ink);
   font-weight: 600;
@@ -1618,6 +1637,86 @@ h2 .accent {
   color: var(--ink-dim);
   font-size: 15px;
   line-height: 1.6;
+}
+/* Breite Generator-Karte als Auftakt des Feature-Grids (beide Landings,
+   Markup in GeneratorFeatureCard.tsx): Copy links, Mini-Visual rechts.
+   Unter 960px (einspaltiges Grid) stapelt die Karte, Visual bleibt. */
+.feature-card-wide {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 44px;
+}
+.feature-card-wide-copy {
+  flex: 1.25;
+}
+.feature-gen-visual {
+  flex: 1;
+  background: var(--bg);
+  border: 0.5px solid var(--line);
+  border-radius: 16px;
+  padding: 22px;
+}
+.feature-gen-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 14px;
+}
+.feature-gen-chips {
+  display: flex;
+  gap: 8px;
+}
+.feature-gen-chip {
+  background: var(--bg-page);
+  border: 0.5px solid var(--line);
+  border-radius: 9px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+/* Solid-Ink wie der echte "Build my list"-Button auf /lists/new (Jan
+   2026-07-23, ersetzt den Blau-Gradient); Download-Icon weil die
+   Gratis-Liste tatsaechlich frei downloadbar ist. */
+.feature-gen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  /* Vertikal auf .feature-gen-chip-Hoehe abgestimmt (empirisch: Chip
+     traegt Border + volle Text-Line-Height, der Flex-Button misst
+     minimal anders) — Button und Chips stehen in einer Toolbar-Zeile
+     und sollen gleich hoch sein. */
+  padding: 6px 13px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+.feature-gen-lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-page);
+  border: 0.5px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 12px;
+}
+.feature-gen-lead + .feature-gen-lead {
+  margin-top: 7px;
+}
+/* Breite pro Zeile steuert der inline flexGrow-Wert (<1 = Anteil am
+   freien Platz, CSS-Flexbox-Spec) — sonst waeren alle Balken gleich. */
+.feature-gen-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(26, 29, 38, 0.08);
+  flex-basis: 0;
 }
 
 /* === HOW IT WORKS === */
@@ -2349,6 +2448,11 @@ h2 .accent {
   .feature-grid {
     grid-template-columns: 1fr;
   }
+  .feature-card-wide {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 28px;
+  }
   .steps {
     grid-template-columns: 1fr;
     gap: 24px;
@@ -2438,12 +2542,13 @@ h2 .accent {
    FlowTabs.tsx renders two completely separate DOM trees, one per
    breakpoint, and CSS toggles which one is laid out:
 
-   Desktop (>960 px) — `.flow-layout` only:
-     2-column CSS Grid with a `.flow-tablist` on the left (3 packed
-     tab buttons) and a `.flow-stage` on the right — a portrait box
-     (aspect-ratio 4/5) holding 3 dashed-stripe `.flow-anim`
-     placeholders, absolutely stacked, only the active one opacity:1.
-     Step-Wechsel NUR per Klick — Auto-Rotation entfernt 2026-07-05.
+   Desktop (>960 px) — `.flow-desktop` only (V1-Redesign 2026-07-23,
+     ersetzt das fruehere Tablist+Stage-Layout):
+     3 gleiche `.flow-card`s nebeneinander, alle Animationen sichtbar.
+     Welche spielt, steuert die Staffel-Logik in FlowTabs.tsx (Sequenz
+     01→02→03 via `ended`, Hover/Klick greift ein). Die laufende Karte
+     traegt data-active → blaue Border (1px Border + 1px Ring, kein
+     Layout-Shift); ruhende Karten bleiben ungedimmt (Jan 2026-07-23).
 
    Mobile (≤960 px) — `.flow-mobile` only:
      A vertical stack of 3 `.flow-card`s (white card with
@@ -2451,7 +2556,10 @@ h2 .accent {
      visible at once — scroll is the only navigation. Jede Karte spielt
      ihre Animation nur waehrend sie ueberwiegend im Viewport steht
      (IntersectionObserver pro Karte, siehe MobileFlowCard in
-     FlowTabs.tsx). */
+     FlowTabs.tsx).
+
+   Die `.flow-card`-Styles sind geteilt und leben deshalb im globalen
+   Scope (nicht mehr im Mobile-Media-Query). */
 
 .flow {
   padding: 72px 0 100px;
@@ -2472,94 +2580,27 @@ h2 .accent {
   margin: 0;
 }
 
-/* Desktop card wrapping the 3 steps + animation stage. Anchors the
-   section as one element instead of two floating columns. */
-.flow-layout {
+/* Desktop: 3 gleiche Karten nebeneinander. Border-Konzept (Jan
+   2026-07-23): konstante 3px-Border in beiden Zustaenden — WEISS im
+   Ruhezustand (verschmilzt mit der weissen Karte, wirkt borderlos),
+   BLAU auf der laufenden Karte (data-active). Konstante Width =
+   nur die Farbe animiert, kein Layout-Shift beim Staffel-Wechsel.
+   Ruhende Karten bleiben ungedimmt (kein Opacity-Farbstich). */
+.flow-desktop {
   display: grid;
-  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1fr);
-  column-gap: 64px;
-  align-items: center;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 32px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
-  padding: 48px 56px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  align-items: stretch;
 }
-
-/* --- Left column: tab list, all 3 steps fully visible. Active gets
-   a blue left-border + subtle blue bg tint to indicate which animation
-   the right column is currently showing. --- */
-.flow-tablist {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.flow-desktop .flow-card {
+  border-width: 3px;
+  border-color: #fff;
+  transition: border-color 0.25s ease;
 }
-/* Aktiv-Box (Hintergrund + Border) lebt auf dem <li>, nicht dem
-   <button> — so sitzt der optionale Step-Link (der aus HTML-Gruenden
-   ausserhalb des Buttons lebt) MIT im blaeulichen Kasten. Border 5px,
-   Radius nur rechts — links bleibt die blaue Bar gerade/eckig
-   (Jan-Design 2026-07-05). */
-.flow-tab-item {
-  width: 100%;
-  border-left: 5px solid transparent;
-  border-radius: 0 14px 14px 0;
-  transition:
-    border-color 0.25s ease,
-    background-color 0.2s ease;
+.flow-desktop .flow-card[data-active] {
+  border-color: rgba(74, 122, 247, 0.45);
 }
-.flow-tab-item:not([data-active]):hover {
-  background-color: rgba(74, 122, 247, 0.03);
-}
-.flow-tab-item[data-active] {
-  border-left-color: var(--blue);
-  background-color: rgba(74, 122, 247, 0.05);
-}
-.flow-tab {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  padding: 16px 20px;
-  font-family: inherit;
-  cursor: pointer;
-  color: var(--ink);
-}
-.flow-tab-head {
-  display: flex;
-  align-items: baseline;
-  gap: 14px;
-}
-.flow-tab-num {
-  font-family: var(--font-geist-sans), sans-serif;
-  font-weight: 600;
-  font-size: 32px;
-  letter-spacing: -0.6px;
-  line-height: 1.1;
-  color: var(--blue);
-  min-width: 48px;
-}
-.flow-tab-title {
-  font-family: var(--font-geist-sans), sans-serif;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.4px;
-  line-height: 1.2;
-  color: var(--ink);
-}
-.flow-tab-copy {
-  font-size: 15px;
-  color: var(--ink-dim);
-  line-height: 1.5;
-  padding-left: 62px;
-  margin: 0;
-}
-/* Optionaler Step-Link (z.B. "Best ways to get a list" unter Step 01).
+/* Optionaler Step-Link (z.B. "Get your first list free" unter Step 01).
    Blau wie die Accent-Woerter, dezent, Hover-Unterstreichung. */
 .flow-step-link {
   display: inline-block;
@@ -2571,90 +2612,93 @@ h2 .accent {
 .flow-step-link:hover {
   text-decoration: underline;
 }
-/* Desktop: Link lebt ausserhalb des Tab-Buttons, aber innerhalb der
-   Aktiv-Box auf dem <li> — auf den Copy-Text einruecken (20px
-   Button-Padding + 62px Copy-Einzug; die Border sitzt jetzt am <li>)
-   und unten Luft lassen, damit die Box nicht direkt am Link endet. */
-.flow-tab-link {
-  margin: -2px 20px 16px 82px;
-}
 
-/* --- Right column: cream sub-card holding the animation placeholders.
-   Sits inside the outer white card; later this is where the iPhone
-   mockup / animation lives. --- */
-.flow-stage {
-  position: relative;
-  width: 100%;
-  max-width: 520px;
-  aspect-ratio: 4 / 5;
-  margin: 0 auto;
-  /* Matcht den Video-BG (--flow-anim-bg) statt cream: deckt sowohl den
-     Video-Load-Moment als auch die 0.2s-Luecke des sequenziellen
-     Crossfades ab, in der kein .flow-anim sichtbar ist. Alle 3 Steps
-     tragen inzwischen MP4s — der cream Text-Placeholder-Fall existiert
-     auf Desktop nicht mehr. */
-  background: var(--flow-anim-bg);
+/* --- Geteilte Karten-Styles (Desktop-Raster + Mobile-Stack) --- */
+.flow-card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--line);
   border-radius: 24px;
+  box-shadow: 0 2px 8px rgba(8, 10, 20, 0.04);
   overflow: hidden;
 }
-.flow-anim {
-  position: absolute;
-  inset: 0;
+/* Media area: cream background, centered placeholder content. */
+.flow-card-media {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 6px;
+  padding: 56px 28px 32px;
+  min-height: 280px;
+  background: #faf6ed;
+  border-bottom: 1px solid var(--line);
   text-align: center;
-  padding: 28px 24px;
-  opacity: 0;
-  /* Sequenzieller Crossfade — alte Anim fadet zuerst komplett raus,
-     dann fadet die neue rein (Delay = Out-Dauer). Verhindert das
-     Doppel-Bild waehrend des Overlaps, das beim klassischen
-     symmetrischen Crossfade auf gestackten Lotties entsteht. Mobile
-     loest dasselbe Problem ueber z-index-Swap auf .flow-card; auf
-     Desktop geht das nicht, weil die Lotties transparente Hintergruende
-     haben und der Stage-cream-Background durch sie durchscheint —
-     z-index allein wuerde die untere Lottie nicht verdecken. Out:
-     0.2s. In: 0.3s mit 0.2s Delay. Total 0.5s. */
-  transition: opacity 0.2s ease-out;
-  pointer-events: none;
 }
-/* Lottie-Variante (data-has-animation): drop the placeholder padding so
-   the animation can use the full stage; SVG-Renderer skaliert das Asset
-   ueber den ganzen Container. Text-Placeholder-Steps behalten ihr
-   Padding unveraendert. */
-.flow-anim[data-has-animation] {
+/* Video-Variante: Container nimmt das Animation-Aspect-Ratio (1:1
+   quadratisch) statt der min-height, damit das Asset komplett ohne
+   Crop reinpasst. Padding raus, das Asset fuellt die Card-Breite. */
+.flow-card-media[data-has-animation] {
+  aspect-ratio: 1 / 1;
+  min-height: 0;
   padding: 0;
   gap: 0;
+  /* Matcht den Video-BG — verhindert den Cream-Flash waehrend das
+     frisch gemountete <video> noch laedt (siehe --flow-anim-bg). */
+  background: var(--flow-anim-bg);
 }
-.flow-anim[data-active] {
-  opacity: 1;
-  pointer-events: auto;
-  transition: opacity 0.3s ease-out 0.2s;
-}
-.flow-anim-badge {
+.flow-card-badge {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
   font-family: var(--font-mono), monospace;
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--ink-faint);
   background: rgba(255, 255, 255, 0.72);
   border: 0.5px solid var(--line-strong);
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 100px;
 }
-.flow-anim-label {
-  font-size: 15px;
+.flow-card-label {
+  font-size: 14px;
   font-weight: 600;
   color: var(--ink-dim);
   letter-spacing: -0.2px;
 }
-.flow-anim-desc {
-  font-size: 12.5px;
+.flow-card-desc {
+  font-size: 12px;
   color: var(--ink-faint);
-  max-width: 230px;
+  max-width: 220px;
   line-height: 1.45;
+}
+/* Text area: title + copy. */
+.flow-card-text {
+  flex: 1;
+  padding: 22px 22px 26px;
+  background: #fff;
+}
+.flow-card-title {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+.flow-card-copy {
+  font-size: 15px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+  margin: 0;
+}
+.flow-card-text .flow-step-link {
+  margin-top: 10px;
 }
 
 /* Play/Pause-Toggle auf den Flow-Videos (Apple-Muster: immer sichtbar,
@@ -2708,7 +2752,7 @@ h2 .accent {
 
 @media (max-width: 960px) {
   /* Swap which tree is laid out — desktop grid out, mobile stack in. */
-  .flow-layout {
+  .flow-desktop {
     display: none;
   }
   .flow-mobile {
@@ -2718,98 +2762,6 @@ h2 .accent {
     width: 100%;
     max-width: 440px;
     margin: 40px auto 0;
-  }
-
-  .flow-card {
-    display: flex;
-    flex-direction: column;
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 24px;
-    box-shadow: 0 2px 8px rgba(8, 10, 20, 0.04);
-    overflow: hidden;
-  }
-
-  /* Media area: cream background, centered placeholder content,
-     badge pinned to the top, prev/next arrows pinned to the sides. */
-  .flow-card-media {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 56px 28px 32px;
-    min-height: 280px;
-    background: #faf6ed;
-    border-bottom: 1px solid var(--line);
-    text-align: center;
-  }
-  /* Lottie-Variante: Container nimmt das Animation-Aspect-Ratio (1:1
-     quadratisch) statt der min-height, damit das Asset komplett ohne
-     Crop reinpasst. Padding raus, das Asset fuellt die Card-Breite. */
-  .flow-card-media[data-has-animation] {
-    aspect-ratio: 1 / 1;
-    min-height: 0;
-    padding: 0;
-    gap: 0;
-    /* Matcht den Video-BG — verhindert den Cream-Flash waehrend das
-       frisch gemountete <video> noch laedt (siehe --flow-anim-bg). */
-    background: var(--flow-anim-bg);
-  }
-  .flow-card-badge {
-    position: absolute;
-    top: 14px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-family: var(--font-mono), monospace;
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    background: rgba(255, 255, 255, 0.72);
-    border: 0.5px solid var(--line-strong);
-    padding: 4px 10px;
-    border-radius: 100px;
-  }
-  .flow-card-label {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--ink-dim);
-    letter-spacing: -0.2px;
-  }
-  .flow-card-desc {
-    font-size: 12px;
-    color: var(--ink-faint);
-    max-width: 220px;
-    line-height: 1.45;
-  }
-
-  /* Text area: title + copy. Kein Dots-/Nav-Footprint mehr — die
-     Karten stehen alle sichtbar untereinander, es gibt nichts mehr zu
-     paginieren. */
-  .flow-card-text {
-    flex: 1;
-    padding: 22px 22px 26px;
-    background: #fff;
-  }
-  .flow-card-title {
-    font-family: var(--font-geist-sans), sans-serif;
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -0.4px;
-    line-height: 1.2;
-    color: var(--ink);
-    margin: 0 0 8px;
-  }
-  .flow-card-copy {
-    font-size: 15px;
-    color: var(--ink-dim);
-    line-height: 1.5;
-    margin: 0;
-  }
-  .flow-card-text .flow-step-link {
-    margin-top: 10px;
   }
 
   /* Heading stays centered on mobile, only the spacing tightens. */
@@ -2826,12 +2778,7 @@ h2 .accent {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .flow-tab-item,
-  .flow-tab,
-  .flow-tab-num,
-  .flow-tab-title,
-  .flow-tab-copy,
-  .flow-anim {
+  .flow-desktop .flow-card {
     transition: none;
   }
 }

@@ -4,6 +4,7 @@ import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { FaqAccordion } from "./components/FaqAccordion";
 import { FlowTabs } from "./components/FlowTabs";
 import { BetaCta } from "./components/BetaCta";
+import { GeneratorFeatureCard } from "./components/GeneratorFeatureCard";
 import { HeroCta } from "./components/HeroCta";
 import { PhoneMockup } from "./components/PhoneMockup";
 import { SiteNav } from "./components/SiteNav";
@@ -39,7 +40,7 @@ export default async function Home() {
           <div className="hero-copy">
             <div className="pill reveal">
               <span className="pill-dot" />
-              Make today a Callday.
+              Generate your first call list for free
             </div>
 
             <h1 className="reveal delay-1">
@@ -86,9 +87,10 @@ export default async function Home() {
       </section>
 
       {/* === THE FLOW — 3 animated steps (the centerpiece) ===
-          Each step carries one workflow animation (placeholder for now). */}
+          container-wide: die Sektion bricht auf 1360px aus (einzige
+          Breakout-Sektion der Seite) — groessere Animations-Kacheln. */}
       <section className="flow">
-        <div className="container">
+        <div className="container container-wide">
           <header className="flow-section-head">
             <h2>
               Take the <span className="accent">friction</span>
@@ -139,13 +141,18 @@ export default async function Home() {
       <section className="features">
         <div className="container">
           <h2>
-            Built to fight the <span className="accent">flinch</span>.
+            {/* br-mobile: auf Phones bricht die Headline kontrolliert nach
+                "to" um, Desktop bleibt einzeilig. */}
+            Built to <br className="br-mobile" />
+            fight the <span className="accent">flinch</span>.
           </h2>
           <p className="section-sub">
             Every detail closes a gap where focus usually dies.
           </p>
 
           <div className="feature-grid">
+            <GeneratorFeatureCard />
+
             <div className="feature-card">
               <div className="feature-icon">
                 <svg
@@ -249,7 +256,7 @@ export default async function Home() {
       {/* === BIG CTA — BetaCta rendert die Section-h2 + ausgeloggt das
           Sign-up, eingeloggt eine "You're already in"-Karte. Identisch zur
           Affiliate-Landing, nur ohne slug. === */}
-      <section className="big-cta" id="beta">
+      <section className="big-cta" id="signup">
         <div className="container big-cta-inner">
           <BetaCta />
         </div>

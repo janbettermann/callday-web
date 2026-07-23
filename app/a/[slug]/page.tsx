@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CalldayLogo } from "../../components/CalldayLogo";
 import { FaqAccordion } from "../../components/FaqAccordion";
 import { FlowTabs } from "../../components/FlowTabs";
+import { GeneratorFeatureCard } from "../../components/GeneratorFeatureCard";
 import { SiteNav } from "../../components/SiteNav";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { trackPageView } from "@/lib/affiliate-page-views";
@@ -23,7 +24,7 @@ import { HeroCta } from "../../components/HeroCta";
  *     Email/PW, /auth/callback fuer OAuth). Macht das Erlebnis fuer
  *     den Klicker identisch zu organic — er bekommt denselben Pitch,
  *     denselben Form-Hub, ohne dass Joe's Name irgendwo ablenkt.
- *   - **Anchor-Scroll** (`#beta`) statt Page-Switch. Hero-CTA und Nav-CTA
+ *   - **Anchor-Scroll** (`#signup`) statt Page-Switch. Hero-CTA und Nav-CTA
  *     zeigen zur Form-Section auf derselben Page.
  *   - **Slug-Resolve** server-side per service-role: liefert die
  *     affiliate_id fuer Click-Tracking (auch bei paused/unknown
@@ -103,7 +104,7 @@ export default async function AffiliateLanding({
         <div className="container hero-inner">
           <div className="pill reveal">
             <span className="pill-dot" />
-            Make today a Callday.
+            Generate your first call list for free
           </div>
 
           <h1 className="reveal delay-1">
@@ -123,7 +124,7 @@ export default async function AffiliateLanding({
 
       {/* === THE FLOW === */}
       <section className="flow">
-        <div className="container">
+        <div className="container container-wide">
           <header className="flow-section-head">
             <h2>
               Take the <span className="accent">friction</span>
@@ -172,13 +173,18 @@ export default async function AffiliateLanding({
       <section className="features">
         <div className="container">
           <h2>
-            Built to fight the <span className="accent">flinch</span>.
+            {/* br-mobile: auf Phones bricht die Headline kontrolliert nach
+                "to" um, Desktop bleibt einzeilig. */}
+            Built to <br className="br-mobile" />
+            fight the <span className="accent">flinch</span>.
           </h2>
           <p className="section-sub">
             Every detail closes a gap where focus usually dies.
           </p>
 
           <div className="feature-grid">
+            <GeneratorFeatureCard />
+
             <div className="feature-card">
               <div className="feature-icon">
                 <svg
@@ -282,7 +288,7 @@ export default async function AffiliateLanding({
       {/* === BIG CTA — Account-Sign-Up, identisch zur organic Landing bis
           auf den slug (Affiliate-Attribution). Section-h2 hier, Card-Titel
           + Sub (linksbuendig) leben in der SignupForm. === */}
-      <section className="big-cta" id="beta">
+      <section className="big-cta" id="signup">
         <div className="container big-cta-inner">
           <BetaCta slug={slug} />
         </div>
