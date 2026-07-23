@@ -69,19 +69,13 @@ export function GeneratorFeatureCard() {
         </div>
         <div className="feature-gen-lead">
           <GoogleGlyph />
-          <span className="feature-gen-bar" style={{ flexGrow: 1 }} />
-          <PhoneGlyph />
-        </div>
+          <span className="feature-gen-bar" style={{ flexGrow: 1 }} />        </div>
         <div className="feature-gen-lead">
           <GoogleGlyph />
-          <span className="feature-gen-bar" style={{ flexGrow: 0.72 }} />
-          <PhoneGlyph />
-        </div>
+          <span className="feature-gen-bar" style={{ flexGrow: 0.72 }} />        </div>
         <div className="feature-gen-lead">
           <GoogleGlyph />
-          <span className="feature-gen-bar" style={{ flexGrow: 0.88 }} />
-          <PhoneGlyph />
-        </div>
+          <span className="feature-gen-bar" style={{ flexGrow: 0.88 }} />        </div>
       </div>
     </div>
   );
@@ -114,27 +108,6 @@ function GoogleGlyph() {
       <path
         d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58A8.99 8.99 0 0 0 .96 4.96l2.99 2.34C4.66 5.17 6.65 3.58 9 3.58z"
         fill="#EA4335"
-      />
-    </svg>
-  );
-}
-
-/* Kleines Telefon-Icon am Ende jeder Lead-Zeile — filled, im Ink-Schwarz
-   der Titel (Jan 2026-07-23, vorher blauer Outline-Stroke). Voller
-   Hoerer-Glyph statt Material-Bogen: dessen schmale Silhouette wirkte
-   bei 13px duenner als der fruehere 2px-Stroke. */
-function PhoneGlyph() {
-  return (
-    <svg
-      width={13}
-      height={13}
-      viewBox="0 0 512 512"
-      style={{ flexShrink: 0 }}
-      aria-hidden="true"
-    >
-      <path
-        d="M493.4 24.6l-104-24c-11.3-2.6-22.9 3.3-27.5 13.9l-48 112c-4.2 9.8-1.4 21.3 6.9 28l60.6 49.6c-36 76.7-98.9 140.5-177.2 177.2l-49.6-60.6c-6.8-8.3-18.2-11.1-28-6.9l-112 48C3.9 366.5-2 378.1.6 389.4l24 104C27.1 504.2 36.7 512 48 512c256.1 0 464-207.5 464-464 0-11.2-7.7-20.9-18.6-23.4z"
-        fill="#1a1d26"
       />
     </svg>
   );

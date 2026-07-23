@@ -232,10 +232,10 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
   // — Affiliate erscheint nirgendwo auf der Seite (Jan-Decision).
   return (
     <div className="login-card">
-      <h3 className="login-card-title">Start calling today</h3>
+      <h3 className="login-card-title">Make today a Callday.</h3>
       <p className="login-card-sub">
-        After you sign up, we&apos;ll email you the download link for the
-        Callday app.
+        Generate your first call list from Google Maps for free &amp;
+        start calling today.
       </p>
       <div className="login-oauth-stack">
         <button

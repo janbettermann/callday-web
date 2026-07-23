@@ -29,7 +29,7 @@ export function BetaCta({ slug }: { slug?: string }) {
           "Welcome back."
         ) : (
           <>
-            Make today a <span className="accent">Callday.</span>
+            Get <span className="accent">started.</span>
           </>
         )}
       </h2>

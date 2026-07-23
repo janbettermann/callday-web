@@ -48,7 +48,6 @@
   --sun-tint: rgba(251, 191, 36, 0.12);
 
   --green: #10b981;
-  --green-light: #6ee7b7;
   --green-deep: #047857;
   --amber: #f59e0b;
   --red: #dc2626;
@@ -357,8 +356,8 @@ body::before {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, var(--green-light), var(--green));
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  background: radial-gradient(circle at 35% 35%, var(--sun-light), var(--sun));
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.55);
   animation: pulse 2.4s ease-in-out infinite;
   flex-shrink: 0;
 }
@@ -1687,9 +1686,10 @@ h2 .accent {
   gap: 7px;
   background: var(--ink);
   color: #fff;
+  /* Font-Metrik identisch zu .feature-gen-chip (13px/500) — Button und
+     Chips teilen sich die Toolbar-Zeile. */
   font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.1px;
+  font-weight: 500;
   /* Vertikal auf .feature-gen-chip-Hoehe abgestimmt (empirisch: Chip
      traegt Border + volle Text-Line-Height, der Flex-Button misst
      minimal anders) — Button und Chips stehen in einer Toolbar-Zeile
