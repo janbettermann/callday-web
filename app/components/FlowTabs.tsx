@@ -11,17 +11,13 @@ type Step = {
   label: string;
   desc: string;
   /**
-   * Wenn true, ersetzt das Lottie-Asset (FlowAnimation) den Text-Placeholder
-   * — Desktop + Mobile gleichermassen. Steps ohne Lottie bekommen weiter
+   * Wenn true, ersetzt das Video-Asset (FlowAnimation) den Text-Placeholder
+   * — Desktop + Mobile gleichermassen. Steps ohne Video bekommen weiter
    * den label+desc-Placeholder. So koennen Animationen einzeln nachgereicht
    * werden ohne den ganzen Block umzubauen.
    */
   hasAnimation?: boolean;
-  /**
-   * Optionaler Link unter der Copy (Desktop: unter dem Tab, Mobile: unter
-   * dem Karten-Text). Auf Desktop lebt er ausserhalb des Tab-<button>s —
-   * ein <a> im <button> waere invalides HTML.
-   */
+  /** Optionaler Link unter der Copy (Desktop-Karte + Mobile-Karte). */
   link?: { label: string; href: string };
 };
 
@@ -29,14 +25,16 @@ const STEPS: Step[] = [
   {
     num: "01",
     title: "Start with any list",
-    copy: "Drop in any CSV or Excel. Ready in under a minute — no setup, no system to build.",
+    // Import bleibt vorn (die Animation zeigt Drag & Drop), der Generator
+    // ist der Zweitweg im selben Satz. Der fruehere Step-Link ("Where to
+    // get a list" → /first-list, spaeter "Get your first list free" →
+    // #signup) ist seit 2026-07-23 komplett raus — der Generator
+    // beantwortet die "Woher Liste?"-Frage in der Copy selbst.
+    copy: "Drop in any CSV or Excel — or pick an industry and location, and Callday generates a call list from Google Maps.",
     badge: "Animation 01",
     label: "Drag & drop import",
     desc: "An Excel file drops into the import zone and becomes a lead list that joins your stack of audiences.",
     hasAnimation: true,
-    // Ziel-Page (/first-list: Guide + Prompt-Generator) existiert noch
-    // nicht — href bleibt bewusst tot, bis die Page steht.
-    link: { label: "Where to get a list", href: "#" },
   },
   {
     num: "02",
@@ -65,27 +63,26 @@ const STEPS: Step[] = [
  * simpler than trying to make a single tree morph between two very
  * different shapes:
  *
- *   Desktop (>960 px) — `.flow-layout`:
- *     2-column grid. Left column is `.flow-tablist` (3 packed tabs).
- *     Right column is `.flow-stage` (3 anim slots, absolutely stacked,
- *     only the active one opacity:1). KEINE Auto-Rotation mehr
- *     (entfernt 2026-07-05): der Step wechselt nur per Klick —
- *     gleiches Produktprinzip wie beim Mobile-Karussell-Removal,
- *     "nichts bewegt sich ohne bewussten Tap".
+ *   Desktop (>960 px) — `.flow-desktop`:
+ *     3 gleiche Karten nebeneinander (V1-Redesign 2026-07-23, ersetzt
+ *     das fruehere Tablist+Stage-Layout). Alle drei Animationen sind
+ *     gleichzeitig sichtbar; welche gerade SPIELT, steuert die
+ *     Staffel-Logik (siehe FlowTabs). Das verletzt das Produktprinzip
+ *     "nichts bewegt sich ohne bewussten Tap" bewusst NICHT: anders als
+ *     die 2026-07-05 entfernte Auto-Rotation wechselt hier kein Inhalt
+ *     unter dem Leser — Karten und Copy stehen fest, nur welches Video
+ *     laeuft wandert (heute spielt beim Reinscrollen auch schon eines).
  *
  *   Mobile (≤960 px) — `.flow-mobile`:
  *     A vertical stack of 3 white cards, all visible at once — scroll
- *     is the only navigation. Kein Karussell mehr (war vorher eins):
- *     Auto-Advance riss den Leser mitten im Satz zur naechsten Karte,
- *     und die Card+Dots-Optik weckte eine Swipe-Erwartung, die nie
- *     implementiert war — beides Verstoesse gegen das Produktprinzip
- *     "nichts bewegt sich ohne bewussten Tap". Jede Karte spielt ihre
- *     Animation, solange sie ueberwiegend im Viewport steht
- *     (eigener IntersectionObserver pro Karte, siehe MobileFlowCard).
+ *     is the only navigation. Jede Karte spielt ihre Animation, solange
+ *     sie ueberwiegend im Viewport steht (eigener IntersectionObserver
+ *     pro Karte, siehe MobileFlowCard). Unveraendert vom V1-Redesign.
  *
  * CSS toggles the two wrappers via `display: none` so only one is
  * laid out at a time. `prefers-reduced-motion: reduce` wird in
- * FlowAnimation respektiert: Videos bleiben auf Frame 0 pausiert.
+ * FlowAnimation respektiert: Videos bleiben auf Frame 0 pausiert,
+ * die Staffel startet dann nicht (Play-Toggle = bewusster Einstieg).
  */
 /**
  * "Element ist ueberwiegend (>= 50%) im Viewport" — aus zwei Quellen:
@@ -153,110 +150,90 @@ function useMostlyInView<T extends HTMLElement>(
   return inView;
 }
 
+/**
+ * Staffel-Logik Desktop (Jan-Konzept 2026-07-23):
+ *
+ *   - Sektion mehrheitlich im Viewport → Karte 0 spielt (ohne loop).
+ *     `ended` uebergibt an die naechste Karte, nach 03 beginnt der
+ *     Zyklus wieder bei 01 — eine nach einem Durchlauf eingefrorene
+ *     Sektion wirkt kaputt, Besucher scrollen zu beliebigen Zeitpunkten
+ *     rein.
+ *   - Hover (nur echte Maus, pointerType-Guard) zieht die Staffel auf
+ *     die Karte: sie spielt von vorn und LOOPT, solange der Cursor
+ *     drauf bleibt. Beim Verlassen laeuft der aktuelle Durchlauf zu
+ *     Ende, `ended` uebergibt dann normal weiter — kein Resume-
+ *     Gedaechtnis noetig.
+ *   - Klick/Tap springt die Staffel auf die Karte, laesst sie aber im
+ *     Sequenz-Modus (fuer Touch-Geraete in Desktop-Breite: dort gibt es
+ *     kein Hover-Ende, ein haengender Hover-Loop waere eine Sackgasse).
+ *   - Verlaesst die Sektion den Viewport, resettet die Tour auf Karte 0
+ *     — naechster Auftritt erzaehlt von vorn (wie die Mobile-Karten).
+ *   - Play/Pause-Toggle pro Karte (VideoStage) bleibt Ueberstimme:
+ *     Pause haelt die Staffel an (kein `ended`), Play setzt sie fort.
+ */
 export function FlowTabs() {
-  const [activeIndex, setActiveIndex] = useState(0);
   const desktopRef = useRef<HTMLDivElement>(null);
-
-  /**
-   * Spielt die aktive Animation nur ab, waehrend der Desktop-Tree im
-   * Viewport sichtbar ist. Verlaesst der User die Sektion, pausiert
-   * das Video auf Frame 0; kommt er wieder rein, startet es von vorn.
-   * Die Step-Auswahl selbst bleibt erhalten — sie wechselt nur per
-   * Klick, nie automatisch.
-   *
-   * Nur der Desktop-Tree wird beobachtet — auf Mobile ist er
-   * display:none und misst hoehe 0. Die Mobile-Karten steuern ihre
-   * Sichtbarkeit selbst (eigener Hook pro Karte in MobileFlowCard).
-   * 50%-Schwelle: empirischer Sweet-Spot, bei dem die rechte
-   * Animations-Spalte garantiert vollstaendig sichtbar ist bevor wir
-   * play druecken.
-   */
   const isInView = useMostlyInView(desktopRef);
 
-  const handleSelect = (i: number) => {
-    setActiveIndex(i);
+  const [active, setActive] = useState(0);
+  const [source, setSource] = useState<"sequence" | "hover">("sequence");
+
+  useEffect(() => {
+    if (!isInView) {
+      setActive(0);
+      setSource("sequence");
+    }
+  }, [isInView]);
+
+  const handleEnded = (index: number) => {
+    // Nur die Staffel schaltet weiter — im Hover-Modus loopt das Video
+    // und `ended` feuert gar nicht erst.
+    if (source === "sequence" && index === active) {
+      setActive((index + 1) % STEPS.length);
+    }
   };
 
   return (
     <>
       {/* === DESKTOP === */}
-      <div className="flow-layout" ref={desktopRef}>
-        <ol
-          className="flow-tablist"
-          role="tablist"
-          aria-label="Workflow steps"
-        >
-          {STEPS.map((s, i) => {
-            const active = i === activeIndex;
-            return (
-              <li
-                key={s.num}
-                className="flow-tab-item"
-                data-active={active || undefined}
-              >
-                <button
-                  type="button"
-                  className="flow-tab"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => handleSelect(i)}
-                >
-                  <span className="flow-tab-head">
-                    <span className="flow-tab-num">{s.num}</span>
-                    <span className="flow-tab-title">{s.title}</span>
-                  </span>
-                  <span className="flow-tab-copy">{s.copy}</span>
-                </button>
+      <div className="flow-desktop" ref={desktopRef}>
+        {STEPS.map((s, i) => {
+          const isCardActive = i === active && isInView;
+          return (
+            <article
+              key={s.num}
+              className="flow-card"
+              data-active={isCardActive || undefined}
+              onPointerEnter={(e) => {
+                if (e.pointerType === "mouse") {
+                  setSource("hover");
+                  setActive(i);
+                }
+              }}
+              onPointerLeave={(e) => {
+                if (e.pointerType === "mouse") setSource("sequence");
+              }}
+              onClick={() => setActive(i)}
+            >
+              <FlowCardMedia
+                step={s}
+                variant="desktop"
+                isActive={isCardActive}
+                loop={source === "hover" && i === active}
+                onEnded={() => handleEnded(i)}
+              />
+              <div className="flow-card-text">
+                <h3 className="flow-card-title">{s.title}</h3>
+                <p className="flow-card-copy">{s.copy}</p>
                 {s.link && (
-                  <a
-                    className="flow-step-link flow-tab-link"
-                    href={s.link.href}
-                    onClick={(e) => e.preventDefault()}
-                  >
+                  <a className="flow-step-link" href={s.link.href}>
                     {s.link.label}
                   </a>
                 )}
-              </li>
-            );
-          })}
-        </ol>
-
-        <div className="flow-stage">
-          {STEPS.map((s, i) => {
-            const active = i === activeIndex;
-            return (
-              <div
-                key={s.num}
-                className="flow-anim"
-                data-active={active || undefined}
-                data-has-animation={s.hasAnimation || undefined}
-                // role="img" nur fuer den Text-Placeholder: Es flacht den
-                // Subtree fuer Screenreader ab — auf Animations-Steps
-                // wuerde es den Play/Pause-Toggle unerreichbar machen.
-                // Das dekorative Video ist eh aria-hidden.
-                {...(s.hasAnimation
-                  ? {}
-                  : {
-                      role: "img" as const,
-                      "aria-label": `${s.label}, animation placeholder`,
-                    })}
-              >
-                {s.hasAnimation ? (
-                  <FlowAnimation
-                    stepNum={s.num}
-                    isActive={active && isInView}
-                  />
-                ) : (
-                  <>
-                    <span className="flow-anim-badge">{s.badge}</span>
-                    <span className="flow-anim-label">{s.label}</span>
-                    <span className="flow-anim-desc">{s.desc}</span>
-                  </>
-                )}
               </div>
-            );
-          })}
-        </div>
+            </article>
+          );
+        })}
       </div>
 
       {/* === MOBILE === */}
@@ -276,7 +253,8 @@ export function FlowTabs() {
  * auf Frame 0 (macht VideoStage), beim Reinscrollen startet die
  * Story von vorn. 50%-Schwelle: die Media-Area sitzt oben in der
  * Karte und ist bei halber Kartensichtbarkeit bereits komplett im
- * Viewport, egal aus welcher Scroll-Richtung.
+ * Viewport, egal aus welcher Scroll-Richtung. Loop bleibt hier an
+ * (FlowAnimation-Default) — es gibt keine Staffel auf Mobile.
  */
 function MobileFlowCard({ step }: { step: Step }) {
   const ref = useRef<HTMLElement>(null);
@@ -284,33 +262,58 @@ function MobileFlowCard({ step }: { step: Step }) {
 
   return (
     <article className="flow-card" ref={ref}>
-      <div
-        className="flow-card-media"
-        data-has-animation={step.hasAnimation || undefined}
-      >
-        {step.hasAnimation ? (
-          <FlowAnimation stepNum={step.num} isActive={inView} />
-        ) : (
-          <>
-            <span className="flow-card-badge">{step.badge}</span>
-            <span className="flow-card-label">{step.label}</span>
-            <span className="flow-card-desc">{step.desc}</span>
-          </>
-        )}
-      </div>
+      <FlowCardMedia step={step} variant="mobile" isActive={inView} />
       <div className="flow-card-text">
         <h3 className="flow-card-title">{step.title}</h3>
         <p className="flow-card-copy">{step.copy}</p>
         {step.link && (
-          <a
-            className="flow-step-link"
-            href={step.link.href}
-            onClick={(e) => e.preventDefault()}
-          >
+          <a className="flow-step-link" href={step.link.href}>
             {step.link.label}
           </a>
         )}
       </div>
     </article>
+  );
+}
+
+/**
+ * Media-Bereich einer Flow-Karte — geteilt zwischen Desktop-Raster und
+ * Mobile-Stack. Steps mit Video rendern FlowAnimation, Steps ohne den
+ * Text-Placeholder (badge/label/desc).
+ */
+function FlowCardMedia({
+  step,
+  variant,
+  isActive,
+  loop,
+  onEnded,
+}: {
+  step: Step;
+  variant: "desktop" | "mobile";
+  isActive: boolean;
+  loop?: boolean;
+  onEnded?: () => void;
+}) {
+  return (
+    <div
+      className="flow-card-media"
+      data-has-animation={step.hasAnimation || undefined}
+    >
+      {step.hasAnimation ? (
+        <FlowAnimation
+          stepNum={step.num}
+          variant={variant}
+          isActive={isActive}
+          loop={loop}
+          onEnded={onEnded}
+        />
+      ) : (
+        <>
+          <span className="flow-card-badge">{step.badge}</span>
+          <span className="flow-card-label">{step.label}</span>
+          <span className="flow-card-desc">{step.desc}</span>
+        </>
+      )}
+    </div>
   );
 }

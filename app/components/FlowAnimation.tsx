@@ -2,19 +2,22 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const BREAKPOINT_PX = 960;
-
 /**
  * Asset-Lookup per Step-Nummer.
  *
- * Pro Step zwei Varianten:
- *   - desktop: 520x650 (4:5 portrait) → matcht .flow-stage
- *   - mobile:  520x520 (1:1 square)   → matcht .flow-card-media[data-has-animation]
+ * Seit dem V1-Redesign (3-Karten-Raster, 2026-07-23) sind BEIDE Varianten
+ * quadratische 1:1-Exports — der Unterschied ist nicht das Format, sondern
+ * das TIMING (Jan-Entscheidung 2026-07-23):
+ *   - desktop: Sequenz-Timing fuer die Staffel (Karte spielt einmal durch
+ *     und uebergibt — Szenenwechsel entsprechend getaktet).
+ *   - mobile:  Loop-Timing fuer den Mobile-Stack (Karte loopt endlos,
+ *     solange sie im Viewport steht).
+ * Die frueheren 4:5-Portrait-Exports sind nicht mehr im Repo (Git-History
+ * hat sie); ein kuenftiges Hochformat-Layout braucht neue Exports.
  *
  * MP4 statt Lottie: hardware-decoded → smooth auch auf alten iPhones. Die
  * Lottie-Exporte stutterten dort weil lottie-web auf dem Main-Thread
- * rendert. Source-of-Truth fuer die Animation bleibt das Jitter-Projekt;
- * MP4-Exports liegen in public/animations/.
+ * rendert. Source-of-Truth fuer die Animation bleibt das Jitter-Projekt.
  *
  * Neue Animation: Eintrag hier ergaenzen + im FlowTabs-Step das
  * hasAnimation-Flag setzen.
@@ -40,14 +43,11 @@ const ANIMATIONS: Record<string, { desktop: string; mobile: string }> = {
  *   - Step 02 (The calling loop)
  *   - Step 03 (Booked. Synced. Sent.)
  *
- * Picks die korrekte Asset-Variante per Breakpoint:
- *   - Desktop (>960 px): 520x650 4:5 portrait
- *   - Mobile  (≤960 px): 520x520 quadratisch
- *
  * Respektiert prefers-reduced-motion: bei aktivem System-Flag laeuft
  * nichts automatisch — der User kann die Animation aber ueber den
  * Play-Toggle bewusst starten (die WCAG-konforme Ausnahme: deliberate
- * user request schlaegt das System-Flag).
+ * user request schlaegt das System-Flag). Die Desktop-Staffel startet
+ * dann ebenfalls nicht (kein Autoplay → kein `ended`).
  */
 type FlowAnimationProps = {
   /**
@@ -58,41 +58,57 @@ type FlowAnimationProps = {
    */
   stepNum: string;
   /**
+   * Welche Timing-Variante des Assets spielt (beide 1:1, s. ANIMATIONS):
+   * das Desktop-Raster uebergibt "desktop", der Mobile-Stack "mobile".
+   * Bewusst expliziter Prop statt matchMedia — die beiden Breakpoint-
+   * Trees sind eh getrennte DOM-Baeume, jeder kennt seine Variante.
+   */
+  variant: "desktop" | "mobile";
+  /**
    * Wenn false, pausiert die Animation auf Frame 0 — der Step ist sichtbar
-   * aber nicht aktiv, also auch nicht spielend. Beim Desktop-Auto-Rotate
-   * schaltet das Parent zwischen Steps und setzt diesen Prop entsprechend.
+   * aber nicht aktiv, also auch nicht spielend. Auf Desktop setzt die
+   * Staffel-Logik in FlowTabs diesen Prop, auf Mobile die per-Karte-
+   * Viewport-Beobachtung.
    */
   isActive: boolean;
+  /**
+   * Default true (Mobile-Karten loopen endlos). Die Desktop-Staffel
+   * schaltet loop nur im Hover-Modus an — ohne loop feuert `ended` und
+   * uebergibt an die naechste Karte.
+   */
+  loop?: boolean;
+  /** Feuert am natuerlichen Video-Ende (nur ohne loop relevant). */
+  onEnded?: () => void;
 };
 
-export function FlowAnimation({ stepNum, isActive }: FlowAnimationProps) {
-  const [isMobile, setIsMobile] = useState(false);
+export function FlowAnimation({
+  stepNum,
+  variant,
+  isActive,
+  loop = true,
+  onEnded,
+}: FlowAnimationProps) {
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
-    const mqlBreakpoint = window.matchMedia(`(max-width: ${BREAKPOINT_PX}px)`);
-    const mqlReduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-    const sync = () => {
-      setIsMobile(mqlBreakpoint.matches);
-      setReducedMotion(mqlReduced.matches);
-    };
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReducedMotion(mql.matches);
     sync();
-
-    mqlBreakpoint.addEventListener("change", sync);
-    mqlReduced.addEventListener("change", sync);
-    return () => {
-      mqlBreakpoint.removeEventListener("change", sync);
-      mqlReduced.removeEventListener("change", sync);
-    };
+    mql.addEventListener("change", sync);
+    return () => mql.removeEventListener("change", sync);
   }, []);
 
-  const asset = ANIMATIONS[stepNum];
-  if (!asset) return null;
-  const src = isMobile ? asset.mobile : asset.desktop;
+  const src = ANIMATIONS[stepNum]?.[variant];
+  if (!src) return null;
 
   return (
-    <VideoStage src={src} isActive={isActive} reducedMotion={reducedMotion} />
+    <VideoStage
+      src={src}
+      isActive={isActive}
+      reducedMotion={reducedMotion}
+      loop={loop}
+      onEnded={onEnded}
+    />
   );
 }
 
@@ -108,9 +124,9 @@ export function FlowAnimation({ stepNum, isActive }: FlowAnimationProps) {
  *                          beim Mount inaktiv sind.
  *   - disablePictureInPicture → kein PiP-Button im Long-Press-Menue
  *
- * `key={src}` forciert Re-Mount wenn der Breakpoint vom Resize wechselt
- * (Mobile↔Desktop). Ohne den Key wuerde das Video weiter aus dem alten
- * Asset-Buffer spielen.
+ * `key={src}` forciert Re-Mount, falls sich das Asset eines Steps je
+ * aendert (seit dem Square-only-Setup ist src pro Step konstant — der
+ * Key ist dann ein No-Op und bleibt als Schutz stehen).
  *
  * Blockiertes Autoplay heilt sich selbst: Frueher wurde ein abgelehntes
  * `play()` still geschluckt — war beim ersten Versuch z.B. der iOS-
@@ -131,10 +147,14 @@ function VideoStage({
   src,
   isActive,
   reducedMotion,
+  loop,
+  onEnded,
 }: {
   src: string;
   isActive: boolean;
   reducedMotion: boolean;
+  loop: boolean;
+  onEnded?: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -268,7 +288,8 @@ function VideoStage({
         autoPlay={isActive && !reducedMotion}
         muted
         playsInline
-        loop
+        loop={loop}
+        onEnded={onEnded}
         preload="metadata"
         disablePictureInPicture
         aria-hidden
