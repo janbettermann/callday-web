@@ -298,7 +298,7 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
           aria-busy={status === "submitting"}
           disabled={status === "submitting"}
         >
-          {status === "submitting" ? "Signing up..." : "Sign up"}
+          {status === "submitting" ? "Signing up..." : "Sign up with Email"}
         </button>
 
         {errorMessage && (

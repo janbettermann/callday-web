@@ -2126,8 +2126,13 @@ h2 .accent {
   max-width: 800px;
 }
 .faq-heading {
-  text-align: center;
-  margin: 0 auto 56px;
+  /* Klein, linksbuendig, dicht an der Liste — Label-Charakter statt
+     Section-Headline, ohne Accent (Jan 2026-07-23): die FAQ ist
+     Utility, kein Pitch-Moment. Weight bleibt beim h2-Standard (600). */
+  font-size: clamp(20px, 2.2vw, 24px);
+  letter-spacing: -0.4px;
+  text-align: left;
+  margin: 0 0 18px;
 }
 .faq-list {
   list-style: none;
@@ -2166,9 +2171,8 @@ h2 .accent {
 .faq-trigger:hover {
   color: var(--blue-deep);
 }
-.faq-item[data-open] .faq-trigger {
-  color: var(--blue-deep);
-}
+/* Offene Frage bleibt schwarz (Jan 2026-07-23) — vorher flippte sie
+   auf Blau; der rotierte Chevron markiert den Zustand ausreichend. */
 .faq-question {
   flex: 1;
 }
@@ -2499,9 +2503,6 @@ h2 .accent {
   }
   .faq {
     padding: 72px 0 80px;
-  }
-  .faq-heading {
-    margin-bottom: 36px;
   }
   .faq-list {
     padding: 0 22px;

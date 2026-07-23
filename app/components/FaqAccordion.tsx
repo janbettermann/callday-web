@@ -58,9 +58,9 @@ const ITEMS: FaqItem[] = [
 /**
  * FAQ accordion for the landing page.
  *
- * Single-open-at-a-time. First item starts expanded so the visitor sees
- * what kind of block this is at a glance (and doesn't mistake the list
- * of questions for static body copy).
+ * Single-open-at-a-time. Alle Fragen starten GESCHLOSSEN (Jan
+ * 2026-07-23 — vorher war die erste offen, damit der Block als
+ * Accordion erkennbar ist; die Chevron-Icons leisten das inzwischen).
  *
  * Expansion uses the `grid-template-rows: 0fr → 1fr` trick so the height
  * animates without measuring the answer in JS. Answers stay in the DOM
@@ -69,10 +69,9 @@ const ITEMS: FaqItem[] = [
  * of the screen-reader's flow.
  */
 export function FaqAccordion() {
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
   // Eingeloggte Rueckkehrer sehen die hideWhenLoggedIn-Fragen nicht
-  // ("What happens after I sign up?" ist fuer sie erledigt). openIndex=0
-  // haelt die erste SICHTBARE Frage offen — funktioniert in beiden Faellen.
+  // ("What happens after I sign up?" ist fuer sie erledigt).
   const loggedIn = useIsLoggedIn();
   const items = loggedIn ? ITEMS.filter((it) => !it.hideWhenLoggedIn) : ITEMS;
 

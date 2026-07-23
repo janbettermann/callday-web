@@ -278,9 +278,7 @@ export default async function AffiliateLanding({
       {/* === FAQ === */}
       <section className="faq" aria-label="Common questions">
         <div className="container faq-inner">
-          <h2 className="faq-heading">
-            Common <span className="accent">questions.</span>
-          </h2>
+          <h2 className="faq-heading">Common questions.</h2>
           <FaqAccordion />
         </div>
       </section>
