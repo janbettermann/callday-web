@@ -225,14 +225,14 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
 
   // === Render: Sign-Up ===
   // Die Section-Headline "Make today a Callday." rendern die Landings als
-  // h2 UEBER der Card; in der Card sitzt ein kleiner linksbuendiger
-  // Titel + Sub (Jan-Decision 2026-07-05 abends, Revert der
-  // In-Card-Headline vom Nachmittag).
+  // h2 UEBER der Card (der Markensatz kriegt den grossen Slot); in der
+  // Card sitzt ein kleiner linksbuendiger funktionaler Titel + Sub
+  // (Jan-Decision 2026-07-23: Marke oben, Handlung im Titel).
   // Affiliate-Attribution laeuft komplett im Backend (Trigger / Callback)
   // — Affiliate erscheint nirgendwo auf der Seite (Jan-Decision).
   return (
     <div className="login-card">
-      <h3 className="login-card-title">Make today a Callday.</h3>
+      <h3 className="login-card-title">Get started for free</h3>
       <p className="login-card-sub">
         Generate your first call list from Google Maps for free &amp;
         start calling today.
@@ -245,7 +245,7 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
           disabled={status === "submitting"}
         >
           <AppleIcon />
-          <span>Sign up with Apple</span>
+          <span>Continue with Apple</span>
         </button>
         <button
           type="button"
@@ -254,7 +254,7 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
           disabled={status === "submitting"}
         >
           <GoogleIcon />
-          <span>Sign up with Google</span>
+          <span>Continue with Google</span>
         </button>
       </div>
 

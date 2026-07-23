@@ -29,6 +29,10 @@ export function HeroCta() {
             Get started for free
           </a>
           <p className="hero-cta-meta">Make today a Callday.</p>
+          {/* Plattform-Hinweis (Jan 2026-07-23): seit dem De-Beta-Pass
+              stand "iOS" nirgends mehr auf der Seite — Android-Besucher
+              sollen es VOR dem Sign-up wissen. */}
+          <p className="hero-cta-platform">iOS only. Android coming later.</p>
         </>
       )}
     </div>

@@ -95,7 +95,7 @@ export default async function Home() {
         <div className="container container-wide">
           <header className="flow-section-head">
             <h2>
-              Take the <span className="accent">friction</span>
+              Take the friction
               <br /> out of cold calling.
             </h2>
           </header>
@@ -141,7 +141,7 @@ export default async function Home() {
             {/* br-mobile: auf Phones bricht die Headline kontrolliert nach
                 "to" um, Desktop bleibt einzeilig. */}
             Built to <br className="br-mobile" />
-            fight the <span className="accent">flinch</span>.
+            fight the flinch.
           </h2>
           <p className="section-sub">
             Every detail closes a gap where focus usually dies.

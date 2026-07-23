@@ -29,9 +29,7 @@ export function BetaCta({ slug }: { slug?: string }) {
           "Welcome back."
         ) : (
           <>
-            Stop avoiding.
-            <br />
-            Start <span className="accent">dialing.</span>
+            Make today a <span className="accent">Callday.</span>
           </>
         )}
       </h2>
