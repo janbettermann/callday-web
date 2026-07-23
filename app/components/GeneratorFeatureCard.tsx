@@ -18,9 +18,14 @@ export function GeneratorFeatureCard() {
     <div className="feature-card feature-card-wide">
       <div className="feature-card-wide-copy">
         <div className="feature-icon">
+          {/* Map-Pin statt Liste+Lupe (Jan 2026-07-23): die Lupe geriet
+              als Zweitmotiv zu winzig; der Pin traegt die Google-Maps-
+              Story der Karte als einzelnes kraeftiges Symbol. 25px statt
+              der 22 der Nachbarn — die Pin-Form hat mehr Luft in ihrer
+              ViewBox und braucht den Ausgleich. */}
           <svg
-            width={22}
-            height={22}
+            width={25}
+            height={25}
             viewBox="0 0 24 24"
             fill="none"
             stroke="#3564e0"
@@ -28,11 +33,8 @@ export function GeneratorFeatureCard() {
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <path d="M4 5h16" />
-            <path d="M4 11h9" />
-            <path d="M4 17h6" />
-            <circle cx={17} cy={16} r={3.5} />
-            <path d="M19.6 18.6 22 21" />
+            <path d="M12 21s-7-5.2-7-11a7 7 0 0 1 14 0c0 5.8-7 11-7 11z" />
+            <circle cx={12} cy={10} r={2.5} />
           </svg>
         </div>
         <h3>No list? No excuse.</h3>

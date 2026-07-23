@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { BoxIcon } from "../../components/BoxIcon";
+import { BrainIcon } from "../../components/BrainIcon";
 import { CalldayLogo } from "../../components/CalldayLogo";
 import { FaqAccordion } from "../../components/FaqAccordion";
 import { FlowTabs } from "../../components/FlowTabs";
@@ -188,8 +190,8 @@ export default async function AffiliateLanding({
             <div className="feature-card">
               <div className="feature-icon">
                 <svg
-                  width={22}
-                  height={22}
+                  width={24}
+                  height={24}
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="#3564e0"
@@ -201,7 +203,7 @@ export default async function AffiliateLanding({
                   <path d="M3 10h18" />
                 </svg>
               </div>
-              <h3>One card at a time.</h3>
+              <h3>One lead card at a time.</h3>
               <p>
                 No menus. No clutter. One card, one decision: call or skip. Each
                 tap pulls you deeper into the rhythm, never out of it.
@@ -210,18 +212,7 @@ export default async function AffiliateLanding({
 
             <div className="feature-card">
               <div className="feature-icon">
-                <svg
-                  width={22}
-                  height={22}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#3564e0"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                </svg>
+                <BrainIcon />
               </div>
               <h3>Rewards the dial, not the close.</h3>
               <p>
@@ -233,21 +224,24 @@ export default async function AffiliateLanding({
 
             <div className="feature-card">
               <div className="feature-icon">
+                {/* Papierflieger statt Kalender-Check (Jan 2026-07-23):
+                    "Sent." ist der magische Moment der Karte — die Mail
+                    fliegt raus, bevor der naechste Lead da ist. Leicht
+                    nach unten links versetzt: die Flieger-Form lehnt
+                    optisch nach oben rechts, der Versatz zentriert sie. */}
                 <svg
-                  width={22}
-                  height={22}
+                  width={23}
+                  height={23}
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="#3564e0"
                   strokeWidth={2}
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  style={{ transform: "translate(-1px, 1px)" }}
                 >
-                  <rect x={3} y={4} width={18} height={18} rx={2} ry={2} />
-                  <line x1={16} y1={2} x2={16} y2={6} />
-                  <line x1={8} y1={2} x2={8} y2={6} />
-                  <line x1={3} y1={10} x2={21} y2={10} />
-                  <polyline points="9 16 11 18 15 14" />
+                  <line x1={22} y1={2} x2={11} y2={13} />
+                  <path d="M22 2 15 22l-4-9-9-4 20-7z" />
                 </svg>
               </div>
               <h3>Booked. Synced. Sent.</h3>
@@ -260,19 +254,7 @@ export default async function AffiliateLanding({
 
             <div className="feature-card">
               <div className="feature-icon">
-                <svg
-                  width={22}
-                  height={22}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#3564e0"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </svg>
+                <BoxIcon />
               </div>
               <h3>No CRM. No spreadsheet.</h3>
               <p>
