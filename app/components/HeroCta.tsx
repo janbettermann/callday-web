@@ -28,9 +28,7 @@ export function HeroCta() {
           <a href="#signup" className="hero-cta">
             Get started for free
           </a>
-          <p className="hero-cta-meta">
-            Generate your list and start calling today.
-          </p>
+          <p className="hero-cta-meta">Make today a Callday.</p>
         </>
       )}
     </div>

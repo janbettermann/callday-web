@@ -40,7 +40,7 @@ export default async function Home() {
           <div className="hero-copy">
             <div className="pill reveal">
               <span className="pill-dot" />
-              Generate your first call list for free
+              Generate call list for free
             </div>
 
             <h1 className="reveal delay-1">
