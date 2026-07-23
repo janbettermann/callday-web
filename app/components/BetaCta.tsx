@@ -4,7 +4,7 @@ import { SignupForm } from "./SignupForm";
 import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 
 /**
- * #beta-Sektion auf den Landings (organic + /a/[slug]).
+ * #signup-Sektion auf den Landings (organic + /a/[slug]).
  *
  * Ausgeloggt: das Sign-up-Formular. Eingeloggte Rueckkehrer haben sich
  * schon registriert — fuer sie eine "You're already in"-Karte, die zum
@@ -29,7 +29,7 @@ export function BetaCta({ slug }: { slug?: string }) {
           "Welcome back."
         ) : (
           <>
-            Get <span className="accent">early access.</span>
+            Make today a <span className="accent">Callday.</span>
           </>
         )}
       </h2>

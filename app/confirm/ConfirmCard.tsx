@@ -222,7 +222,7 @@ export function ConfirmCard() {
         Didn&apos;t get the code? Send a new one
       </button>
 
-      <Link href="/#beta" className="login-back-link">
+      <Link href="/#signup" className="login-back-link">
         ← Wrong email? Start over
       </Link>
     </div>

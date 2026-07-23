@@ -27,7 +27,7 @@ import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 export function SiteNav() {
   const [scrolled, setScrolled] = useState(false);
   // Header-CTA je nach Login-Status: eingeloggte Rueckkehrer bekommen einen
-  // Dashboard-Link statt "Get early access" (geteilter Hook, siehe
+  // Dashboard-Link statt "Get started" (geteilter Hook, siehe
   // useIsLoggedIn). Auf `/` greift zwar der Server-Redirect aufs Dashboard,
   // aber die Landing-Komponenten sind mit /a/[slug] geteilt (dort kein
   // Redirect) — deshalb bleibt der Login-Zweig hier bestehen.
@@ -98,8 +98,8 @@ export function SiteNav() {
             Dashboard
           </a>
         ) : (
-          <a href="#beta" className="nav-cta">
-            Get early access
+          <a href="#signup" className="nav-cta">
+            Get started
           </a>
         )}
       </div>

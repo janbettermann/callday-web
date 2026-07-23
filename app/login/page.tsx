@@ -491,12 +491,12 @@ function LoginForm() {
         </button>
       </div>
 
-      {/* Sign-up lebt auf der Landing (#beta) — nur dort haengt die
+      {/* Sign-up lebt auf der Landing (#signup) — nur dort haengt die
           TestFlight-Mail-Logik dran, siehe Doc-Comment oben. */}
       <div className="login-switch-mode">
         New to Callday?{" "}
         <Link
-          href="/#beta"
+          href="/#signup"
           className="login-text-link login-text-link-strong"
         >
           Sign up

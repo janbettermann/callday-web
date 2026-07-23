@@ -17,9 +17,10 @@ const ITEMS: FaqItem[] = [
     a: (
       <>
         <p>
-          Confirm your account and your TestFlight invite lands in your
-          inbox right away, sent from <strong>hello@callday.io</strong>.
-          Install Callday from there and sign in with the same account.
+          Confirm your account and the download link for the Callday app
+          lands in your inbox right away, sent from{" "}
+          <strong>hello@callday.io</strong>. Install the app and sign in
+          with the same account.
         </p>
         <p>If you don&apos;t see the email, check spam.</p>
       </>
@@ -27,11 +28,12 @@ const ITEMS: FaqItem[] = [
     hideWhenLoggedIn: true,
   },
   {
-    q: "Is the beta really free?",
+    q: "How much does Callday cost?",
     a: (
       <p>
-        Yes. No credit card, no charge. We only want you to burn through
-        your lead list with Callday and give us honest feedback.
+        Callday is $14.99 per month or $119 per year, after a 14-day
+        free trial. Signing up and building your first lead list is
+        free — no credit card required.
       </p>
     ),
   },
@@ -40,25 +42,15 @@ const ITEMS: FaqItem[] = [
     a: (
       <>
         <p>
-          Any CSV or Excel file works. The three fastest ways: scrape
-          Google Maps (tools like Outscraper export ready-to-import
-          files), ask Claude to research and build a list for your
-          niche, or buy one from a data provider for a few cents per
-          lead.
+          Callday builds it for you: pick an industry and a city, and
+          you get a call-ready list — phone numbers, websites, ratings.
+          Your first list is free.
         </p>
-        <p>Drop it into Callday and you&apos;re dialing a minute later.</p>
+        <p>
+          Already have leads? Any CSV or Excel file imports in under a
+          minute.
+        </p>
       </>
-    ),
-  },
-  {
-    q: "How does TestFlight work?",
-    a: (
-      <p>
-        TestFlight is Apple&apos;s official beta-testing app. You need an
-        iPhone with iOS 17 or later. Install TestFlight from the App
-        Store, tap the invite link from our email, and Callday installs
-        from there (like any other regular app).
-      </p>
     ),
   },
 ];

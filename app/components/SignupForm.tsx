@@ -224,7 +224,7 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
   }
 
   // === Render: Sign-Up ===
-  // Die Section-Headline "Get early access." rendern die Landings als
+  // Die Section-Headline "Make today a Callday." rendern die Landings als
   // h2 UEBER der Card; in der Card sitzt ein kleiner linksbuendiger
   // Titel + Sub (Jan-Decision 2026-07-05 abends, Revert der
   // In-Card-Headline vom Nachmittag).
@@ -234,8 +234,8 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
     <div className="login-card">
       <h3 className="login-card-title">Start calling today</h3>
       <p className="login-card-sub">
-        After you sign up, we&apos;ll send your TestFlight invite to
-        download the Callday app.
+        After you sign up, we&apos;ll email you the download link for the
+        Callday app.
       </p>
       <div className="login-oauth-stack">
         <button
