@@ -6,6 +6,7 @@ import { CalldayLogo } from "../../components/CalldayLogo";
 import { FaqAccordion } from "../../components/FaqAccordion";
 import { FlowTabs } from "../../components/FlowTabs";
 import { GeneratorFeatureCard } from "../../components/GeneratorFeatureCard";
+import { SignupModal } from "../../components/SignupModal";
 import { SiteNav } from "../../components/SiteNav";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { trackPageView } from "@/lib/affiliate-page-views";
@@ -299,6 +300,11 @@ export default async function AffiliateLanding({
           </div>
         </div>
       </footer>
+
+      {/* Sign-up-Modal (Hero-/Nav-„Get started" oeffnen es); portalt nach
+          document.body. `slug` reist mit fuer die Affiliate-Attribution —
+          identisch zur BetaCta oben. */}
+      <SignupModal slug={slug} />
     </>
   );
 }

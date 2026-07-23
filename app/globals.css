@@ -821,6 +821,68 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
     rgba(255, 255, 255, 1) 100%
   );
 }
+
+/* === SIGN-UP MODAL (Hero-/Nav-„Get started" → Popup mit SignupForm) ===
+   Portal-Overlay ueber der z:9999-Nav (SignupModal.tsx). Das Panel ist nur
+   Positionierung — die sichtbare Flaeche ist die .login-card des SignupForm
+   selbst (kein Card-in-Card; die neutrale 484px-Variante greift, nicht die
+   blaue .big-cta-Toenung). Reused keyframes: pc-backdrop-in/pc-modal-in/
+   pc-sheet-in (Post-Composer). Desktop = zentriert, Mobile = Bottom-Sheet. */
+.signup-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(13, 15, 20, 0.4);
+  animation: pc-backdrop-in 0.18s ease;
+}
+.signup-modal-panel {
+  position: relative;
+  width: 100%;
+  max-width: 484px;
+  animation: pc-modal-in 0.18s ease;
+  outline: none;
+}
+.signup-modal-panel .login-card {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+.signup-modal-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--ink-faint);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.signup-modal-close:hover {
+  color: var(--ink-dim);
+}
+/* Mobile: bewusst ZENTRIERTES Modal (kein Bottom-Slide-up) — Jan-Decision
+   2026-07-23, minimalistischer Figma-Look. Nur die Backdrop-Polster/Card-
+   Hoehe an kleine Screens anpassen, Positionierung bleibt zentriert. */
+@media (max-width: 600px) {
+  .signup-modal-backdrop {
+    padding: 16px;
+  }
+  .signup-modal-panel .login-card {
+    max-height: calc(100vh - 32px);
+    padding: 30px 24px 26px;
+  }
+}
 /* "Confirm account"-Button mit blauem Glow wie die Account-/Landing-
    Primary-CTAs. */
 .confirm-page .beta-submit {

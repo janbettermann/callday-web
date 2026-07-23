@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
@@ -11,6 +11,8 @@ import {
 
 const SIGNUP_VALIDATION_MESSAGE =
   "Add email and password — or use Apple or Google above.";
+const EMAIL_STEP_MESSAGE =
+  "Enter your email — or continue with Apple or Google above.";
 
 /**
  * Detection fuer "User already registered"-Errors aus supabase.auth.signUp.
@@ -112,9 +114,25 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Zwei-Schritt (email-first, Jan-Decision 2026-07-23, Figma-Vorbild):
+  // OAuth + "or" + Email stehen in BEIDEN Schritten. Schritt "email" zeigt
+  // zusaetzlich Titel+Sub und den Button "Continue with email"; nach Klick
+  // verschwinden Titel+Sub, das Passwortfeld schiebt sich rein, der Button
+  // wird "Create account" (Schritt "password"). OAuth bleibt sichtbar (kein
+  // verlorener Ausweg), deshalb kein Back-Button noetig. Kein Email-Existenz-
+  // Vorabcheck (Enumeration-Risiko) — der "already registered"-Recovery-Pfad
+  // faengt Rueckkehrer eh sauber ab.
+  const [step, setStep] = useState<"email" | "password">("email");
 
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
+
+  // Passwort-Feld fokussieren, sobald Schritt 2 rendert (der User hat
+  // "Continue with email" bewusst geklickt — Tastatur auf Mobile ist hier
+  // erwuenscht).
+  useEffect(() => {
+    if (step === "password") passwordInputRef.current?.focus();
+  }, [step]);
 
   async function handleOAuth(provider: "apple" | "google") {
     if (status === "submitting") return;
@@ -148,13 +166,26 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
     if (status === "submitting") return;
     setErrorMessage(null);
 
-    // Client-Validation statt disabled-Button: User klickt → wir geben
-    // konkretes Feedback ("Email + Password noetig — oder Apple/Google").
-    // Vorher war der Button bei leeren Feldern disabled, was den
-    // wait-Cursor triggerte und das OAuth-Alternativ-Path nicht erklaerte.
-    if (!email.trim() || !password) {
+    const cleanEmail = email.trim();
+
+    // Schritt 1: nur Email pruefen und zu Schritt "password" weiter (kein
+    // signUp). Enter im Email-Feld feuert denselben Pfad.
+    if (step === "email") {
+      if (!cleanEmail) {
+        setErrorMessage(EMAIL_STEP_MESSAGE);
+        emailInputRef.current?.focus();
+        return;
+      }
+      setStep("password");
+      return;
+    }
+
+    // Schritt 2: jetzt wird registriert. Client-Validation mit konkretem
+    // Feedback (statt disabled-Button, der den wait-Cursor triggerte).
+    if (!cleanEmail || !password) {
       setErrorMessage(SIGNUP_VALIDATION_MESSAGE);
-      if (!email.trim()) {
+      if (!cleanEmail) {
+        setStep("email");
         emailInputRef.current?.focus();
       } else {
         passwordInputRef.current?.focus();
@@ -165,7 +196,6 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
     setStatus("submitting");
 
     const supabase = createSupabaseBrowser();
-    const cleanEmail = email.trim();
 
     const { data, error } = await supabase.auth.signUp({
       email: cleanEmail,
@@ -230,19 +260,25 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
   // (Jan-Decision 2026-07-23: Marke oben, Handlung im Titel).
   // Affiliate-Attribution laeuft komplett im Backend (Trigger / Callback)
   // — Affiliate erscheint nirgendwo auf der Seite (Jan-Decision).
+  const submitting = status === "submitting";
+
   return (
     <div className="login-card">
-      <h3 className="login-card-title">Get started for free</h3>
-      <p className="login-card-sub">
-        Generate your first call list from Google Maps for free &amp;
-        start calling today.
-      </p>
+      {step === "email" && (
+        <>
+          <h3 className="login-card-title">Get started for free</h3>
+          <p className="login-card-sub">
+            Generate your first call list from Google Maps for free &amp;
+            start calling today.
+          </p>
+        </>
+      )}
       <div className="login-oauth-stack">
         <button
           type="button"
           className="login-oauth-btn login-oauth-btn-apple"
           onClick={() => handleOAuth("apple")}
-          disabled={status === "submitting"}
+          disabled={submitting}
         >
           <AppleIcon />
           <span>Continue with Apple</span>
@@ -251,7 +287,7 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
           type="button"
           className="login-oauth-btn login-oauth-btn-google"
           onClick={() => handleOAuth("google")}
-          disabled={status === "submitting"}
+          disabled={submitting}
         >
           <GoogleIcon />
           <span>Continue with Google</span>
@@ -273,32 +309,38 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="your@email.com"
-            disabled={status === "submitting"}
+            disabled={submitting}
           />
         </label>
 
-        <label className="beta-field">
-          <span className="beta-field-label">Password</span>
-          <input
-            ref={passwordInputRef}
-            type="password"
-            required
-            autoComplete="new-password"
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 8 characters"
-            disabled={status === "submitting"}
-          />
-        </label>
+        {step === "password" && (
+          <label className="beta-field">
+            <span className="beta-field-label">Password</span>
+            <input
+              ref={passwordInputRef}
+              type="password"
+              required
+              autoComplete="new-password"
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="At least 8 characters"
+              disabled={submitting}
+            />
+          </label>
+        )}
 
         <button
           type="submit"
           className="beta-submit"
-          aria-busy={status === "submitting"}
-          disabled={status === "submitting"}
+          aria-busy={submitting}
+          disabled={submitting}
         >
-          {status === "submitting" ? "Signing up..." : "Sign up with Email"}
+          {submitting
+            ? "Signing up..."
+            : step === "email"
+              ? "Continue with email"
+              : "Create account"}
         </button>
 
         {errorMessage && (

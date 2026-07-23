@@ -9,6 +9,7 @@ import { BrainIcon } from "./components/BrainIcon";
 import { GeneratorFeatureCard } from "./components/GeneratorFeatureCard";
 import { HeroCta } from "./components/HeroCta";
 import { PhoneMockup } from "./components/PhoneMockup";
+import { SignupModal } from "./components/SignupModal";
 import { SiteNav } from "./components/SiteNav";
 
 export default async function Home() {
@@ -263,6 +264,11 @@ export default async function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Sign-up-Modal (Hero-/Nav-„Get started" oeffnen es); portalt nach
+          document.body, Position im Baum egal. Ohne slug auf der organischen
+          Landing. */}
+      <SignupModal />
     </>
   );
 }

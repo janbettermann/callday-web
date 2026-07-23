@@ -1,12 +1,16 @@
 "use client";
 
 import { useIsLoggedIn } from "@/lib/use-is-logged-in";
+import { openSignupModal } from "@/lib/use-signup-modal";
 
 /**
- * Hero-CTA auf den Landings. Ausgeloggt: "Get started" → #signup.
+ * Hero-CTA auf den Landings. Ausgeloggt: "Get started" oeffnet das
+ * Sign-up-Modal (siehe SignupModal) statt zur #signup-Sektion zu scrollen —
+ * faengt die Absicht direkt am Hero ab. Der `href="#signup"` bleibt als
+ * No-JS-Fallback (preventDefault + Modal nur wenn JS laeuft).
  * Eingeloggte Rueckkehrer bekommen "Go to your dashboard" → /dashboard
- * (direkt, nicht zum #signup-Scroll), damit der prominenteste CTA der Seite
- * nicht "leg los" sagt, obwohl der User schon drin ist.
+ * (direkt, kein Modal), damit der prominenteste CTA der Seite nicht "leg
+ * los" sagt, obwohl der User schon drin ist.
  *
  * Der Wrapper behaelt `reveal delay-3` (self-playing CSS-Animation) — nur
  * der Inhalt swappt, die Animation feuert weiterhin einmal beim Laden.
@@ -25,7 +29,14 @@ export function HeroCta() {
         </>
       ) : (
         <>
-          <a href="#signup" className="hero-cta">
+          <a
+            href="#signup"
+            className="hero-cta"
+            onClick={(e) => {
+              e.preventDefault();
+              openSignupModal();
+            }}
+          >
             Get started for free
           </a>
           <p className="hero-cta-meta">Make today a Callday.</p>

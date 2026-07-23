@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CalldayLogo } from "./CalldayLogo";
 import { useIsLoggedIn } from "@/lib/use-is-logged-in";
+import { openSignupModal } from "@/lib/use-signup-modal";
 
 /**
  * Notion-style sticky nav: transparent + light text while the dark
@@ -98,7 +99,14 @@ export function SiteNav() {
             Dashboard
           </a>
         ) : (
-          <a href="#signup" className="nav-cta">
+          <a
+            href="#signup"
+            className="nav-cta"
+            onClick={(e) => {
+              e.preventDefault();
+              openSignupModal();
+            }}
+          >
             Get started
           </a>
         )}
