@@ -1678,12 +1678,14 @@ h2 .accent {
   color: var(--ink);
 }
 /* Solid-Ink-Button (wie der echte "Build my list" auf /lists/new),
-   linksbuendig UNTER den Lead-Zeilen (Jan 2026-07-23; Weiss-Variante
-   kurz probiert und verworfen). Download-Icon rechts, weil die
-   Gratis-Liste frei downloadbar ist. Einen Tick kleiner als die Chips
-   (12px/5px-Padding, Jan 2026-07-23). */
+   RECHTSBUENDIG unter den Lead-Zeilen, Download-Icon links vor dem
+   Label (Jan 2026-07-23; linksbuendig + Icon rechts davor probiert).
+   Download-Icon, weil die Gratis-Liste frei downloadbar ist. Einen
+   Tick kleiner als die Chips (12px/5px-Padding). */
 .feature-gen-btn {
-  display: inline-flex;
+  display: flex;
+  width: fit-content;
+  margin-left: auto;
   align-items: center;
   gap: 7px;
   background: var(--ink);
