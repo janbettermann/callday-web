@@ -4159,7 +4159,7 @@ h2 .accent {
   width: 90%;
   max-width: 380px;
   z-index: 100;
-  background: var(--bg-page);
+  background: #FAF9F5;
   padding: 20px 20px 24px;
   padding-top: calc(20px + env(safe-area-inset-top, 0px));
   padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
