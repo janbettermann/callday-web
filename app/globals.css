@@ -4437,6 +4437,44 @@ h2 .accent {
   font-weight: 600;
   color: var(--ink);
 }
+/* Actions-Footer der Listen-Card (Design-B, 2026-07-26). Dünner Divider
+   trennt die Meta-Info oben (Titel, Progress, Stats) von den Sekundär-
+   Aktionen unten. Zwei Buttons nebeneinander (Download CSV + Preview
+   leads), gleicher Style, sales-native Konvention. Icon in Brand-Blau
+   als visueller Anker. */
+.dash-tile-actions {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 0.5px solid var(--line);
+  display: flex;
+  gap: 8px;
+}
+.dash-tile-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: transparent;
+  border: 0.5px solid var(--line-strong);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.dash-tile-action svg {
+  color: var(--blue);
+}
+.dash-tile-action:hover {
+  background: rgba(8, 10, 20, 0.03);
+  border-color: var(--ink-faint);
+}
+.dash-tile-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* Callday-Sticker (App: components/share/ShareCard.tsx, light-Theme).
    Feste Sticker-Farben — bewusst nicht themebar, wie die App-Vorlage. */

@@ -8,11 +8,16 @@ import { BuildingJobCard } from "./BuildingJobCard";
  * verlinkt (.dash-tile-plain) und mit Quelle-Pill oben rechts. Datenquelle
  * sind die synced Listen (lead_lists, Demo ausgeblendet); ein laufender
  * Generator-Job sitzt als pollende Building-Kachel oben. Kein In-Page-
- * "New list"-Button (die AppNav traegt ihn), keine Download-Aktionen.
+ * "New list"-Button (die AppNav traegt ihn).
  *
  * Quelle: `Generated` = ueber den Callday-Generator erstellt, `Imported`
  * = in der App per Datei importiert (Unterscheidung server-seitig in
  * page.tsx ueber die Existenz eines Generator-Jobs).
+ *
+ * Actions-Footer (Design-B, 2026-07-26): jede Card hat unten "Download
+ * CSV" + "Preview leads". Handler-Wiring folgt separat — aktuell reines
+ * UI-Skeleton (Buttons haben noch keinen Effekt). Die Endpoints
+ * (/api/lists/[id]/export, Preview-Sheet) kommen im Follow-up.
  */
 
 export type ListSource = "generated" | "imported";
@@ -70,6 +75,23 @@ function SourcePill({ source }: { source: ListSource }) {
   );
 }
 
+function DownloadIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3v12M7 10l5 5 5-5M4 21h16" />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
 /**
  * Listen-Kachel im Dashboard-Look (.dash-tile), aber nicht verlinkt
  * (.dash-tile-plain, kein Web-Listen-Detail) und mit Quelle-Pill statt
@@ -98,6 +120,26 @@ function ListCard({ list }: { list: ListCardData }) {
           {list.totalLeads.toLocaleString("en-US")} leads in list
         </span>
         <b>{pct}%</b>
+      </div>
+      {/* Actions-Footer — Design-B, 2026-07-26. Download-Link zeigt auf
+          die bestehende /api/lists/download-Route mit format=xlsx
+          (formatierter Excel-Export, locale-safe; siehe Route-Doc).
+          Preview-Button ist noch UI-Skeleton — Sheet-Component folgt
+          separat. */}
+      <div className="dash-tile-actions">
+        <a
+          href={`/api/lists/download?list=${list.id}&format=xlsx`}
+          download
+          className="dash-tile-action"
+          aria-label={`Download list ${list.name}`}
+        >
+          <DownloadIcon />
+          Download list
+        </a>
+        <button type="button" className="dash-tile-action" aria-label={`Preview leads in ${list.name}`}>
+          <EyeIcon />
+          Preview leads
+        </button>
       </div>
     </div>
   );
