@@ -59,6 +59,22 @@ function PlusIcon() {
   );
 }
 
+/**
+ * Sparkle-Icon (4-Punkt-Stern, filled) — visueller Anker fuer das
+ * Generate-Feature ueber App + Web. Matched das `SparklesIcon` in
+ * `app/(tabs)/listen/import/file.tsx` in der iOS-App.
+ * Auf dem Desktop-Header-Button in Brand-Blau (Design-B, 2026-07-26):
+ * weisser Grund + blauer Sparkle als Marken-Anker; im Slide-In-Panel-CTA
+ * (Mobile) auf schwarzem Grund weiss — nur der Icon-Shape ist geteilt.
+ */
+function SparkleIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" />
+    </svg>
+  );
+}
+
 export function AppNav({
   active,
   initial = "?",
@@ -151,7 +167,7 @@ export function AppNav({
 
         <div className="appnav-right">
           <Link href="/lists/new" className="appnav-new-btn">
-            <PlusIcon />
+            <SparkleIcon />
             Generate list
           </Link>
           <button
