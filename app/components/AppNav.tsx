@@ -229,7 +229,7 @@ export function AppNav({
           className="appnav-panel-cta"
           onClick={closeMenu}
         >
-          <PlusIcon />
+          <SparkleIcon />
           Generate list
         </Link>
         <div className="appnav-panel-divider" role="presentation" />

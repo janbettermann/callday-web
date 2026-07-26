@@ -4192,9 +4192,11 @@ h2 .accent {
 .appnav-panel-close:hover {
   border-color: var(--ink-faint);
 }
-/* CTA matched Desktop-New-list-Button (schwarz, weiss), aber full-width
-   im Panel — die eine Aktion an dieser Stelle, klar abgesetzt von den
-   Nav-Items durch Farbe und Divider. */
+/* CTA matched Desktop-Header-Button farblich (weiss, dunkler Text,
+   blauer Sparkle als einziger Brand-Akzent), behaelt aber die Panel-
+   Form: full-width im Panel, groesseres Padding fuer Menu-Prominenz.
+   Der Sparkle-Icon-Anker verbindet App-Card, Desktop-Header und
+   Mobile-Panel — dieselbe Aktion ueberall am selben Icon erkennbar. */
 .appnav-panel-cta {
   display: inline-flex;
   align-items: center;
@@ -4202,16 +4204,21 @@ h2 .accent {
   gap: 8px;
   padding: 14px 20px;
   border-radius: 12px;
-  background: var(--ink);
-  color: #fff;
+  background: #fff;
+  border: 0.5px solid var(--line-strong);
+  color: var(--ink);
   text-decoration: none;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.1px;
-  transition: background 0.15s;
+  transition: border-color 0.15s, background 0.15s;
+}
+.appnav-panel-cta svg {
+  color: var(--blue);
 }
 .appnav-panel-cta:hover {
-  background: #000;
+  border-color: var(--ink-faint);
+  background: var(--bg-page);
 }
 .appnav-panel-divider {
   height: 0.5px;
