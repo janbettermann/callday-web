@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { CalldayLogo } from "./CalldayLogo";
 
 /**
@@ -10,8 +11,13 @@ import { CalldayLogo } from "./CalldayLogo";
  * Aktion, kein Ort — deshalb "New list" als prominenter Button rechts
  * (Jan-Entscheidung 2026-07-15, ersetzt den frueheren "Google Maps
  * scraper"-Tab). "Manage account" (Avatar) ganz rechts als Identitaet.
- * Unter 900px klappen die Tabs ins Hamburger-Menue; Button + Pille
- * bleiben sichtbar.
+ *
+ * Mobile (< 900px): der Header traegt nur noch Logo, Burger und Avatar.
+ * Der "New list"-Button rutscht in ein Slide-In-Panel von rechts (90%
+ * Screen-Breite, gecappt bei 380px), das ueber den Header drueber liegt
+ * und den Hintergrund via Overlay dimmt. Als CTA oben im Panel, gefolgt
+ * von den Nav-Items. Vier Close-Trigger: Overlay-Tap, Close-X, Escape,
+ * Route-Change (Nav-Item-Tap navigiert und schliesst).
  *
  * Sitzt im bestehenden `.site-nav`-Shell (fixed, --nav-h, safe-area).
  */
@@ -61,6 +67,60 @@ export function AppNav({
   initial?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const burgerRef = useRef<HTMLButtonElement>(null);
+  const panelCloseRef = useRef<HTMLButtonElement>(null);
+  const pathname = usePathname();
+
+  const closeMenu = useCallback(() => {
+    setOpen(false);
+    // Focus-Return zum Burger fuer Keyboard/Screen-Reader-User. setTimeout(0)
+    // damit React den State-Flip erst rendert bevor wir focussen — sonst
+    // koennte der Burger noch das inaktive Aussehen haben. Bei Route-Change
+    // ist der Burger ggf. gar nicht mehr im DOM (AppNav remountet); dann
+    // schlaegt focus() still fehl, focus wandert an body. Kein Bug.
+    setTimeout(() => burgerRef.current?.focus(), 0);
+  }, []);
+
+  // Escape schliesst. Listener nur registriert wenn offen — spart einen
+  // dead global keydown im Ruhezustand.
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeMenu();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, closeMenu]);
+
+  // Body-Scroll-Lock. Ohne dies scrollt der Hintergrund mit wenn der User
+  // im Panel scrollt (Scroll-Chain in iOS Safari besonders auffaellig).
+  // Vorigen Wert merken damit ein anderer Modal-Lock nicht ueberschrieben
+  // wird — realistisch gibt's aktuell keinen, aber defensiv billig.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  // Route-Change schliesst. Feuert auch beim initial Mount (pathname ist
+  // immer gesetzt), aber setOpen(false) ist dann ein No-Op weil der State
+  // ohnehin false ist.
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  // Focus auf den Close-Button beim Oeffnen. Timeout gibt der Slide-In-
+  // Animation Zeit zu starten bevor der Focus-Ring erscheint — sonst
+  // sieht man den Focus-Ring am linken Rand aufblitzen bevor das Panel
+  // ganz drin ist.
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => panelCloseRef.current?.focus(), 120);
+    return () => clearTimeout(t);
+  }, [open]);
 
   return (
     <nav className="site-nav appnav" data-scrolled="true">
@@ -95,14 +155,15 @@ export function AppNav({
             New list
           </Link>
           <button
+            ref={burgerRef}
             type="button"
             className="appnav-burger"
             aria-expanded={open}
-            aria-controls="appnav-mobile"
+            aria-controls="appnav-panel"
             aria-label={open ? "Close menu" : "Open menu"}
             onClick={() => setOpen((v) => !v)}
           >
-            {open ? <CloseIcon /> : <MenuIcon />}
+            <MenuIcon />
           </button>
           {/* Avatar ganz rechts — auch rechts vom Burger (Jan 2026-07-24):
               Identitaet sitzt am aeusseren Rand, die blaue Pille markiert
@@ -117,19 +178,54 @@ export function AppNav({
             <span className="appnav-avatar">{initial}</span>
           </Link>
         </div>
+      </div>
 
-        <nav
-          id="appnav-mobile"
-          className={"appnav-mobile" + (open ? " is-open" : "")}
+      {/* Slide-In-Panel + Overlay. Immer im DOM (kein conditional mount),
+          damit die CSS-Transform-Animation beim Oeffnen/Schliessen greift.
+          `inert` (React-19-Prop) macht die Elemente im geschlossenen
+          Zustand nicht tabbable und nicht klickbar — sauberer als
+          aria-hidden allein, das nur AT-Layer wirkt. */}
+      <div
+        className={"appnav-overlay" + (open ? " is-open" : "")}
+        onClick={closeMenu}
+        aria-hidden="true"
+      />
+      <aside
+        id="appnav-panel"
+        className={"appnav-panel" + (open ? " is-open" : "")}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu"
+        aria-hidden={!open}
+        inert={!open ? true : undefined}
+      >
+        <button
+          ref={panelCloseRef}
+          type="button"
+          className="appnav-panel-close"
+          onClick={closeMenu}
+          aria-label="Close menu"
         >
+          <CloseIcon />
+        </button>
+        <Link
+          href="/lists/new"
+          className="appnav-panel-cta"
+          onClick={closeMenu}
+        >
+          <PlusIcon />
+          New list
+        </Link>
+        <div className="appnav-panel-divider" role="presentation" />
+        <div className="appnav-panel-nav">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.key}
               href={item.href}
               className={
-                "appnav-mobile-link" + (active === item.key ? " is-active" : "")
+                "appnav-panel-item" + (active === item.key ? " is-active" : "")
               }
-              onClick={() => setOpen(false)}
+              onClick={closeMenu}
             >
               {item.label}
             </Link>
@@ -137,14 +233,14 @@ export function AppNav({
           <Link
             href="/account"
             className={
-              "appnav-mobile-link" + (active === "account" ? " is-active" : "")
+              "appnav-panel-item" + (active === "account" ? " is-active" : "")
             }
-            onClick={() => setOpen(false)}
+            onClick={closeMenu}
           >
             Account
           </Link>
-        </nav>
-      </div>
+        </div>
+      </aside>
     </nav>
   );
 }

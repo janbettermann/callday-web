@@ -4117,44 +4117,135 @@ h2 .accent {
 .appnav-burger:hover {
   border-color: var(--ink-faint);
 }
-.appnav-mobile {
+/* === Mobile Slide-In-Panel (< 900px) ===
+   Overlay + Panel sind IMMER im DOM (kein conditional mount), damit die
+   CSS-Transform-Animation beim Oeffnen/Schliessen greift. Im geschlossenen
+   Zustand sitzt das Panel offscreen (translateX(100%)) und das Overlay ist
+   opacity:0 + pointer-events:none — kein visueller/interaktiver Impact.
+   `inert` (in AppNav.tsx) macht die Panel-Kinder zusaetzlich nicht
+   tabbable und nicht klickbar.
+
+   z-index: Overlay 90, Panel 100 — beide ueber der site-nav (z-index 50
+   im aktuellen Shell) damit das Panel den Header sauber ueberdeckt.
+   Auf Desktop (>= 900px) sind Overlay+Panel weggeblendet (display:none),
+   der Header traegt die Navigation wie bisher. */
+.appnav-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(8, 10, 20, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease-out;
   display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
+}
+.appnav-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.appnav-panel {
+  position: fixed;
+  top: 0;
   right: 0;
+  bottom: 0;
+  width: 90%;
+  max-width: 380px;
+  z-index: 100;
+  background: var(--bg-page);
+  padding: 20px 20px 24px;
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transform: translateX(100%);
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: -16px 0 40px rgba(8, 10, 20, 0.18);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.appnav-panel.is-open {
+  transform: translateX(0);
+}
+.appnav-panel-close {
+  align-self: flex-end;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: border-color 0.15s;
+}
+.appnav-panel-close:hover {
+  border-color: var(--ink-faint);
+}
+/* CTA matched Desktop-New-list-Button (schwarz, weiss), aber full-width
+   im Panel — die eine Aktion an dieser Stelle, klar abgesetzt von den
+   Nav-Items durch Farbe und Divider. */
+.appnav-panel-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  transition: background 0.15s;
+}
+.appnav-panel-cta:hover {
+  background: #000;
+}
+.appnav-panel-divider {
+  height: 0.5px;
+  background: var(--line);
+  margin: 14px 4px 8px;
+}
+.appnav-panel-nav {
+  display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 8px;
-  background: var(--bg-page);
-  border-bottom: 1px solid var(--line);
-  box-shadow: 0 16px 40px -16px rgba(8, 10, 20, 0.18);
 }
-.appnav-mobile.is-open {
-  display: flex;
-}
-.appnav-mobile-link {
-  padding: 12px 14px;
-  border-radius: 9px;
+.appnav-panel-item {
+  padding: 14px 16px;
+  border-radius: 10px;
   text-decoration: none;
   color: var(--ink);
   font-weight: 500;
   font-size: 15px;
+  letter-spacing: -0.15px;
+  transition: background 0.15s;
 }
-.appnav-mobile-link:hover {
+.appnav-panel-item:hover {
   background: rgba(26, 29, 38, 0.05);
 }
-.appnav-mobile-link.is-active {
-  background: var(--blue-tint);
-  color: var(--blue-deep);
+.appnav-panel-item.is-active {
+  background: rgba(26, 29, 38, 0.05);
   font-weight: 600;
 }
-@media (max-width: 900px) {
+@media (max-width: 899px) {
   .appnav-links {
     display: none;
   }
   .appnav-burger {
     display: grid;
+  }
+  /* New-list-Button rutscht auf Mobile ins Panel — im Header nur noch
+     Logo, Burger und Avatar. */
+  .appnav-new-btn {
+    display: none;
+  }
+  .appnav-overlay {
+    display: block;
   }
 }
 
