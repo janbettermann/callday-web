@@ -225,9 +225,9 @@ export function GeneratorClient() {
   return (
     <div className="lists-inner-account">
       <header className="lists-workhead">
-        <h1 className="lists-worktitle">Build a list from Google Maps</h1>
+        <h1 className="lists-worktitle">Generate a new list</h1>
         <p className="lists-worksub">
-          Tell us who you want to call — we handle the rest.
+          Scan Google for your ideal customers.
         </p>
       </header>
 

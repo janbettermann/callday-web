@@ -15,9 +15,8 @@ import { GeneratorClient } from "./GeneratorClient";
  */
 
 export const metadata: Metadata = {
-  title: "New lead list · Callday Lists",
-  description:
-    "Pick an industry and a city — we build a call-ready lead list.",
+  title: "Generate a new list · Callday Lists",
+  description: "Scan Google for your ideal customers.",
   robots: { index: false, follow: false },
 };
 
