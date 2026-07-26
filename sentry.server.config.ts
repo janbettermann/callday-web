@@ -8,6 +8,9 @@ import * as Sentry from "@sentry/nextjs";
  */
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  // Nur in Production senden — lokaler Dev-Lauf (NODE_ENV="development")
+  // bleibt stumm, damit transiente Edit-Fehler nicht in Sentry landen.
+  enabled: process.env.NODE_ENV === "production",
   environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
   tracesSampleRate: 0,
 });
