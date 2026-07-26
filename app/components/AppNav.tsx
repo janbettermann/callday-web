@@ -152,7 +152,7 @@ export function AppNav({
         <div className="appnav-right">
           <Link href="/lists/new" className="appnav-new-btn">
             <PlusIcon />
-            New list
+            Generate list
           </Link>
           <button
             ref={burgerRef}
@@ -214,7 +214,7 @@ export function AppNav({
           onClick={closeMenu}
         >
           <PlusIcon />
-          New list
+          Generate list
         </Link>
         <div className="appnav-panel-divider" role="presentation" />
         <div className="appnav-panel-nav">
