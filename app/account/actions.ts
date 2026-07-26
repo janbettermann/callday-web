@@ -1,9 +1,15 @@
 /**
- * Server Actions für /account — Stripe Customer Portal + Account Delete.
+ * Server Actions für /account — Account Delete + Sign-out.
  *
- * Beides Server Actions weil sie service-role-Operationen brauchen
- * (Customer Portal Session via Stripe SDK, Auth-Delete via Supabase
- * Admin) und der User explizit auf Buttons im Account-UI clickt.
+ * Server Actions weil sie service-role-Operationen brauchen (Auth-Delete
+ * via Supabase Admin) und der User explizit auf Buttons im Account-UI
+ * clickt.
+ *
+ * Historie: `createPortalSessionAction` (Stripe Customer Portal) wurde
+ * beim Account-Entruempeln 2026-07-24 entfernt — Subscriptions laufen
+ * ab Launch ausschliesslich ueber Apple-IAP in der App, das Web zeigt
+ * nur noch einen read-only Hinweis. Der Stripe-Cancel-Block im
+ * Account-Delete bleibt fuer Legacy-Stripe-Customer bestehen.
  */
 
 "use server";
@@ -12,51 +18,6 @@ import { redirect } from "next/navigation";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { getStripe } from "@/lib/stripe";
-
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://callday.io";
-
-/**
- * Erstellt eine Stripe-Customer-Portal-Session für den eingeloggten User
- * und redirected zur Portal-URL. Stripe handelt dann Plan-Switching,
- * Cancel, Pause, Payment-Method-Updates, Invoice-Download komplett selbst.
- *
- * Per `return_url` kommt der User nach Operations in unserem Portal
- * wieder auf /account.
- */
-export async function createPortalSessionAction() {
-  const supabase = await createSupabaseSSR();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login?next=/account");
-  }
-
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("stripe_customer_id")
-    .eq("id", user.id)
-    .single();
-
-  if (error || !profile?.stripe_customer_id) {
-    // User hat (noch) kein Stripe-Customer-Record. Sollte nicht passieren
-    // wenn der Button auf /account korrekt nur bei aktivem Sub gezeigt wird.
-    throw new Error("No active subscription found");
-  }
-
-  const stripe = getStripe();
-  const session = await stripe.billingPortal.sessions.create({
-    customer: profile.stripe_customer_id,
-    return_url: `${BASE_URL}/account`,
-  });
-
-  if (!session.url) {
-    throw new Error("Stripe didn't return a portal URL");
-  }
-
-  redirect(session.url);
-}
 
 /**
  * Löscht den User-Account komplett:

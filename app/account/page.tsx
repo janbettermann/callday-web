@@ -6,29 +6,20 @@ import { AppNav } from "../components/AppNav";
 import { AppShell } from "../components/AppShell";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { parseUserAgent } from "@/lib/user-agent";
-import {
-  createPortalSessionAction,
-  deleteAccountAction,
-  signOutAction,
-} from "./actions";
-import { ResendTestFlightButton } from "./ResendTestFlightButton";
-import { LeadListsSection } from "./LeadListsSection";
+import { deleteAccountAction, signOutAction } from "./actions";
 import { avatarInitial } from "@/lib/dashboard/data";
 
 export const metadata: Metadata = {
   title: "Your account · Callday",
-  description: "Manage your Callday subscription and account.",
+  description: "Manage your Callday account.",
   robots: { index: false, follow: false },
 };
 
 interface Profile {
   email: string | null;
   name: string | null;
-  stripe_customer_id: string | null;
   subscription_status: string | null;
   subscription_plan: "monthly" | "yearly" | null;
-  subscription_renews_at: string | null;
-  referred_by_affiliate_id: string | null;
 }
 
 /**
@@ -77,14 +68,20 @@ function linkedProviders(
 }
 
 /**
- * /account — Self-Service Hub für eingeloggte User.
+ * /account — schlanke Identitaets-Seite fuer eingeloggte User.
+ *
+ * Entruempelt 2026-07-24 (Jan-Decision): Lead-Lists-Karte (redundant zu
+ * /lists in der Nav), TestFlight-Onboarding-Karte und die Stripe-
+ * Subscription-Karte sind raus — Subscriptions laufen ab Launch
+ * ausschliesslich ueber Apple-IAP in der App, das Web zeigt nur noch
+ * einen read-only Hinweis.
  *
  * Sektionen:
- *   1. Install/Onboarding: "You're in" + TestFlight-2-Step + Resend.
- *      Immer sichtbar — deckt Erst-Signup UND Reinstall (neues Handy) ab.
- *   2. Subscription: Status + Plan + Renewal, "Manage subscription" Button
- *      (öffnet Stripe Customer Portal via Server Action).
- *   3. Account: Email, Sign-in-Methoden, "Delete account" mit Re-Type-Safeguard.
+ *   1. Get-the-app: Einzeiler-Karte — einziger In-Product-Zeiger auf die
+ *      App (das Dashboard hat keinen). Haelt den Funnel Web-Liste → App
+ *      intakt.
+ *   2. Account: Email, Sign-in-Methoden, Subscription-Row (read-only,
+ *      "managed in the app"), "Delete account" mit Re-Type-Safeguard.
  *
  * Auth-Gate: nicht-eingeloggte User werden zu /login?next=/account
  * geschickt. Per @supabase/ssr-Middleware werden Cookies vorher refreshed.
@@ -99,46 +96,40 @@ export default async function AccountPage() {
     redirect("/login?next=/account");
   }
 
-  const testflightLink = process.env.TESTFLIGHT_PUBLIC_LINK;
-  // TestFlight-App im App Store — fixe Apple-App-ID, global konstant.
-  const testflightAppStoreUrl =
-    "https://apps.apple.com/app/testflight/id899247664";
+  // Beta-Phase: der App-Link zeigt auf den TestFlight-Public-Link (die
+  // TestFlight-Landing erklaert Install + Join selbst). Beim App-Store-
+  // Launch wird NUR diese eine Konstante auf die App-Store-URL getauscht
+  // (https://apps.apple.com/app/id...) — Layout bleibt identisch.
+  const appLink = process.env.TESTFLIGHT_PUBLIC_LINK;
 
-  // Device-Kontext fuer den Welcome-State (Desktop -> "auf iPhone weitermachen").
+  // Device-Kontext: auf Desktop ergaenzt die Karte den "auf dem iPhone
+  // oeffnen"-Hinweis.
   const { isIOS } = parseUserAgent((await headers()).get("user-agent"));
 
   const { data: profileRow } = await supabase
     .from("profiles")
-    .select(
-      "email,name,stripe_customer_id,subscription_status,subscription_plan,subscription_renews_at,referred_by_affiliate_id",
-    )
+    .select("email,name,subscription_status,subscription_plan")
     .eq("id", user.id)
     .maybeSingle();
 
   const profile: Profile = profileRow ?? {
     email: user.email ?? null,
     name: null,
-    stripe_customer_id: null,
     subscription_status: null,
     subscription_plan: null,
-    subscription_renews_at: null,
-    referred_by_affiliate_id: null,
   };
 
+  // Read-only Subscription-Label. Die Spalten werden heute von Stripe-
+  // Legacy-Daten, ab App-Store-Launch vom RevenueCat-Webhook gefuellt
+  // (supabase/functions/revenuecat-webhook im App-Repo) — die Anzeige
+  // funktioniert fuer beide Quellen unveraendert.
+  // TODO beim App-Store-Launch: Fallback-Label "Beta access" → "Free".
   const hasActiveSubscription =
     profile.subscription_status === "active" ||
     profile.subscription_status === "trialing";
-
-  const isPaused = profile.subscription_status === "paused";
-  const isCanceled = profile.subscription_status === "canceled";
-
-  const renewsDate = profile.subscription_renews_at
-    ? new Date(profile.subscription_renews_at).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : null;
+  const subscriptionLabel = hasActiveSubscription
+    ? `Callday ${profile.subscription_plan === "yearly" ? "Yearly" : "Monthly"}`
+    : "Beta access";
 
   return (
     <AppShell>
@@ -155,184 +146,42 @@ export default async function AccountPage() {
         <div className="account-inner">
           <h1 className="account-headline">Account</h1>
 
-          {/* Lead-Listen: kompakter Zeiger auf die Listen-Welt (/lists +
-              /lists/new) — Promo/Status/Zeile je nach Zustand, siehe
-              LeadListsSection. Bewusst VOR der TestFlight-Card:
-              Schritt 1 Liste, Schritt 2 App. */}
-          <LeadListsSection userId={user.id} />
-
-          {/* Install-/Onboarding-Card — immer sichtbar: direkt nach dem Signup
-              UND wenn ein Rueckkehrer (neues Handy) die App neu laden muss. */}
-          {testflightLink && (
+          {/* Get-the-app — bewusst ein Einzeiler statt der frueheren
+              Onboarding-Karte: /account ist der einzige In-Product-Weg
+              zur App, mehr als ein Zeiger muss es aber nicht sein. */}
+          {appLink && (
             <section
               className="account-card"
               style={{
-                borderColor: "rgba(37,99,232,0.3)",
-                background:
-                  "linear-gradient(180deg, rgba(37,99,232,0.06) 0%, rgba(255,255,255,1) 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 16,
+                flexWrap: "wrap",
               }}
             >
-              <h2 className="account-card-title account-welcome-title">
-                You&apos;re in 🎉
-              </h2>
-              <p className="account-welcome-lede">
-                Your first calls are one install away.
-              </p>
-
-              <ol className="account-steps">
-                <li className="account-step">
-                  <span className="account-step-num">1</span>
-                  <span className="account-step-text">
-                    Install <strong>TestFlight</strong> — Apple&apos;s free
-                    beta app
-                  </span>
-                </li>
-                <li className="account-step">
-                  <span className="account-step-num">2</span>
-                  <span className="account-step-text">
-                    Unlock Callday inside TestFlight
-                  </span>
-                </li>
-                <li className="account-step">
-                  <span className="account-step-num">3</span>
-                  <span className="account-step-text">
-                    Sign in with{" "}
-                    {profile.email ? (
-                      <span className="account-step-email">
-                        {profile.email}
-                      </span>
-                    ) : (
-                      "the same email"
-                    )}{" "}
-                    and start calling
-                  </span>
-                </li>
-              </ol>
-
-              {!isIOS && (
-                <p className="account-hint account-welcome-device">
-                  TestFlight runs on iPhone — open this page (or the email we
-                  sent) on your iPhone to continue.
+              <div style={{ minWidth: 220, flex: 1 }}>
+                <h2
+                  className="account-card-title"
+                  style={{ marginBottom: 4 }}
+                >
+                  Callday for iPhone
+                </h2>
+                <p className="account-hint" style={{ margin: 0 }}>
+                  Your lists sync to the app — that&apos;s where the calling
+                  happens.
+                  {!isIOS && " Open this page on your iPhone to install."}
                 </p>
-              )}
-
-              <div className="account-welcome-actions">
-                <a
-                  href={testflightAppStoreUrl}
-                  className="account-btn account-btn-secondary"
-                >
-                  Install TestFlight
-                </a>
-                <a
-                  href={testflightLink}
-                  className="account-btn account-btn-primary"
-                >
-                  Unlock Callday
-                </a>
               </div>
-
-              <p className="account-hint">
-                We also send an invite email, but the buttons above are all you
-                need. No need to dig through your inbox.{" "}
-                {profile.email ? (
-                  <ResendTestFlightButton />
-                ) : (
-                  "Email missing on your profile — contact hello@callday.io."
-                )}
-              </p>
+              <a
+                href={appLink}
+                className="account-btn account-btn-primary"
+                style={{ width: "auto", whiteSpace: "nowrap", marginTop: 0 }}
+              >
+                Get the app
+              </a>
             </section>
           )}
-
-          {/* Subscription Section */}
-          <section className="account-card">
-            <h2 className="account-card-title">Subscription</h2>
-
-            {hasActiveSubscription && (
-              <>
-                <div className="account-status account-status-active">
-                  <span className="account-status-dot" />
-                  Active
-                </div>
-                <div className="account-row">
-                  <span className="account-row-label">Plan</span>
-                  <span className="account-row-value">
-                    Callday {profile.subscription_plan === "yearly"
-                      ? "Yearly"
-                      : "Monthly"}
-                  </span>
-                </div>
-                {renewsDate && (
-                  <div className="account-row">
-                    <span className="account-row-label">Renews</span>
-                    <span className="account-row-value">{renewsDate}</span>
-                  </div>
-                )}
-                <form action={createPortalSessionAction}>
-                  <button type="submit" className="account-btn account-btn-primary">
-                    Manage subscription
-                  </button>
-                </form>
-                <p className="account-hint">
-                  Update payment method, change plan, cancel or pause — all
-                  via Stripe.
-                </p>
-              </>
-            )}
-
-            {isPaused && (
-              <>
-                <div className="account-status account-status-paused">
-                  Paused
-                </div>
-                <p className="account-body">
-                  Your subscription is paused. You can resume anytime.
-                </p>
-                <form action={createPortalSessionAction}>
-                  <button type="submit" className="account-btn account-btn-primary">
-                    Resume subscription
-                  </button>
-                </form>
-              </>
-            )}
-
-            {isCanceled && (
-              <>
-                <div className="account-status account-status-canceled">
-                  Cancelled
-                </div>
-                <p className="account-body">
-                  Your subscription was cancelled
-                  {renewsDate && (
-                    <>
-                      {" "}
-                      and ends on <strong>{renewsDate}</strong>
-                    </>
-                  )}
-                  . You can resubscribe anytime.
-                </p>
-                {profile.stripe_customer_id && (
-                  <form action={createPortalSessionAction}>
-                    <button type="submit" className="account-btn account-btn-primary">
-                      Open billing portal
-                    </button>
-                  </form>
-                )}
-              </>
-            )}
-
-            {!hasActiveSubscription && !isPaused && !isCanceled && (
-              <>
-                <div className="account-status account-status-none">
-                  Beta access
-                </div>
-                <p className="account-body">
-                  You&apos;re in the closed beta. Pricing and subscriptions
-                  go live at public launch — we&apos;ll email you when
-                  it&apos;s time. Until then, enjoy unlimited use.
-                </p>
-              </>
-            )}
-          </section>
 
           {/* Account Section */}
           <section className="account-card">
@@ -351,6 +200,13 @@ export default async function AccountPage() {
                 })()}
               </span>
             </div>
+            <div className="account-row">
+              <span className="account-row-label">Subscription</span>
+              <span className="account-row-value">{subscriptionLabel}</span>
+            </div>
+            <p className="account-hint">
+              Your subscription is managed in the Callday app on your iPhone.
+            </p>
 
             <details className="account-details">
               <summary className="account-details-summary">
