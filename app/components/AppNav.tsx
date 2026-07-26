@@ -94,15 +94,6 @@ export function AppNav({
             <PlusIcon />
             New list
           </Link>
-          <Link
-            href="/account"
-            aria-label="Manage account"
-            className={
-              "appnav-account" + (active === "account" ? " is-active" : "")
-            }
-          >
-            <span className="appnav-avatar">{initial}</span>
-          </Link>
           <button
             type="button"
             className="appnav-burger"
@@ -113,6 +104,18 @@ export function AppNav({
           >
             {open ? <CloseIcon /> : <MenuIcon />}
           </button>
+          {/* Avatar ganz rechts — auch rechts vom Burger (Jan 2026-07-24):
+              Identitaet sitzt am aeusseren Rand, die blaue Pille markiert
+              sie als das eine Marken-Element im Header. */}
+          <Link
+            href="/account"
+            aria-label="Manage account"
+            className={
+              "appnav-account" + (active === "account" ? " is-active" : "")
+            }
+          >
+            <span className="appnav-avatar">{initial}</span>
+          </Link>
         </div>
 
         <nav
