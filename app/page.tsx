@@ -55,7 +55,7 @@ export default async function Home() {
 
             <p className="hero-sub reveal delay-2">
               Cold callers don&apos;t lose to bad scripts. They lose to
-              procrastination. Callday keeps you on the phone, one tap at a
+              procrastination. Callday keeps you on the phone, one call at a
               time.
             </p>
 
