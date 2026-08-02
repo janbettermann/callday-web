@@ -23,7 +23,7 @@ import {
   type PayoutSummary,
 } from "@/lib/affiliate-payout";
 import { AffiliateNav } from "../AffiliateNav";
-import { AffiliateFooter } from "../AffiliateFooter";
+import { SiteFooter } from "../../components/SiteFooter";
 import { affiliateMainStyle } from "../layout-styles";
 import { MethodMark } from "../MethodMark";
 import { EarningsFeed } from "./EarningsFeed";
@@ -312,7 +312,7 @@ export default async function AffiliatePayoutsPage({
         ) : null}
       </main>
 
-      <AffiliateFooter />
+      <SiteFooter />
     </div>
   );
 }

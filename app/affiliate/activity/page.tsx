@@ -11,7 +11,7 @@ import {
   computeDailySeries,
 } from "@/lib/affiliate-activity";
 import { AffiliateNav } from "../AffiliateNav";
-import { AffiliateFooter } from "../AffiliateFooter";
+import { SiteFooter } from "../../components/SiteFooter";
 import { ActivityFeed } from "../ActivityFeed";
 import { ActivityTrendChart } from "../ActivityTrendChart";
 import { affiliateMainStyle } from "../layout-styles";
@@ -108,7 +108,7 @@ export default async function AffiliateActivityPage() {
         </section>
       </main>
 
-      <AffiliateFooter />
+      <SiteFooter />
     </div>
   );
 }

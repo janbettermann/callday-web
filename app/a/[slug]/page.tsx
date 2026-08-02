@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { BoxIcon } from "../../components/BoxIcon";
 import { BrainIcon } from "../../components/BrainIcon";
-import { CalldayLogo } from "../../components/CalldayLogo";
 import { FaqAccordion } from "../../components/FaqAccordion";
 import { FlowTabs } from "../../components/FlowTabs";
 import { GeneratorFeatureCard } from "../../components/GeneratorFeatureCard";
@@ -12,6 +10,7 @@ import { getServerSupabase } from "@/lib/supabase-server";
 import { trackPageView } from "@/lib/affiliate-page-views";
 import { BetaCta } from "../../components/BetaCta";
 import { HeroCta } from "../../components/HeroCta";
+import { SiteFooter } from "../../components/SiteFooter";
 
 /**
  * /a/[slug] — Founding-Affiliate-Landing.
@@ -285,21 +284,7 @@ export default async function AffiliateLanding({
       </section>
 
       {/* === FOOTER === */}
-      <footer className="site-footer">
-        <div className="container footer-inner">
-          <div className="logo">
-            <CalldayLogo size={28} />
-            Callday
-          </div>
-          <div className="footer-tagline">MAKE TODAY A CALLDAY.</div>
-          <div className="footer-meta">
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
-            <Link href="/terms#imprint">Imprint</Link>
-            <a href="mailto:hello@callday.io">hello@callday.io</a>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
 
       {/* Sign-up-Modal (Hero-/Nav-„Get started" oeffnen es); portalt nach
           document.body. `slug` reist mit fuer die Affiliate-Attribution —

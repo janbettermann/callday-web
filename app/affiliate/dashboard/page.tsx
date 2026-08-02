@@ -15,7 +15,7 @@ import {
   type PostRow,
 } from "@/lib/affiliate-activity";
 import { AffiliateNav } from "../AffiliateNav";
-import { AffiliateFooter } from "../AffiliateFooter";
+import { SiteFooter } from "../../components/SiteFooter";
 import { affiliateMainStyle } from "../layout-styles";
 import { ActivityList } from "../ActivityList";
 import { PostList } from "../PostList";
@@ -284,7 +284,7 @@ export default async function AffiliateDashboardPage() {
         </p>
       </main>
 
-      <AffiliateFooter />
+      <SiteFooter />
     </div>
   );
 }

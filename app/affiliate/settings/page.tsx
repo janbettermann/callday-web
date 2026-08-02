@@ -11,7 +11,7 @@ import { getServerSupabase } from "@/lib/supabase-server";
 import { PAYOUT_COLUMNS, mapPayout, type RawPayout } from "@/lib/affiliate-payout";
 
 import { AffiliateNav } from "../AffiliateNav";
-import { AffiliateFooter } from "../AffiliateFooter";
+import { SiteFooter } from "../../components/SiteFooter";
 import { affiliateMainStyle } from "../layout-styles";
 import { PayoutSettings } from "./PayoutSettings";
 
@@ -149,7 +149,7 @@ export default async function AffiliateSettingsPage() {
         </section>
       </main>
 
-      <AffiliateFooter />
+      <SiteFooter />
     </div>
   );
 }

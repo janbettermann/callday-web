@@ -11,6 +11,7 @@ import { HeroCta } from "./components/HeroCta";
 import { PhoneMockup } from "./components/PhoneMockup";
 import { SignupModal } from "./components/SignupModal";
 import { SiteNav } from "./components/SiteNav";
+import { SiteFooter } from "./components/SiteFooter";
 
 export default async function Home() {
   // Eingeloggte gehoeren in die Web-App, nicht auf den Pitch: die Homepage
@@ -253,17 +254,7 @@ export default async function Home() {
       </section>
 
       {/* === FOOTER === */}
-      <footer className="site-footer site-footer-brand">
-        <div className="container footer-brand-row">
-          <p className="footer-tagline-big">Make today a Callday.</p>
-          <div className="footer-meta">
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
-            <Link href="/terms#imprint">Imprint</Link>
-            <a href="mailto:hello@callday.io">hello@callday.io</a>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
 
       {/* Sign-up-Modal (Hero-/Nav-„Get started" oeffnen es); portalt nach
           document.body, Position im Baum egal. Ohne slug auf der organischen

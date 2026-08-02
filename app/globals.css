@@ -2398,21 +2398,51 @@ h2 .accent {
 }
 
 /* === FOOTER === */
-/* Symmetrisches Padding (war 56/40 — der Sprung wirkte schief). */
+/* Statement-Footer (Redesign 2026-08-02, einziger Footer site-weit via
+   components/SiteFooter.tsx): grosses Marken-Statement als Abschluss der
+   Seite, darunter eine ruhige Servicezeile (Logo + Copyright links,
+   Links rechts) hinter einem Trenner. Der Punkt im Statement ist sun-
+   gelb und zitiert das Sonnen-Motiv aus dem Logo. */
 .site-footer {
-  padding: 44px 0;
+  padding: 60px 0 40px;
   border-top: 0.5px solid var(--line);
 }
-.footer-inner {
+.footer-statement {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: clamp(30px, 4.2vw, 46px);
+  font-weight: 700;
+  letter-spacing: -1.4px;
+  line-height: 1.15;
+  color: var(--ink);
+  margin: 0 0 40px;
+}
+.footer-statement-dot {
+  color: var(--sun);
+}
+.footer-service-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 14px 24px;
+  padding-top: 24px;
+  border-top: 0.5px solid var(--line);
+}
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.footer-copy {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--ink-faint);
+  letter-spacing: 1.5px;
 }
 .footer-meta {
   display: flex;
   gap: 28px;
+  flex-wrap: wrap;
   font-size: 13px;
   color: var(--ink-faint);
 }
@@ -2423,35 +2453,6 @@ h2 .accent {
 }
 .footer-meta a:hover {
   color: var(--ink);
-}
-.footer-tagline {
-  font-family: var(--font-mono), monospace;
-  font-size: 11px;
-  color: var(--ink-faint);
-  letter-spacing: 1.5px;
-}
-/* Landing- + Account-Footer (Variante C, ueberarbeitet 2026-07-15): nur das
-   Marken-Statement links, Legal-Links rechtsbuendig auf gleicher Hoehe.
-   Kein Trenner, kein Logo, deutlich mehr Padding unten als oben. */
-.site-footer-brand {
-  padding-top: 36px;
-  padding-bottom: 84px;
-}
-.footer-tagline-big {
-  font-family: var(--font-geist-sans), sans-serif;
-  font-size: clamp(19px, 2.6vw, 22px);
-  font-weight: 600;
-  letter-spacing: -0.4px;
-  line-height: 1.2;
-  color: var(--ink);
-  margin: 0;
-}
-.footer-brand-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 14px 24px;
 }
 
 /* === LEGAL PAGE LAYOUT === */

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CalldayLogo } from "../components/CalldayLogo";
 import { ConfirmCard } from "./ConfirmCard";
+import { SiteFooter } from "../components/SiteFooter";
 
 /**
  * /confirm — Code-Bestaetigung nach Email/PW-Sign-Up (Landing + /a/[slug]).
@@ -46,21 +47,7 @@ export default function ConfirmPage() {
         <ConfirmCard />
       </main>
 
-      <footer className="site-footer">
-        <div className="container footer-inner">
-          <div className="logo">
-            <CalldayLogo size={28} />
-            Callday
-          </div>
-          <div className="footer-tagline">MAKE TODAY A CALLDAY.</div>
-          <div className="footer-meta">
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
-            <Link href="/terms#imprint">Imprint</Link>
-            <a href="mailto:hello@callday.io">hello@callday.io</a>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   );
 }

@@ -7,7 +7,7 @@ import {
   verifyAffiliateSession,
 } from "@/lib/affiliate-auth";
 import { AffiliateNav } from "../AffiliateNav";
-import { AffiliateFooter } from "../AffiliateFooter";
+import { SiteFooter } from "../../components/SiteFooter";
 import { affiliateMainStyle } from "../layout-styles";
 
 /**
@@ -96,7 +96,7 @@ export default async function AffiliateAgreementPage() {
         </section>
       </main>
 
-      <AffiliateFooter />
+      <SiteFooter />
     </div>
   );
 }

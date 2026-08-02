@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CalldayLogo } from "../components/CalldayLogo";
+import { SiteFooter } from "../components/SiteFooter";
 
 /**
  * Shared frame for /privacy and /terms. The legal pages live under the
@@ -31,17 +32,7 @@ export default function LegalLayout({
 
       <main className="legal-page">{children}</main>
 
-      <footer className="site-footer">
-        <div className="container footer-inner">
-          <div className="footer-tagline">MAKE TODAY A CALLDAY.</div>
-          <div className="footer-meta">
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
-            <Link href="/terms/de#imprint">Imprint</Link>
-            <a href="mailto:hello@callday.io">hello@callday.io</a>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   );
 }
