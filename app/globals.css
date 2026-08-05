@@ -3793,12 +3793,20 @@ h2 .accent {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 19px;
-  height: 19px;
+  /* 17px = exakt der Chip-X (.lists-loc-chip-x): beim Fokus-Swap
+     Check→X kein Groessensprung, gleiche Stelle. */
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
   background: rgba(37, 99, 232, 0.12);
   color: var(--blue-deep);
   flex: 0 0 auto;
+}
+/* X-Clear im Industry-Snapfield: liegt als Flex-Item am rechten Rand
+   (kein absolutes Positioning wie im Country-Feld). 2px = die
+   padding-right der Snap-Meta, damit Check und X exakt gleich sitzen. */
+.lists-snap-clear {
+  margin-right: 2px;
 }
 .lists-suggest-dropdown {
   position: absolute;

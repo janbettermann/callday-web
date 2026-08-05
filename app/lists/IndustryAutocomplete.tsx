@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   resolveCanonicalCategory,
   searchCategories,
 } from "@/lib/lists/gmb-categories";
 import {
   CheckBadge,
+  ClearX,
   SuggestDropdown,
   handleSuggestKeys,
   type SuggestOption,
@@ -50,6 +51,8 @@ export function IndustryAutocomplete({
   const [options, setOptions] = useState<SuggestOption[]>([]);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   // Erkannt = Feldtext loest zu einer Kanonik auf — englischer Name
   // ODER Alias ("Zahnarzt" bleibt sichtbar stehen, die Query laeuft
   // auf "Dentist"; Aufloesung macht der Submit im Parent).
@@ -60,6 +63,10 @@ export function IndustryAutocomplete({
   const showCanonical =
     canonical !== null &&
     canonical.toLowerCase() !== value.trim().toLowerCase();
+  // Rechts-Icon beim Bearbeiten (Fokus + Text): X-Clear ersetzt das
+  // Check-Badge — dasselbe Muster wie im Country-Feld. Gilt auch fuer
+  // Freitext (das Feld hatte sonst keinen Clear).
+  const showClear = focused && value.trim().length > 0 && !disabled;
 
   function showMatches(query: string) {
     // CategorySuggestion ist strukturell eine SuggestOption — Alias-
@@ -82,6 +89,14 @@ export function IndustryAutocomplete({
     onChange(option.label);
     setOpen(false);
     setOptions([]);
+  }
+
+  // X-Clear: Feld leeren, Fokus halten (wie Country) — direkt neu tippbar.
+  function handleClear() {
+    onChange("");
+    setOptions([]);
+    setOpen(false);
+    inputRef.current?.focus();
   }
 
   // KEIN umschliessendes <label> — Begruendung siehe CountryAutocomplete
@@ -108,11 +123,13 @@ export function IndustryAutocomplete({
           }
         >
           <input
+            ref={inputRef}
             id="lists-industry-input"
             type="text"
             value={value}
             onChange={(e) => handleText(e.target.value)}
             onFocus={() => {
+              setFocused(true);
               // Erkannte Kategorie nicht direkt wieder ueberpinseln —
               // Vorschlaege erst, wenn der Text sich aendert.
               if (!recognized) showMatches(value);
@@ -127,7 +144,10 @@ export function IndustryAutocomplete({
                 onClose: () => setOpen(false),
               })
             }
-            onBlur={() => setOpen(false)}
+            onBlur={() => {
+              setFocused(false);
+              setOpen(false);
+            }}
             placeholder="Dentist"
             maxLength={60}
             autoComplete="off"
@@ -137,14 +157,27 @@ export function IndustryAutocomplete({
             aria-expanded={open}
             aria-autocomplete="list"
           />
-          {recognized && (
+          {/* Rechts: beim Bearbeiten der X-Clear (ersetzt das Badge,
+              preventDefault haelt den Fokus), sonst das Check-Badge +
+              Kanonik bei erkannter Kategorie. */}
+          {showClear ? (
+            <button
+              type="button"
+              className="lists-loc-chip-x lists-snap-clear"
+              aria-label="Clear industry"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleClear}
+            >
+              <ClearX />
+            </button>
+          ) : recognized ? (
             <span className="lists-snap-meta" aria-hidden="true">
               <CheckBadge />
               {showCanonical && (
                 <span className="lists-snap-canonical">{canonical}</span>
               )}
             </span>
-          )}
+          ) : null}
         </div>
         {open && (
           <SuggestDropdown
