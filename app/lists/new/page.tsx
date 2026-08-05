@@ -33,11 +33,18 @@ export default async function NewListPage({
   if (!user) {
     const params = await searchParams;
     const website = typeof params.website === "string" ? params.website : null;
+    // ?embed=1 kommt aus der iOS-App (In-App-Browser) und schaltet /login
+    // auf die chromelose Variante. Muss den Login-Umweg ueberleben, sonst
+    // sieht der User kurz die volle Website-Login statt des nahtlosen
+    // App-Looks.
+    const embed = params.embed === "1";
     const next =
       website === "without" || website === "with"
         ? `/lists/new?website=${website}`
         : "/lists/new";
-    redirect(`/login?next=${encodeURIComponent(next)}`);
+    redirect(
+      `/login?next=${encodeURIComponent(next)}${embed ? "&embed=1" : ""}`,
+    );
   }
 
   return (

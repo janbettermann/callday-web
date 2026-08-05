@@ -1038,6 +1038,63 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
   color: var(--ink-dim);
 }
 
+/* === EMBED-LOGIN (In-App-Browser: /lists/new?embed=1) ===
+   Chromelose Variante C fuer den "Generate a new list"-Einstieg aus der
+   iOS-App. site-nav / Footer / bg-orbs entfernt schon LoginPageInner; hier
+   floatet die Card randlos auf dem App-Creme-Grund, mit App-Icon + warmem
+   Sonnen-Glow, damit sich der Uebergang aus der App nahtlos anfuehlt. */
+.login-embed {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  background-color: var(--bg);
+}
+.login-card--embed {
+  /* Padding erbt bewusst von der responsiven .login-card-Basis (mobile
+     28/20/24) — der In-App-Browser ist immer Phone-Breite. Hier nur Rahmen +
+     Schatten weg, damit die Card randlos auf dem Creme-Grund floatet. */
+  max-width: 400px;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+.login-embed-brand {
+  /* z-index:0 macht einen eigenen Stacking-Context auf, damit der Glow
+     (z-index:-1) garantiert HINTER dem Logo sitzt und nicht hinter dem
+     Creme-Grund verschwindet. */
+  position: relative;
+  z-index: 0;
+  display: flex;
+  justify-content: center;
+  margin: 12px 0 16px;
+}
+.login-embed-glow {
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 168px;
+  height: 118px;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(251, 191, 36, 0.22),
+    rgba(251, 191, 36, 0) 68%
+  );
+}
+.login-embed-sub {
+  margin-bottom: 26px;
+}
+.login-embed-email-link {
+  display: block;
+  margin: 18px auto 4px;
+}
+
 .login-hint {
   text-align: center;
   font-size: 13px;

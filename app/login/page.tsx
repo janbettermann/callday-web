@@ -101,7 +101,7 @@ function isEmailNotConfirmed(error: { message?: string; code?: string }): boolea
   return m.includes("email not confirmed") || m.includes("not confirmed");
 }
 
-function LoginForm() {
+function LoginForm({ embed = false }: { embed?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   // Ohne explizites next landet der eingeloggte User auf dem Dashboard
@@ -121,6 +121,11 @@ function LoginForm() {
     initialError ? decodeURIComponent(initialError) : null,
   );
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  // Im Embed-Modus (In-App-Browser) sind Email/Passwort initial versteckt
+  // und werden erst per "Sign in with email"-Link eingeblendet (Variante C:
+  // OAuth zuerst, Mail per Progressive Disclosure). Auf der Website
+  // (embed=false) sofort sichtbar wie bisher.
+  const [emailRevealed, setEmailRevealed] = useState(!embed);
 
   function resetMessages() {
     setErrorMessage(null);
@@ -397,9 +402,23 @@ function LoginForm() {
 
   // === Render: signin ===
   return (
-    <div className="login-card">
-      <h1 className="login-headline">Sign in to Callday</h1>
-      <p className="login-sub">Welcome back. Pick a method to continue.</p>
+    <div className={`login-card${embed ? " login-card--embed" : ""}`}>
+      {embed ? (
+        <>
+          <div className="login-embed-brand">
+            <span className="login-embed-glow" aria-hidden />
+            <CalldayLogo size={52} />
+          </div>
+          <p className="login-sub login-embed-sub">
+            Sign in to generate your list
+          </p>
+        </>
+      ) : (
+        <>
+          <h1 className="login-headline">Sign in to Callday</h1>
+          <p className="login-sub">Welcome back. Pick a method to continue.</p>
+        </>
+      )}
 
       <div className="login-oauth-stack">
         <button
@@ -422,87 +441,105 @@ function LoginForm() {
         </button>
       </div>
 
-      <div className="login-divider">
-        <span>or</span>
-      </div>
+      {/* Email/Passwort im Embed-Modus (In-App-Browser) hinter einem Link
+          versteckt — Variante C. Auf der Website ist emailRevealed initial
+          true, das Verhalten bleibt also unveraendert. */}
+      {emailRevealed ? (
+        <>
+          <div className="login-divider">
+            <span>or</span>
+          </div>
 
-      <form className="beta-form" onSubmit={handlePasswordSubmit}>
-        <label className="beta-field">
-          <span className="beta-field-label">Email</span>
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
-            disabled={status === "submitting"}
-          />
-        </label>
+          <form className="beta-form" onSubmit={handlePasswordSubmit}>
+            <label className="beta-field">
+              <span className="beta-field-label">Email</span>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                disabled={status === "submitting"}
+              />
+            </label>
 
-        <label className="beta-field">
-          <span className="beta-field-label">Password</span>
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Your password"
-            disabled={status === "submitting"}
-          />
-        </label>
+            <label className="beta-field">
+              <span className="beta-field-label">Password</span>
+              <input
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Your password"
+                disabled={status === "submitting"}
+              />
+            </label>
 
-        <button
-          type="submit"
-          className="beta-submit"
-          aria-busy={status === "submitting"}
-          disabled={!email || !password || status === "submitting"}
-        >
-          {status === "submitting" ? "Signing in..." : "Sign in"}
-        </button>
+            <button
+              type="submit"
+              className="beta-submit"
+              aria-busy={status === "submitting"}
+              disabled={!email || !password || status === "submitting"}
+            >
+              {status === "submitting" ? "Signing in..." : "Sign in"}
+            </button>
 
-        {errorMessage && (
-          <>
-            <p className="beta-submit-error" role="alert">
-              {errorMessage}
-            </p>
-            {isLikelyProviderConflict(errorMessage) && (
-              <p className="login-hint">
-                Already signed up with Apple or Google? Try the buttons
-                above — accounts are tied to the method you first used.
-              </p>
+            {errorMessage && (
+              <>
+                <p className="beta-submit-error" role="alert">
+                  {errorMessage}
+                </p>
+                {isLikelyProviderConflict(errorMessage) && (
+                  <p className="login-hint">
+                    Already signed up with Apple or Google? Try the buttons
+                    above — accounts are tied to the method you first used.
+                  </p>
+                )}
+              </>
             )}
-          </>
-        )}
-      </form>
+          </form>
 
-      <div className="login-link-row">
+          <div className="login-link-row">
+            <button
+              type="button"
+              className="login-text-link"
+              onClick={() => {
+                switchMode("otp-email");
+                setInfoMessage(
+                  "Sign in with a one-time code, then change your password in your account.",
+                );
+              }}
+            >
+              Forgot password?
+            </button>
+          </div>
+        </>
+      ) : (
         <button
           type="button"
-          className="login-text-link"
-          onClick={() => {
-            switchMode("otp-email");
-            setInfoMessage(
-              "Sign in with a one-time code, then change your password in your account.",
-            );
-          }}
+          className="login-text-link login-embed-email-link"
+          onClick={() => setEmailRevealed(true)}
         >
-          Forgot password?
+          Sign in with email
         </button>
-      </div>
+      )}
 
       {/* Sign-up lebt auf der Landing (#signup) — nur dort haengt die
-          TestFlight-Mail-Logik dran, siehe Doc-Comment oben. */}
-      <div className="login-switch-mode">
-        New to Callday?{" "}
-        <Link
-          href="/#signup"
-          className="login-text-link login-text-link-strong"
-        >
-          Sign up
-        </Link>
-      </div>
+          TestFlight-Mail-Logik dran, siehe Doc-Comment oben. Im Embed-Modus
+          (User hat bereits einen Account) ausgeblendet. */}
+      {!embed && (
+        <div className="login-switch-mode">
+          New to Callday?{" "}
+          <Link
+            href="/#signup"
+            className="login-text-link login-text-link-strong"
+          >
+            Sign up
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
@@ -551,6 +588,36 @@ function GoogleIcon() {
 
 export default function LoginPage() {
   return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
+  );
+}
+
+/**
+ * Innerer Teil, der die Query-Params liest — useSearchParams braucht eine
+ * Suspense-Grenze, die liefert LoginPage.
+ *
+ * ?embed=1 schaltet auf die chromelose In-App-Browser-Variante (Variante C):
+ * keine site-nav, kein Footer, keine bg-orbs — nur das App-Icon mit warmem
+ * Glow, damit sich der Login aus der iOS-App wie ein nahtloser Teil der App
+ * anfuehlt. Gesetzt wird ?embed=1 nur von der App beim Oeffnen von
+ * callday.io/lists/new (und ueberlebt den /lists/new → /login-Redirect);
+ * regulaere Web-Besucher auf /login sehen die volle Seite unveraendert.
+ */
+function LoginPageInner() {
+  const searchParams = useSearchParams();
+  const embed = searchParams.get("embed") === "1";
+
+  if (embed) {
+    return (
+      <main className="login-embed">
+        <LoginForm embed />
+      </main>
+    );
+  }
+
+  return (
     <>
       <div className="bg-orb bg-orb-1" />
       <div className="bg-orb bg-orb-2" />
@@ -566,9 +633,7 @@ export default function LoginPage() {
       </nav>
 
       <main className="confirm-page">
-        <Suspense fallback={null}>
-          <LoginForm />
-        </Suspense>
+        <LoginForm />
       </main>
 
       <SiteFooter />
