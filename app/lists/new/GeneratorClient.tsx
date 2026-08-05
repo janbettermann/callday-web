@@ -447,8 +447,9 @@ export function GeneratorClient() {
             </p>
             {websiteFilter === "without" && (
               <p className="lists-field-hint">
-                No emails on these — businesses without a website have
-                nothing to scrape. Every lead still has a phone number.
+                No emails on these — we pull emails from a business&apos;s
+                website, and these don&apos;t have one. Every lead still has
+                a phone number.
               </p>
             )}
           </div>
