@@ -7,6 +7,7 @@ import {
   type CountryOption,
 } from "@/lib/lists/countries";
 import {
+  ClearX,
   SuggestDropdown,
   handleSuggestKeys,
   type SuggestOption,
@@ -186,7 +187,7 @@ export function CountryAutocomplete({
             onMouseDown={(e) => e.preventDefault()}
             onClick={handleClear}
           >
-            ×
+            <ClearX />
           </button>
         ) : (
           // Dropdown-Chevron: reine Affordance (pointer-events none) —

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_LOCATIONS } from "@/lib/lists/fanout";
 import { searchRegions } from "@/lib/lists/geo-regions";
 import {
+  ClearX,
   SuggestDropdown,
   handleSuggestKeys,
   type SuggestOption,
@@ -182,7 +183,7 @@ export function LocationsField({
                 onClick={() => removeChip(chip)}
                 disabled={disabled}
               >
-                ×
+                <ClearX />
               </button>
             </span>
           ))}

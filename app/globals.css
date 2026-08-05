@@ -3660,35 +3660,38 @@ h2 .accent {
   background: rgba(74, 122, 247, 0.05);
   border-radius: 999px;
   padding: 5px 7px 5px 12px;
-  font-size: 13px;
+  /* Name im exakten Dropdown-Options-Look: gleiche Font/Gewicht/Farbe,
+     jetzt auch gleiche 14px (war 13px) — siehe .lists-suggest-option. */
+  font-size: 14px;
   font-weight: 500;
   color: var(--ink);
 }
+/* "State"-Tag im Dropdown-Sublabel-Look (Jan 2026-08-05): heller Grau,
+   normale Schreibweise — kein blauer Uppercase-Badge mehr. Spiegelt
+   .lists-suggest-option-sub (--ink-faint, 12px). */
 .lists-loc-chip-tag {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  color: var(--blue-deep);
+  font-size: 12px;
+  color: var(--ink-faint);
 }
+/* Clear-X im App-Look (Jan-Wahl V1, 2026-08-05): solider grauer Kreis
+   + weisses SVG-× (crisp), 1:1 wie der iOS-Clear-Button der App —
+   geteilt von Location-Chips + Country-Feld-Clear. */
 .lists-loc-chip-x {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   border: 0;
   border-radius: 50%;
-  background: rgba(26, 29, 38, 0.06);
-  color: var(--ink-dim);
-  font-size: 12px;
-  line-height: 1;
+  background: #c2c2ca;
+  color: #ffffff;
   cursor: pointer;
   padding: 0;
+  transition: background 0.12s;
 }
 .lists-loc-chip-x:hover:not(:disabled) {
-  background: rgba(26, 29, 38, 0.12);
-  color: var(--ink);
+  background: #adadb6;
 }
 /* Eigener "Filters"-Abschnitt mit Titel ueber dem Website-Dropdown. */
 .lists-filters-section {
