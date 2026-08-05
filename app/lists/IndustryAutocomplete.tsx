@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import {
-  isKnownCategory,
+  resolveCanonicalCategory,
   searchCategories,
 } from "@/lib/lists/gmb-categories";
 import {
+  CheckBadge,
   SuggestDropdown,
   handleSuggestKeys,
   type SuggestOption,
@@ -20,10 +21,13 @@ import {
  * Parent es korrekt setzen.
  *
  * Seit Generator-v3 (§14b) matcht die Suche auch deutsche Aliase:
- * "Zahnarzt" erscheint mit der Kanonik als Sublabel ("Dentist"), der
- * Klick setzt IMMER die englische Kategorie ins Feld — sie funktioniert
- * in jedem Markt (§6b). Wer den deutschen Freitext stehen laesst, kann
- * das weiterhin — dann ohne Haekchen.
+ * "Zahnarzt" erscheint mit der Kanonik als Sublabel ("Dentist"). Der
+ * Klick laesst den DEUTSCHEN Text im Feld stehen (Anzeige-Sprache,
+ * Jan-Entscheidung 2026-08-05) — die englische Kanonik ist jederzeit
+ * pur aus dem Text ableitbar (resolveCanonicalCategory) und wird erst
+ * beim Submit als Query-Begriff aufgeloest; sie funktioniert in jedem
+ * Markt (§6b). Unbekannter Freitext bleibt gueltig — dann ohne
+ * Haekchen, Query woertlich.
  */
 
 interface Props {
@@ -46,7 +50,16 @@ export function IndustryAutocomplete({
   const [options, setOptions] = useState<SuggestOption[]>([]);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const recognized = isKnownCategory(value);
+  // Erkannt = Feldtext loest zu einer Kanonik auf — englischer Name
+  // ODER Alias ("Zahnarzt" bleibt sichtbar stehen, die Query laeuft
+  // auf "Dentist"; Aufloesung macht der Submit im Parent).
+  const canonical = resolveCanonicalCategory(value);
+  const recognized = canonical !== null;
+  // Kanonik nur anzeigen, wenn sie sich vom Feldtext unterscheidet —
+  // "Dentist ✓ Dentist" waere Rauschen.
+  const showCanonical =
+    canonical !== null &&
+    canonical.toLowerCase() !== value.trim().toLowerCase();
 
   function showMatches(query: string) {
     // CategorySuggestion ist strukturell eine SuggestOption — Alias-
@@ -63,7 +76,10 @@ export function IndustryAutocomplete({
   }
 
   function handlePick(option: SuggestOption) {
-    onChange(option.value);
+    // Anzeige-Sprache: der geklickte LABEL-Text bleibt im Feld stehen
+    // ("Zahnarzt"), nicht die Kanonik — die ist ueber
+    // resolveCanonicalCategory jederzeit aus dem Text ableitbar.
+    onChange(option.label);
     setOpen(false);
     setOptions([]);
   }
@@ -77,42 +93,59 @@ export function IndustryAutocomplete({
         Industry
       </label>
       <div className="lists-suggest-wrap">
-        <input
-          id="lists-industry-input"
-          type="text"
-          value={value}
-          onChange={(e) => handleText(e.target.value)}
-          onFocus={() => {
-            // Erkannte Kategorie nicht direkt wieder ueberpinseln —
-            // Vorschlaege erst, wenn der Text sich aendert.
-            if (!recognized) showMatches(value);
-          }}
-          onKeyDown={(e) =>
-            handleSuggestKeys(e, {
-              open,
-              options,
-              activeIndex,
-              setActiveIndex,
-              onPick: handlePick,
-              onClose: () => setOpen(false),
-            })
+        {/* Einrast-Zustand (Design-Variante B, Jan-Entscheidung
+            2026-08-05): bei erkannter Kategorie kippt das FELD in den
+            gerasteten Look (Brand-Toenung, Text semibold, rechts
+            ✓ + Kanonik). Flex-Box statt absolutem Haekchen, damit
+            lange Kanonik-Namen nie mit dem Text kollidieren.
+            Weitertippen loest den Zustand — reine Wert-Ableitung,
+            kein eigener State. */}
+        <div
+          className={
+            "lists-snapfield" +
+            (recognized ? " is-snapped" : "") +
+            (disabled ? " is-disabled" : "")
           }
-          onBlur={() => setOpen(false)}
-          placeholder="Dentist"
-          maxLength={60}
-          autoComplete="off"
-          spellCheck={false}
-          disabled={disabled}
-          role="combobox"
-          aria-expanded={open}
-          aria-autocomplete="list"
-          style={recognized ? { paddingRight: 44 } : undefined}
-        />
-        {recognized && (
-          <span className="lists-suggest-check" aria-hidden="true">
-            ✓
-          </span>
-        )}
+        >
+          <input
+            id="lists-industry-input"
+            type="text"
+            value={value}
+            onChange={(e) => handleText(e.target.value)}
+            onFocus={() => {
+              // Erkannte Kategorie nicht direkt wieder ueberpinseln —
+              // Vorschlaege erst, wenn der Text sich aendert.
+              if (!recognized) showMatches(value);
+            }}
+            onKeyDown={(e) =>
+              handleSuggestKeys(e, {
+                open,
+                options,
+                activeIndex,
+                setActiveIndex,
+                onPick: handlePick,
+                onClose: () => setOpen(false),
+              })
+            }
+            onBlur={() => setOpen(false)}
+            placeholder="Dentist"
+            maxLength={60}
+            autoComplete="off"
+            spellCheck={false}
+            disabled={disabled}
+            role="combobox"
+            aria-expanded={open}
+            aria-autocomplete="list"
+          />
+          {recognized && (
+            <span className="lists-snap-meta" aria-hidden="true">
+              <CheckBadge />
+              {showCanonical && (
+                <span className="lists-snap-canonical">{canonical}</span>
+              )}
+            </span>
+          )}
+        </div>
         {open && (
           <SuggestDropdown
             options={options}

@@ -15,12 +15,15 @@ import { Resend } from "resend";
 import { ListReady } from "@/emails/list-ready";
 import { chargeJobDelivery, resolveStoredMaxSize } from "./credits";
 import { findCountry } from "./countries";
+import type { LocationInput, QueryPlanEntry } from "./fanout";
 import { getRequestResults } from "./outscraper";
 import {
   buildCustomFieldDefs,
   filterByWebsite,
+  filterKnownPhones,
   insertGeneratedList,
-  sortByCityMatch,
+  normalizePhoneKey,
+  orderForDelivery,
   toCallableLeads,
   type WebsiteFilterMode,
 } from "./pipeline";
@@ -28,13 +31,23 @@ import {
 export type LeadGenJobStatus = "pending" | "processing" | "ready" | "failed";
 
 export interface LeadGenJobParams {
+  /** QUERY-Begriff (englische Kanonik oder woertlicher Freitext). */
   industry?: string;
+  /** Sichtbarer Feldtext ("Zahnarzt") — Anzeige + Listenname (§14b.3).
+   *  Alte Jobs: undefined → industry verwenden. */
+  industry_display?: string;
+  /** Anzeige-String der Locations (Chips per ", " gejoint). */
   city?: string;
   country?: string;
   /** Website-Filter der Anfrage — "without" ist der Agentur-Use-Case. */
   website?: WebsiteFilterMode;
   /** Max. Listengroesse (Credit-Modell) — alte Jobs haben das Feld nicht. */
   max_size?: number;
+  /** Location-Chips der Anfrage (Multi-Location, §14b Punkt 5). */
+  locations?: LocationInput[];
+  /** Bei Erstellung fixierter Fan-out-Plan — Basis von Interleave +
+   *  City-Zuordnung in der Verarbeitung. Alte Jobs: undefined. */
+  query_plan?: QueryPlanEntry[];
 }
 
 export interface LeadGenJob {
@@ -61,8 +74,9 @@ export function buildListName(
   params: LeadGenJobParams,
   fallback: string,
 ): string {
-  if (params.industry && params.city) {
-    return `${params.industry} – ${params.city}`;
+  const industry = params.industry_display ?? params.industry;
+  if (industry && params.city) {
+    return `${industry} – ${params.city}`;
   }
   return fallback;
 }
@@ -136,6 +150,11 @@ export async function processJobIfFinished(
   }
   if (results.status === "pending") return job;
 
+  // VOR dem Claim laden: wirft der Fetch (transient), bleibt der Job
+  // pending und der naechste Poll heilt — nach dem Claim gaebe es einen
+  // unheilbaren processing-Haenger.
+  const knownPhones = await fetchExistingPhoneKeys(admin, job.user_id);
+
   const { data: claimed, error: claimError } = await admin
     .from("lead_gen_jobs")
     .update({ status: "processing" })
@@ -156,14 +175,22 @@ export async function processJobIfFinished(
   const marketLanguage = findCountry(job.params.country)?.language ?? "en";
   const callable = toCallableLeads(
     results.places,
-    job.params.industry ?? null,
+    // Fallback-Branche ist nutzer-sichtbar (Lead-Feld) → Anzeige-Text.
+    job.params.industry_display ?? job.params.industry ?? null,
     marketLanguage,
   );
   const filtered = filterByWebsite(callable, job.params.website ?? "any");
-  const leads = sortByCityMatch(filtered, job.params.city ?? null).slice(
-    0,
-    resolveStoredMaxSize(job.params.max_size),
-  );
+
+  // Bestands-Dedupe: was der Account schon in irgendeiner Liste hat,
+  // kommt nicht nochmal rein (und kostet keine Credits) — Vorstufe des
+  // Coverage-Ledgers, bleibt danach als Garantie-Netz (§14b.1).
+  const fresh = filterKnownPhones(filtered, knownPhones);
+
+  const leads = orderForDelivery(
+    fresh,
+    job.params.query_plan,
+    job.params.city ?? null,
+  ).slice(0, resolveStoredMaxSize(job.params.max_size));
   if (leads.length === 0) {
     return failJob(admin, job.id, "no_results");
   }
@@ -217,6 +244,44 @@ export async function processJobIfFinished(
 
   await sendReadyEmail(admin, readyJob, listName);
   return readyJob;
+}
+
+/**
+ * Alle Telefon-Schluessel der bestehenden Listen eines Accounts —
+ * Grundlage des Bestands-Dedupe. Beta-Skala (wenige tausend Leads pro
+ * Account) vertraegt den Voll-Fetch locker; mit dem Coverage-Ledger
+ * wird das feiner. Fehler werfen bewusst: lieber ein heilbarer
+ * pending-Job als eine Liste voller Dubletten.
+ */
+async function fetchExistingPhoneKeys(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<Set<string>> {
+  const { data: lists, error: listsError } = await admin
+    .from("lead_lists")
+    .select("id")
+    .eq("user_id", userId);
+  if (listsError) {
+    throw new Error(`lead_lists fetch failed: ${listsError.message}`);
+  }
+  const listIds = (lists ?? []).map((row) => row.id);
+  if (listIds.length === 0) return new Set();
+
+  const { data: leads, error: leadsError } = await admin
+    .from("leads")
+    .select("phone")
+    .in("list_id", listIds);
+  if (leadsError) {
+    throw new Error(`leads phone fetch failed: ${leadsError.message}`);
+  }
+  const keys = new Set<string>();
+  for (const row of leads ?? []) {
+    if (typeof row.phone === "string" && row.phone) {
+      keys.add(normalizePhoneKey(row.phone));
+    }
+  }
+  keys.delete("");
+  return keys;
 }
 
 async function failJob(

@@ -15,6 +15,32 @@ export interface SuggestOption {
   sublabel?: string;
 }
 
+/**
+ * Vereinheitlichtes Bestaetigungs-Badge der Formular-Felder (Design-
+ * Variante B, Jan-Wahl 2026-08-05): Stroke-Check im gruenen Tint-Kreis.
+ * SVG statt Text-Glyphe — ✓ als Schriftzeichen rendert je nach
+ * Plattform/Gewicht unterschiedlich (bis hin zum Emoji-Look), das SVG
+ * ist ueberall identisch.
+ */
+export function CheckBadge() {
+  return (
+    <span className="lists-check-badge" aria-hidden="true">
+      <svg
+        width="11"
+        height="11"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <polyline points="4.5 12.5 9.5 17.5 19.5 6.5" />
+      </svg>
+    </span>
+  );
+}
+
 interface SuggestDropdownProps {
   options: SuggestOption[];
   activeIndex: number;

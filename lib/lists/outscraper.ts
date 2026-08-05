@@ -68,7 +68,9 @@ function getApiKey(): string {
 }
 
 interface StartSearchOptions {
-  query: string;
+  /** Eine oder mehrere Queries — Multi-Location schickt den ganzen
+   *  Query-Plan als EINEN Request (limit gilt PRO Query). */
+  query: string | string[];
   limit: number;
   region: string;
   language: string;
@@ -94,14 +96,23 @@ export async function startGoogleMapsSearch(
   options: StartSearchOptions,
 ): Promise<string> {
   const params = new URLSearchParams({
-    query: options.query,
     limit: String(options.limit),
     async: "true",
     language: options.language,
     region: options.region,
     webhook: options.webhookUrl,
     fields: RESULT_FIELDS,
+    // Server-seitiges Dedupe UEBER die Queries eines Requests —
+    // Nachbar-Staedte eines Fan-outs liefern (und berechnen) doppelte
+    // Betriebe sonst mehrfach. Bei einer Einzel-Query wirkungslos.
+    dropDuplicates: "true",
   });
+  const queries = Array.isArray(options.query)
+    ? options.query
+    : [options.query];
+  for (const query of queries) {
+    params.append("query", query);
+  }
   for (const filter of options.filters ?? []) {
     params.append("filters", filter);
   }
@@ -128,8 +139,9 @@ export async function startGoogleMapsSearch(
 
 /**
  * Ergebnis-Lookup per Request-ID. Outscrapers data-Shape ist ein Array
- * pro Query (wir schicken genau eine) — beide Formen (nested/flach)
- * werden auf eine flache Place-Liste normalisiert.
+ * pro Query — beide Formen (nested/flach) werden auf eine flache
+ * Place-Liste normalisiert; die Herkunfts-Query traegt jede Zeile
+ * selbst im `query`-Feld (Grundlage des Fairness-Interleaves).
  */
 export async function getRequestResults(
   requestId: string,

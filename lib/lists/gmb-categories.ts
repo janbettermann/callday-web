@@ -18,6 +18,7 @@
  */
 
 import { CATEGORY_ALIASES } from "./category-aliases";
+import { normalizeTerm } from "./normalize";
 
 export const GMB_CATEGORIES: string[] = [
   // Bau + Handwerk
@@ -364,20 +365,6 @@ export interface CategorySuggestion {
 }
 
 /**
- * Diakritik- und ß-tolerantes Matching: "backerei" findet "Bäckerei",
- * "waschstrasse" findet "Waschstraße". Beide Seiten (Eingabe + Liste)
- * laufen durch dieselbe Normalisierung.
- */
-function normalizeTerm(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/ß/g, "ss")
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "");
-}
-
-/**
  * Lokale Suche wie im City-/Country-Feld: Substring-Match ueber
  * Kanonik-Namen UND Sprach-Aliase (category-aliases.ts), fruehe
  * Treffer-Position gewinnt (Prefix vor Mitte). Pro Kanonik erscheint
@@ -420,9 +407,36 @@ export function searchCategories(query: string): CategorySuggestion[] {
     );
 }
 
-/** Exakter (case-insensitiver) Listen-Treffer — steuert das Haekchen. */
+/** Exakter (case-insensitiver) Listen-Treffer — Kanonik-Mitgliedschaft. */
 export function isKnownCategory(value: string): boolean {
   const needle = value.trim().toLowerCase();
   if (!needle) return false;
   return GMB_CATEGORIES.some((c) => c.toLowerCase() === needle);
+}
+
+/**
+ * Kanonik-Aufloesung PUR AUS DEM FELDTEXT (Anzeige-Sprache-Split,
+ * Jan-Entscheidung 2026-08-05): Im Feld darf "Zahnarzt" stehen, die
+ * Query laeuft trotzdem auf "Dentist". Bewusst als reine Ableitung
+ * statt verstecktem Zustand — exakter Treffer (normalisiert) auf
+ * Kanonik-Namen ODER Alias liefert die englische Kategorie, alles
+ * andere ist woertlicher Freitext (null). Damit koennen sichtbarer
+ * Text und gesuchte Kategorie nie auseinanderdriften, und das
+ * Haekchen ist weiterhin pur aus dem Wert ableitbar.
+ */
+const canonicalByTerm = new Map<string, string>();
+for (const category of GMB_CATEGORIES) {
+  canonicalByTerm.set(normalizeTerm(category), category);
+}
+for (const aliases of Object.values(CATEGORY_ALIASES)) {
+  for (const [alias, canonical] of Object.entries(aliases)) {
+    const key = normalizeTerm(alias);
+    if (!canonicalByTerm.has(key)) canonicalByTerm.set(key, canonical);
+  }
+}
+
+export function resolveCanonicalCategory(value: string): string | null {
+  const needle = normalizeTerm(value);
+  if (!needle) return null;
+  return canonicalByTerm.get(needle) ?? null;
 }

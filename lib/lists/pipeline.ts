@@ -14,6 +14,7 @@
 import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { choosePrefillEmail, collectEmailCandidates } from "./emails";
+import type { QueryPlanEntry } from "./fanout";
 import type { OutscraperPlace } from "./outscraper";
 
 export interface CallableLead {
@@ -28,6 +29,9 @@ export interface CallableLead {
    *  Verified) — landen als Custom Fields am Lead, Shape wie beim
    *  CSV-Import (App-Repo types/lead.ts). */
   custom_fields: Record<string, string>;
+  /** INTERN: Herkunfts-Query der Zeile (Multi-Location-Interleave).
+   *  Wird in buildLeadRows explizit GESTRIPPT — nie in die DB. */
+  source_query?: string | null;
 }
 
 export type WebsiteFilterMode = "any" | "without" | "with";
@@ -227,7 +231,7 @@ export function toCallableLeads(
     const businessStatus = place.business_status?.toUpperCase();
     if (businessStatus && businessStatus !== "OPERATIONAL") continue;
 
-    const phoneKey = phone.replace(/\D/g, "");
+    const phoneKey = normalizePhoneKey(phone);
     if (!phoneKey || seenPhones.has(phoneKey)) continue;
     seenPhones.add(phoneKey);
 
@@ -244,6 +248,7 @@ export function toCallableLeads(
       industry: place.category?.trim() || fallbackIndustry,
       location: (place.address ?? place.full_address)?.trim() || null,
       custom_fields: toCustomFields(place, language),
+      source_query: place.query ?? null,
     });
   }
 
@@ -294,6 +299,84 @@ export function sortByCityMatch(
   return [...cityHits, ...rest];
 }
 
+/** Telefon-Schluessel wie im Dedupe: nur Ziffern. */
+export function normalizePhoneKey(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
+
+/**
+ * Leads rauswerfen, die der Account schon besitzt (Telefon-Abgleich
+ * gegen alle bestehenden Listen) — niemand bezahlt Credits fuer
+ * Dubletten seiner eigenen Listen. Vorstufe des Coverage-Ledgers
+ * (§14b.1); dieser Filter bleibt auch danach als Garantie-Netz.
+ */
+export function filterKnownPhones(
+  leads: CallableLead[],
+  knownPhoneKeys: Set<string>,
+): CallableLead[] {
+  if (knownPhoneKeys.size === 0) return leads;
+  return leads.filter(
+    (lead) => !knownPhoneKeys.has(normalizePhoneKey(lead.phone)),
+  );
+}
+
+/**
+ * Liefer-Reihenfolge fuer Multi-Location (Generator-v3 §14b.1):
+ * Zwei-Ebenen-Round-Robin — gleichmaessig ueber die Location-Chips,
+ * innerhalb eines State-Chips gleichmaessig ueber dessen Stadt-Queries,
+ * jede Query-Gruppe city-first sortiert. Damit frisst eine Grossstadt
+ * beim Max-Size-Cap nie die ganze Liste. Ein Plan mit <= 1 Eintrag
+ * verhaelt sich exakt wie der alte Ein-Stadt-Sort.
+ */
+export function orderForDelivery(
+  leads: CallableLead[],
+  plan: QueryPlanEntry[] | undefined,
+  fallbackCity: string | null,
+): CallableLead[] {
+  if (!plan || plan.length <= 1) {
+    return sortByCityMatch(leads, plan?.[0]?.city ?? fallbackCity);
+  }
+
+  const byQuery = new Map<string, CallableLead[]>(
+    plan.map((entry) => [entry.query, []]),
+  );
+  // Zeilen ohne Plan-Zuordnung (defensiv — sollte nicht vorkommen)
+  // haengen hinten an statt zu verschwinden.
+  const stray: CallableLead[] = [];
+  for (const lead of leads) {
+    const group = lead.source_query
+      ? byQuery.get(lead.source_query)
+      : undefined;
+    if (group) group.push(lead);
+    else stray.push(lead);
+  }
+
+  const groupsByLocation = new Map<string, CallableLead[][]>();
+  for (const entry of plan) {
+    const sorted = sortByCityMatch(byQuery.get(entry.query) ?? [], entry.city);
+    const groups = groupsByLocation.get(entry.location) ?? [];
+    groups.push(sorted);
+    groupsByLocation.set(entry.location, groups);
+  }
+
+  const roundRobin = (streams: CallableLead[][]): CallableLead[] => {
+    const merged: CallableLead[] = [];
+    for (let i = 0, added = true; added; i++) {
+      added = false;
+      for (const stream of streams) {
+        if (i < stream.length) {
+          merged.push(stream[i]);
+          added = true;
+        }
+      }
+    }
+    return merged;
+  };
+
+  const perLocation = [...groupsByLocation.values()].map(roundRobin);
+  return [...roundRobin(perLocation), ...stray];
+}
+
 const LEADS_INSERT_CHUNK = 500;
 
 interface InsertListOptions {
@@ -332,7 +415,9 @@ export function buildLeadRows(
   listId: string,
   options: InsertListOptions,
 ): Array<Record<string, unknown>> {
-  return options.leads.map((lead, index) => ({
+  // source_query ist Pipeline-intern (Interleave) — die leads-Tabelle
+  // kennt die Spalte nicht, spreaden wuerde den Insert brechen.
+  return options.leads.map(({ source_query: _internal, ...lead }, index) => ({
     id: randomUUID(),
     list_id: listId,
     user_id: options.userId,

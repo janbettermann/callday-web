@@ -15,15 +15,18 @@ import { randomBytes } from "crypto";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
 import {
-  OUTSCRAPER_FETCH_LIMIT,
-  OUTSCRAPER_MAX_SCAN_LIMIT,
-} from "@/lib/lists/config";
-import {
   clampRequestedSize,
   ensureSignupGrant,
   getCreditBalance,
 } from "@/lib/lists/credits";
 import { findCountry } from "@/lib/lists/countries";
+import {
+  buildQueryPlan,
+  computePerQueryLimit,
+  MAX_LOCATIONS,
+  type LocationInput,
+} from "@/lib/lists/fanout";
+import { getRegion } from "@/lib/lists/geo-regions";
 import { startGoogleMapsSearch } from "@/lib/lists/outscraper";
 import {
   WEBSITE_FILTER_MODES,
@@ -66,14 +69,46 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "invalid_payload" }, { status: 400 });
   }
 
-  const { industry, city, country, website, maxSize } = (body ?? {}) as Record<
-    string,
-    unknown
-  >;
+  const { industry, industryDisplay, city, country, website, maxSize, locations } =
+    (body ?? {}) as Record<string, unknown>;
   const cleanIndustry = cleanField(industry);
-  const cleanCity = cleanField(city);
   const countryConfig = findCountry(country);
-  if (!cleanIndustry || !cleanCity || !countryConfig) {
+  if (!cleanIndustry || !countryConfig) {
+    return Response.json({ error: "invalid_input" }, { status: 400 });
+  }
+  // Anzeige-Sprache-Split (§14b Punkt 3): industry ist der QUERY-Begriff
+  // (Kanonik), industry_display der sichtbare Feldtext ("Zahnarzt") —
+  // fuer BuildingView + Listenname. Fehlt er (alte Clients), ist beides
+  // dasselbe.
+  const cleanIndustryDisplay = cleanField(industryDisplay) ?? cleanIndustry;
+
+  // Locations-Chips validieren (Multi-Location, §14b Punkt 5): Stadt-
+  // Chips als Freitext (cleanField), State-Chips gegen das Geo-Asset
+  // (region_id muss existieren UND zum Land passen). Fallback: das
+  // alte Ein-Stadt-`city`-Feld (Deploy-Fenster mit altem Client).
+  const rawLocations = Array.isArray(locations)
+    ? locations
+    : typeof city === "string"
+      ? [{ name: city }]
+      : [];
+  const cleanLocations: LocationInput[] = [];
+  for (const entry of rawLocations.slice(0, MAX_LOCATIONS)) {
+    const raw = (entry ?? {}) as Record<string, unknown>;
+    if (typeof raw.regionId === "string") {
+      const region = getRegion(raw.regionId);
+      if (!region || region.country !== countryConfig.code) {
+        return Response.json({ error: "invalid_input" }, { status: 400 });
+      }
+      cleanLocations.push({ name: region.name, region_id: region.id });
+    } else {
+      const name = cleanField(raw.name);
+      if (!name) {
+        return Response.json({ error: "invalid_input" }, { status: 400 });
+      }
+      cleanLocations.push({ name });
+    }
+  }
+  if (cleanLocations.length === 0) {
     return Response.json({ error: "invalid_input" }, { status: 400 });
   }
   const websiteFilter: WebsiteFilterMode = WEBSITE_FILTER_MODES.includes(
@@ -96,7 +131,20 @@ export async function POST(request: NextRequest) {
   }
 
   const webhookSecret = randomBytes(24).toString("base64url");
-  const query = `${cleanIndustry}, ${cleanCity}`;
+
+  // Query-Plan bei Job-Erstellung fixieren — die Verarbeitung liest
+  // ihn aus params statt ihn zu re-deriven (§14b.1); params.city bleibt
+  // als Anzeige-String (BuildingView, Listen-Name).
+  const queryPlan = buildQueryPlan(
+    cleanIndustry,
+    cleanLocations,
+    countryConfig.code,
+  );
+  if (queryPlan.length === 0) {
+    return Response.json({ error: "invalid_input" }, { status: 400 });
+  }
+  const displayLocation = cleanLocations.map((l) => l.name).join(", ");
+  const query = `${cleanIndustry}, ${displayLocation}`;
 
   const { data: job, error: insertError } = await admin
     .from("lead_gen_jobs")
@@ -104,10 +152,13 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       params: {
         industry: cleanIndustry,
-        city: cleanCity,
+        industry_display: cleanIndustryDisplay,
+        city: displayLocation,
         country: countryConfig.code,
         website: websiteFilter,
         max_size: listSize,
+        locations: cleanLocations,
+        query_plan: queryPlan,
       },
       query,
       webhook_secret: webhookSecret,
@@ -143,24 +194,18 @@ export async function POST(request: NextRequest) {
   if (websiteFilter === "without") serverFilters.push("only_without_website");
   if (websiteFilter === "with") serverFilters.push("only_with_website");
 
-  // Mit aktiven Server-Filtern zaehlt das Limit GESCANNTE Plaetze
-  // (nicht Treffer) — beim Website-Filter volle Scan-Tiefe (Trefferquote
-  // ~5 %, unplanbar). Ohne Website-Filter skaliert die Scan-Tiefe mit
-  // der gewuenschten Groesse (+40 % Puffer fuer Telefon-Dedupe +
-  // City-Sort-Verschnitt): wer max 50 will, soll keine 400 gelieferten
-  // Records bezahlen.
-  const scanLimit =
-    websiteFilter !== "any"
-      ? OUTSCRAPER_MAX_SCAN_LIMIT
-      : Math.min(
-          OUTSCRAPER_FETCH_LIMIT,
-          Math.max(60, Math.ceil(listSize * 1.4)),
-        );
+  // Scan-Budget PRO Query aus Wunschgroesse + Plan-Groesse + Filter
+  // (Formel + Begruendung: lib/lists/fanout.ts).
+  const perQueryLimit = computePerQueryLimit(
+    listSize,
+    queryPlan.length,
+    websiteFilter !== "any",
+  );
 
   try {
     const requestId = await startGoogleMapsSearch({
-      query,
-      limit: scanLimit,
+      query: queryPlan.map((entry) => entry.query),
+      limit: perQueryLimit,
       region: countryConfig.code,
       language: "en",
       webhookUrl,

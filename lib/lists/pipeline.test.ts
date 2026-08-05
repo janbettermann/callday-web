@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { OutscraperPlace } from "./outscraper";
 import {
   buildCustomFieldDefs,
+  buildLeadRows,
   filterByWebsite,
+  filterKnownPhones,
+  orderForDelivery,
   sortByCityMatch,
   toCallableLeads,
   type CallableLead,
@@ -196,6 +199,103 @@ describe("toCallableLeads", () => {
       "fr",
     );
     expect(fr.custom_fields.opening_hours).toBe("lundi: 09:00-17:00");
+  });
+});
+
+describe("filterKnownPhones (Bestands-Dedupe)", () => {
+  it("wirft Leads raus, deren Nummer der Account schon besitzt", () => {
+    const result = filterKnownPhones(
+      [
+        lead({ company_name: "Neu", phone: "+49 221 111111" }),
+        lead({ company_name: "Bekannt", phone: "+49 (221) 22 22 22" }),
+      ],
+      new Set(["49221222222"]),
+    );
+    expect(result.map((l) => l.company_name)).toEqual(["Neu"]);
+  });
+
+  it("leere Bestandsmenge laesst alles durch", () => {
+    const input = [lead({})];
+    expect(filterKnownPhones(input, new Set())).toBe(input);
+  });
+});
+
+describe("orderForDelivery (Multi-Location-Interleave)", () => {
+  const plan = [
+    { query: "Dentist, Köln", city: "Köln", location: "Köln" },
+    { query: "Dentist, München, Bayern", city: "München", location: "Bayern" },
+    { query: "Dentist, Nürnberg, Bayern", city: "Nürnberg", location: "Bayern" },
+  ];
+  const mk = (name: string, query: string, location: string) =>
+    lead({
+      company_name: name,
+      phone: `+49 ${name.length} ${Math.abs(hash(name))}`,
+      location,
+      source_query: query,
+    });
+  // simpler deterministischer "Hash" fuer eindeutige Test-Telefonnummern
+  const hash = (s: string) =>
+    [...s].reduce((acc, ch) => acc * 31 + ch.charCodeAt(0), 7) % 100000;
+
+  it("interleavt fair ueber Locations, nicht ueber Queries", () => {
+    // Bayern hat ZWEI Queries — darf trotzdem nur jeden zweiten Slot
+    // bekommen (Fairness pro Chip, nicht pro Query).
+    const leads = [
+      mk("K1", plan[0].query, "Köln"),
+      mk("K2", plan[0].query, "Köln"),
+      mk("M1", plan[1].query, "München"),
+      mk("M2", plan[1].query, "München"),
+      mk("N1", plan[2].query, "Nürnberg"),
+    ];
+    const ordered = orderForDelivery(leads, plan, null).map(
+      (l) => l.company_name,
+    );
+    expect(ordered.slice(0, 2).sort()).toEqual(["K1", "M1"]);
+    expect(ordered).toHaveLength(5);
+    // Koeln bekommt Slot 1+3 (2 von den ersten 4), Bayern die anderen.
+    expect(ordered.filter((n) => n.startsWith("K")).length).toBe(2);
+  });
+
+  it("sortiert innerhalb einer Query-Gruppe city-first", () => {
+    const leads = [
+      mk("Umland", plan[0].query, "Pulheim"),
+      mk("Stadt", plan[0].query, "Köln-Ehrenfeld"),
+    ];
+    const ordered = orderForDelivery(leads, [plan[0]], null);
+    expect(ordered[0].company_name).toBe("Stadt");
+  });
+
+  it("verhaelt sich ohne Plan wie der alte Ein-Stadt-Sort", () => {
+    const leads = [
+      mk("Umland", "x", "Pulheim"),
+      mk("Stadt", "x", "Köln"),
+    ];
+    const ordered = orderForDelivery(leads, undefined, "Köln");
+    expect(ordered[0].company_name).toBe("Stadt");
+  });
+
+  it("haengt Zeilen ohne Plan-Zuordnung hinten an statt sie zu verlieren", () => {
+    const leads = [
+      mk("Fremd", "Dentist, Unbekannt", "Woanders"),
+      mk("K1", plan[0].query, "Köln"),
+    ];
+    const ordered = orderForDelivery(leads, plan, null).map(
+      (l) => l.company_name,
+    );
+    expect(ordered).toEqual(["K1", "Fremd"]);
+  });
+});
+
+describe("buildLeadRows", () => {
+  it("strippt das interne source_query — nie in die DB-Row", () => {
+    const rows = buildLeadRows("list-1", {
+      userId: "user-1",
+      name: "Test",
+      leads: [lead({ source_query: "Dentist, Köln" })],
+      customFieldDefs: [],
+    });
+    expect(rows[0]).not.toHaveProperty("source_query");
+    expect(rows[0]).toMatchObject({ list_id: "list-1", position_in_batch: 0 });
   });
 });
 

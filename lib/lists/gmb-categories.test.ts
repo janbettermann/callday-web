@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   GMB_CATEGORIES,
   isKnownCategory,
+  resolveCanonicalCategory,
   searchCategories,
 } from "./gmb-categories";
 import { CATEGORY_ALIASES } from "./category-aliases";
@@ -81,6 +82,33 @@ describe("Alias-Suche (deutsch)", () => {
     for (const alias of Object.keys(CATEGORY_ALIASES.de)) {
       expect(canonical.has(alias.toLowerCase()), `"${alias}" ist schon Kanonik`)
         .toBe(false);
+    }
+  });
+});
+
+describe("resolveCanonicalCategory (Anzeige-Sprache-Split)", () => {
+  it("loest englische Namen und deutsche Aliase zur Kanonik auf", () => {
+    expect(resolveCanonicalCategory("Dentist")).toBe("Dentist");
+    expect(resolveCanonicalCategory("dentist")).toBe("Dentist");
+    expect(resolveCanonicalCategory("Zahnarzt")).toBe("Dentist");
+    expect(resolveCanonicalCategory("bäcker")).toBe("Bakery");
+    expect(resolveCanonicalCategory("backer")).toBe("Bakery");
+  });
+
+  it("liefert null fuer Freitext — der geht woertlich als Query raus", () => {
+    expect(resolveCanonicalCategory("Zahnarzt Praxis")).toBeNull();
+    expect(resolveCanonicalCategory("")).toBeNull();
+    expect(resolveCanonicalCategory("  ")).toBeNull();
+  });
+
+  it("jeder Dropdown-Pick ist rueckaufloesbar (Label → value)", () => {
+    // Der Klick laesst das LABEL im Feld stehen — resolve muss daraus
+    // wieder exakt die value-Kanonik machen, sonst waere das Haekchen
+    // nach dem Pick aus.
+    for (const query of ["zahn", "dent", "steuer", "dachdeck"]) {
+      for (const option of searchCategories(query)) {
+        expect(resolveCanonicalCategory(option.label)).toBe(option.value);
+      }
     }
   });
 });

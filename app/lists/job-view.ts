@@ -20,6 +20,8 @@ export interface JobView {
   listName: string | null;
   params: {
     industry?: string;
+    /** Sichtbarer Feldtext ("Zahnarzt") — fuer Anzeigen bevorzugen. */
+    industry_display?: string;
     city?: string;
     country?: string;
     website?: WebsiteFilterMode;

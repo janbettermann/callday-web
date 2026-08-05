@@ -7,6 +7,7 @@ import {
   type CountryOption,
 } from "@/lib/lists/countries";
 import {
+  CheckBadge,
   SuggestDropdown,
   handleSuggestKeys,
   type SuggestOption,
@@ -133,7 +134,7 @@ export function CountryAutocomplete({
         />
         {selected && (
           <span className="lists-suggest-check" aria-hidden="true">
-            ✓
+            <CheckBadge />
           </span>
         )}
         {open && (

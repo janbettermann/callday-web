@@ -9,9 +9,9 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CityAutocomplete } from "../CityAutocomplete";
 import { CountryAutocomplete } from "../CountryAutocomplete";
 import { IndustryAutocomplete } from "../IndustryAutocomplete";
+import { LocationsField, type LocationChip } from "../LocationsField";
 import {
   failureMessage,
   fetchJobStatus,
@@ -27,6 +27,7 @@ import {
   DEFAULT_LIST_SIZE,
   MAX_LIST_SIZE,
 } from "@/lib/lists/credits";
+import { resolveCanonicalCategory } from "@/lib/lists/gmb-categories";
 import type { WebsiteFilterMode } from "@/lib/lists/pipeline";
 
 /**
@@ -94,7 +95,7 @@ export function GeneratorClient() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const [industry, setIndustry] = useState("");
-  const [city, setCity] = useState("");
+  const [locations, setLocations] = useState<LocationChip[]>([]);
   const [country, setCountry] = useState<string | null>("DE");
   const [websiteFilter, setWebsiteFilter] = useState<WebsiteFilterMode>("any");
   const [maxSize, setMaxSize] = useState(String(DEFAULT_LIST_SIZE));
@@ -149,6 +150,16 @@ export function GeneratorClient() {
     }
   }, [credits]);
 
+  // Landwechsel leert die Location-Chips: Regionen gehoeren fest zum
+  // Land, und auch Stadt-Chips waeren im neuen Land falsche Queries.
+  const prevCountryRef = useRef(country);
+  useEffect(() => {
+    if (prevCountryRef.current !== country) {
+      prevCountryRef.current = country;
+      setLocations([]);
+    }
+  }, [country]);
+
   useEffect(() => {
     if (justBuilt) router.replace("/lists");
   }, [justBuilt, router]);
@@ -174,8 +185,10 @@ export function GeneratorClient() {
       if (submitting || creditsExhausted) return;
       setFormError(null);
 
-      if (!industry.trim() || !city.trim()) {
-        setFormError("Add an industry and a city — that's all we need.");
+      if (!industry.trim() || locations.length === 0) {
+        setFormError(
+          "Add an industry and at least one location — that's all we need.",
+        );
         return;
       }
       if (!country) {
@@ -189,8 +202,15 @@ export function GeneratorClient() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            industry,
-            city,
+            // Query-Begriff = Kanonik (falls aufloesbar), Anzeige =
+            // Feldtext ("Zahnarzt" bleibt sichtbar, gesucht wird
+            // "Dentist" — §14b Punkt 3, Anzeige-Sprache-Split).
+            industry: resolveCanonicalCategory(industry) ?? industry,
+            industryDisplay: industry,
+            locations: locations.map((chip) => ({
+              name: chip.name,
+              regionId: chip.regionId,
+            })),
             country,
             website: websiteFilter,
             maxSize: Number.parseInt(maxSize, 10) || DEFAULT_LIST_SIZE,
@@ -227,7 +247,15 @@ export function GeneratorClient() {
         setSubmitting(false);
       }
     },
-    [submitting, creditsExhausted, industry, city, country, websiteFilter, maxSize],
+    [
+      submitting,
+      creditsExhausted,
+      industry,
+      locations,
+      country,
+      websiteFilter,
+      maxSize,
+    ],
   );
 
   if (statusData === undefined) {
@@ -294,16 +322,16 @@ export function GeneratorClient() {
             required
           />
 
-          {/* Country + City in einer Zeile, darunter die Country-
+          {/* Country + Locations in einer Zeile, darunter die Country-
               Schnellwahl-Pillen (v2-Layout). Die Pillen leben ALS
               Flex-Item IN der Row (volle Breite): Desktop unveraendert
               unter der ganzen Zeile; auf schmalen Viewports stackt die
-              Row per CSS-order zu Country → Pillen → City, damit die
-              Country-Shortcuts unterm Country-Feld stehen statt unter
-              City (Mobile-Bug, Generator-v3-Runde). Container-Query auf
-              dem Feld-Wrapper statt Viewport-Media-Query: der Umbruch
-              haengt an der CONTAINER-Breite (Paddings!), nicht am
-              Viewport — beide muessen an derselben Schwelle schalten. */}
+              Row per CSS-order zu Country → Pillen → Locations, damit
+              die Country-Shortcuts unterm Country-Feld stehen (Mobile-
+              Bug, Generator-v3-Runde). Container-Query auf dem Feld-
+              Wrapper statt Viewport-Media-Query: der Umbruch haengt an
+              der CONTAINER-Breite (Paddings!), nicht am Viewport —
+              beide muessen an derselben Schwelle schalten. */}
           <div className="beta-field lists-location-field">
             <div className="lists-field-row">
               <div className="lists-col-country">
@@ -315,11 +343,12 @@ export function GeneratorClient() {
                 />
               </div>
               <div className="lists-col-city">
-                <CityAutocomplete
-                  value={city}
+                <LocationsField
+                  chips={locations}
                   country={country}
                   disabled={formDisabled}
-                  onChange={setCity}
+                  onChange={setLocations}
+                  required
                 />
               </div>
               <div
@@ -460,7 +489,8 @@ export function GeneratorClient() {
 }
 
 function BuildingView({ job }: { job: JobView }) {
-  const industry = job.params.industry ?? "your industry";
+  const industry =
+    job.params.industry_display ?? job.params.industry ?? "your industry";
   const city = job.params.city ?? "your city";
   // Ehrliche Stufen-Zuordnung: pending = Outscraper scannt (Stufe 1),
   // processing = unsere Pipeline laeuft (Stufe 2) — keine Fake-Timer.

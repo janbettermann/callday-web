@@ -692,6 +692,32 @@ bestätigt. Faktenbasis für alles Location-bezogene: §6b.
    gehabt; `exactMatch` (en-only, würde Rausch-Records sparen, riskiert
    aber verwandte Kategorien) bewusst GEPARKT — erst A/B-testen, wenn
    Volumen es rechtfertigt.
+   **UPDATE Anzeige-Sprache (Jan, 2026-08-05 abends):** Der Klick lässt
+   den DEUTSCHEN Text im Feld stehen („Zahnarzt" bleibt sichtbar), die
+   Kanonik wird als reine ABLEITUNG aufgelöst
+   (`resolveCanonicalCategory`: exakter normalisierter Treffer auf
+   Kanonik ODER Alias → englische Kategorie; sonst null = wörtlicher
+   Freitext). Bewusst KEIN versteckter Zustand — Text und gesuchte
+   Kategorie können nie driften, Häkchen bleibt pur wertabgeleitet.
+   Konsequent durch den sichtbaren Pfad: Submit schickt `industry`
+   (Kanonik/Query) + `industryDisplay` (Feldtext) →
+   `params.industry_display` → BuildingView + Listenname („Zahnarzt –
+   Köln") + Lead-Fallback-Branche. Nur Query, query_plan und künftiger
+   Coverage-Schlüssel laufen englisch. Test-Invariante: jedes
+   Dropdown-Label muss zur value-Kanonik rückauflösbar sein.
+   **UI-Endstand „Einrasten" (Design-Variante B, Jan-Wahl aus 3
+   Mockups):** Bei erkannter Kategorie kippt das FELD in den
+   gerasteten Look (`.lists-snapfield.is-snapped`: Brand-Tönung,
+   Text semibold, rechts ✓ + Kanonik; Kanonik entfällt, wenn sie dem
+   Feldtext entspricht — kein „Dentist ✓ Dentist"). Flex-Box statt
+   absolutem Häkchen (lange Kanonik ellipsiert, keine Kollision).
+   Weitertippen löst den Zustand — weiterhin reine Wert-Ableitung.
+   Verworfen: A (Single-Chip wie Locations — max. Objekt-Haptik, aber
+   Extra-Tap beim Ändern), C (Kanonik-Pille rechts). Multi-Kategorie
+   (Outscraper-Muster) bewusst GEPARKT: Credit-Modell erlaubt eh
+   mehrere Listen = eine pro Pitch (bessere Call-Ergonomie); bei
+   Beta-Nachfrage kleiner Lift (Tag-Input-Pattern + Multi-Query
+   existieren, Kreuzprodukt-Cap ~30 + 2D-Round-Robin nötig).
 4. **Credit-Modell** (✅ PHASE 1 UMGESETZT + DEPLOYED 2026-08-05):
    - **Entschieden (Jan, 2026-08-05, per MC):** 250 Free-Credits pro
      Account (einmalig); Abo = 500/Monat-**Drip** (auch Jahres-Abo, kein
@@ -727,17 +753,53 @@ bestätigt. Faktenbasis für alles Location-bezogene: §6b.
      angelegt.
    - Max list size pro Liste hard-capped auf 500 (realistische
      Liefer-Tiefe einer Einzel-Query) — fällt mit Multi-Location.
-5. **Multi-Location-Feld** (✅ Grundidee: Chips mit X, Städte UND
-   Bundesländer/States, Feld umbenennen): baut auf 4 auf.
-   - **Städte-Chips:** eine Query pro Chip (API kann mehrere Queries pro
-     Request), mergen + Telefon-Dedupe, Round-Robin über Locations beim
-     Cap (🔷 damit eine Großstadt nicht alles frisst). 🔷 Cap ~5 Chips;
-     Freitext-Enter wird Chip; Label „Locations".
-   - **State-Chips = Fan-out, NIE eine State-Query** (Beweis §6b):
-     kuratiertes statisches Asset Top-10–20-Städte pro DE-Bundesland +
-     US-State → Stadt-Queries, per-Query-Limit klein halten
-     (≈ MaxSize/Städtezahl + Puffer). Places-Autocomplete muss Regionen
-     mit vorschlagen (heute `(cities)`-Type-Filter).
+5. **Multi-Location-Feld** (✅ UMGESETZT 2026-08-05; Jan-Entscheidungen
+   per MC: Cap 5 Chips, Freitext-Enter wird Chip, Label „Locations",
+   Coverage-Ledger als FOLGEPAKET):
+   - **UI:** `LocationsField` ersetzt das City-Feld — Chips mit X,
+     gemischte Vorschläge (lokales Geo-Asset = Regionen mit
+     „State"-Sublabel, sofort; Places-Städte debounced dazu), Freitext
+     per Enter (zählt immer als Stadt, kein Häkchen), Dedupe pro Chip,
+     Landwechsel leert die Chips. **Chip-Design (Jan-Wahl aus 4
+     Mockups, 2026-08-05):** ALLE Chips in der Einrast-Optik des
+     Industry-Felds (Blau-Tönung + blaue Border), Namen in Ink, nur
+     das „STATE"-Wort blau — Formular-Grammatik „blaue Fläche =
+     committete Eingabe". Verworfen: neutrale Chips (kollidieren mit
+     Try-Pillen), randlose Tokens, Swatch-Dot; auch die Freitext-
+     Differenzierung (neutrale Border für nicht-validierte Chips)
+     bewusst nicht — Jan wollte den einheitlichen Look.
+   - **Geo-Asset** `lib/lists/geo-regions.ts`: kuratierte Top-Städte
+     nach Einwohnerzahl für 13 DE-Flächenländer + 8 AT-Bundesländer +
+     50 US-States (Stadtstaaten + CH-Kantone bewusst draußen,
+     Kommentar erklärt). IDs (`DE-BY`) = künftige Ledger-Schlüssel,
+     nie umbenennen. GeoNames-Import-Script erst mit PLZ-Ausbau.
+   - **Fan-out** `lib/lists/fanout.ts`: Stadt-Chip = 1 Query (altes
+     Format `industry, city`), State-Chip = Top-Städte-Queries
+     (`industry, city, state` — Springfield-Präzision, Format wie
+     Outscrapers Micro-Queries); Tiefe skaliert mit Region-Zahl
+     (1→12, ≤3→8, sonst 5 Städte; Plan ≤ ~25 Queries). Query-Plan
+     wird bei Job-Erstellung in `params.query_plan` FIXIERT — die
+     Verarbeitung re-derivt nichts (§14b.1-Prinzip).
+     `computePerQueryLimit`: ohne Website-Filter eng (×1,4/Queries,
+     Floor 15), mit Filter großzügig (×20/Queries — Scans kosten
+     nichts, nur Geliefertes).
+   - **Ein Request:** alle Queries als EIN Outscraper-Call
+     (`dropDuplicates=true` — server-seitiges Dedupe an
+     Gebietsgrenzen, sonst doppelt bezahlt).
+   - **Fairness:** `orderForDelivery` = Zwei-Ebenen-Round-Robin
+     (über Chips, im State über dessen Stadt-Queries; Gruppen via
+     `source_query` der Response-Zeilen, in buildLeadRows gestrippt),
+     jede Gruppe city-first. Eine Großstadt frisst beim Cap nie die
+     Liste.
+   - **Bestands-Dedupe:** `filterKnownPhones` gegen ALLE Leads des
+     Accounts (Telefon-Schlüssel; Fetch VOR dem Processing-Claim, damit
+     Fehler heilbar pending bleiben) — niemand zahlt Credits für
+     Dubletten der eigenen Listen. Bleibt auch nach dem Coverage-Ledger
+     als Garantie-Netz.
+   - API nimmt `locations[{name, regionId?}]` (Fallback altes
+     `city`-Feld fürs Deploy-Fenster); Regionen server-validiert
+     (Existenz + Land). `params.city` = Anzeige-Join für
+     BuildingView/Listen-Name.
    - **Coverage-Ledger** (Design-Baustein, Umsetzung mit diesem Paket oder
      direkt danach): pro Account (Branche, Gebiet, Zeitpunkt, geliefert)
      abhaken; Gebiet GENERISCH typisieren (`city | zip`) — v1 läuft auf

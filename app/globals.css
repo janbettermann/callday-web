@@ -3505,9 +3505,13 @@ h2 .accent {
   background: var(--blue-tint);
 }
 /* Pflicht-Stern an Industry-/Country-Label. */
+/* Pflicht-Stern: neutral-grau, NICHT Brand-Blau. Brand-Blau ist
+   Aktion/Navigation (Farb-Dosierung, project_design_language) — ein
+   Pflicht-Marker traegt keine Aktion und darf das Blau nicht
+   verwaessern. Leiser Stern statt lautem 700er-Glyph. */
 .lists-req {
-  color: var(--blue-deep);
-  font-weight: 700;
+  color: var(--ink-faint);
+  font-weight: 500;
 }
 /* Country + City nebeneinander in einer Zeile (v2-Layout); wrappt auf
    schmalen Viewports uebereinander. */
@@ -3550,6 +3554,143 @@ h2 .accent {
   .lists-col-city {
     order: 3;
   }
+}
+/* Locations als Tag-Input (Multi-Location, §14b Punkt 5): die Box
+   traegt den Input-Look der Console-Felder (weiss, Border, Fokus-Ring
+   via :focus-within), Chips + wachsender Inner-Input leben DRIN
+   (Outscraper-Muster, Jan-Wunsch 2026-08-05). Der Inner-Input wird
+   von den .beta-field-Input-Styles per spezifischerem Selektor
+   freigelegt. */
+.lists-locbox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  padding: 7px 10px;
+  min-height: 54px;
+  cursor: text;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s,
+    background 0.18s;
+}
+.lists-locbox:focus-within {
+  border-color: rgba(74, 122, 247, 0.55);
+  box-shadow: 0 0 0 3px rgba(74, 122, 247, 0.14);
+}
+.lists-locbox.is-disabled {
+  background-color: rgba(26, 29, 38, 0.045);
+  border-color: transparent;
+  cursor: not-allowed;
+}
+.lists-console-form .beta-field .lists-locbox input,
+.lists-console-form .beta-field .lists-locbox input:focus,
+.lists-suggest-wrap .lists-locbox input,
+.lists-console-form .beta-field .lists-snapfield input,
+.lists-console-form .beta-field .lists-snapfield input:focus,
+.lists-suggest-wrap .lists-snapfield input {
+  flex: 1 1 130px;
+  width: auto;
+  min-width: 110px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 7px 6px;
+}
+/* Industry-Einrast-Feld (Design-Variante B, 2026-08-05): gleiche
+   Box-Grammatik wie .lists-locbox; bei erkannter Kategorie kippt die
+   Box in den gerasteten Look — Brand-Toenung, semibold, rechts
+   ✓ + Kanonik (ellipsiert, nie Text-Kollision). */
+.lists-snapfield {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  padding: 7px 12px;
+  min-height: 54px;
+  cursor: text;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s,
+    background 0.18s;
+}
+.lists-snapfield:focus-within {
+  border-color: rgba(74, 122, 247, 0.55);
+  box-shadow: 0 0 0 3px rgba(74, 122, 247, 0.14);
+}
+.lists-snapfield.is-snapped {
+  background: rgba(74, 122, 247, 0.05);
+  border-color: rgba(74, 122, 247, 0.45);
+}
+.lists-snapfield.is-snapped input {
+  font-weight: 600;
+}
+.lists-snapfield.is-disabled {
+  background-color: rgba(26, 29, 38, 0.045);
+  border-color: transparent;
+  cursor: not-allowed;
+}
+.lists-snap-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  max-width: 45%;
+  padding-right: 2px;
+}
+.lists-snap-meta .lists-snap-canonical {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Chip-Look = Einrast-Optik des Industry-Felds (Jan-Design-Wahl
+   2026-08-05, Variante 1 aus 4 Mockups): Blau-Toenung + blaue Border
+   fuer ALLE Chips, Namen in Ink, nur das "State"-Wort blau. Ein
+   Formular-Vokabular: blaue Flaeche = committete Eingabe. */
+.lists-loc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(74, 122, 247, 0.45);
+  background: rgba(74, 122, 247, 0.05);
+  border-radius: 999px;
+  padding: 5px 7px 5px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.lists-loc-chip-tag {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--blue-deep);
+}
+.lists-loc-chip-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(26, 29, 38, 0.06);
+  color: var(--ink-dim);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.lists-loc-chip-x:hover:not(:disabled) {
+  background: rgba(26, 29, 38, 0.12);
+  color: var(--ink);
 }
 /* Eigener "Filters"-Abschnitt mit Titel ueber dem Website-Dropdown. */
 .lists-filters-section {
@@ -3622,15 +3763,29 @@ h2 .accent {
 .lists-suggest-wrap input {
   width: 100%;
 }
+/* Absoluter Positionierer fuers CheckBadge in klassischen Inputs
+   (Country) — Inhalt ist das geteilte .lists-check-badge. */
 .lists-suggest-check {
   position: absolute;
   top: 50%;
-  right: 16px;
+  right: 14px;
   transform: translateY(-50%);
-  color: var(--green-deep);
-  font-size: 15px;
-  font-weight: 600;
+  display: inline-flex;
   pointer-events: none;
+}
+/* Geteiltes Bestaetigungs-Badge (Design-Variante B): Stroke-Check im
+   gruenen Tint-Kreis — identisch in Country + Industry (+ kuenftigen
+   Einrast-Feldern). */
+.lists-check-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: rgba(29, 154, 92, 0.13);
+  color: var(--green-deep);
+  flex: 0 0 auto;
 }
 .lists-suggest-dropdown {
   position: absolute;
