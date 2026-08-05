@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CountryAutocomplete } from "../CountryAutocomplete";
 import { IndustryAutocomplete } from "../IndustryAutocomplete";
+import { InfoPopover } from "../InfoPopover";
 import { LocationsField, type LocationChip } from "../LocationsField";
 import {
   failureMessage,
@@ -374,9 +375,16 @@ export function GeneratorClient() {
               Garantie: kleine Suchen liefern kleinere Listen, und nur
               gelieferte Leads kosten Credits (Spec §14b Punkt 4). */}
           <div className="beta-field">
-            <label className="beta-field-label" htmlFor="gen-listsize">
-              Max list size
-            </label>
+            <div className="lists-label-row">
+              <label className="beta-field-label" htmlFor="gen-listsize">
+                Max list size
+              </label>
+              <InfoPopover label="About max list size">
+                Your list can come out smaller than this if your search does
+                not find enough businesses. Credits are only used for leads
+                that actually land in your list.
+              </InfoPopover>
+            </div>
             <div className="lists-size-row">
               <input
                 id="gen-listsize"

@@ -4066,6 +4066,76 @@ h2 .accent {
   color: var(--sun-deep);
   font-weight: 600;
 }
+/* Label + Info-"?" in einer Zeile (das Label traegt seine margin sonst
+   selbst — hier auf die Zeile verlegt). */
+.lists-label-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 8px;
+}
+.lists-label-row .beta-field-label {
+  margin: 0;
+}
+/* iOS-artiges Info-"?" (InfoPopover). */
+.lists-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(26, 29, 38, 0.08);
+  color: var(--ink-faint);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.lists-info-btn:hover {
+  background: rgba(26, 29, 38, 0.14);
+  color: var(--ink-dim);
+}
+/* Klick-Popover — helles Callout im iOS-Stil, per Portal (position:fixed),
+   Auto-Flip oben/unten setzt die Inline-Styles. */
+.lists-info-pop {
+  position: fixed;
+  z-index: 200;
+  background: #ffffff;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(26, 29, 38, 0.16);
+  padding: 11px 13px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink-dim);
+}
+.lists-info-caret {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  background: #ffffff;
+  border: 1px solid var(--line-strong);
+  transform: rotate(45deg);
+}
+/* Popover unter dem Button → Caret oben, zeigt nach oben (nur die zwei
+   oberen Kanten sichtbar). Darueber → Caret unten. */
+.lists-info-pop.is-below .lists-info-caret {
+  top: -6px;
+  border-right: 0;
+  border-bottom: 0;
+}
+.lists-info-pop.is-above .lists-info-caret {
+  bottom: -6px;
+  border-left: 0;
+  border-top: 0;
+}
 /* Listengroesse — im Free-State fix + deaktiviert (der bediente Regler
    kommt mit Credits). Zahl schmal, "leads" daneben, gedaempft. */
 .lists-size-row {
