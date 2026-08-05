@@ -3528,33 +3528,6 @@ h2 .accent {
   flex: 1 1 260px;
   min-width: 200px;
 }
-/* Country-Schnellwahl-Pillen als volle Flex-Zeile IN der Field-Row:
-   breit wie gehabt unter Country+City; sobald die Row stackt, schiebt
-   sich die Pillen-Zeile per order zwischen Country und City, damit die
-   Shortcuts beim Country-Feld bleiben (Mobile-Stacking-Bug). margin-top
-   entfaellt hier — den Abstand liefert das Row-gap.
-   CONTAINER-Query statt Viewport-Media-Query: die Row bricht bei
-   Container-Breite < 472px um — Flex-Zeilenumbruch rechnet mit den
-   flex-BASIS-Werten (200 Country + 260 City + 12 gap), NICHT mit den
-   min-widths; und die Schwelle haengt an Paddings, nicht am Viewport.
-   Die Query schaltet exakt an derselben Grenze, Umbruch und
-   Umsortierung koennen nicht auseinanderlaufen. Bei Aenderung der
-   flex-basis/gap oben die 472 mitziehen! */
-.lists-location-field {
-  container-type: inline-size;
-}
-.lists-try-country {
-  flex-basis: 100%;
-  margin-top: 0;
-}
-@container (width < 472px) {
-  .lists-try-country {
-    order: 2;
-  }
-  .lists-col-city {
-    order: 3;
-  }
-}
 /* Locations als Tag-Input (Multi-Location, §14b Punkt 5): die Box
    traegt den Input-Look der Console-Felder (weiss, Border, Fokus-Ring
    via :focus-within), Chips + wachsender Inner-Input leben DRIN
@@ -3693,18 +3666,48 @@ h2 .accent {
 .lists-loc-chip-x:hover:not(:disabled) {
   background: #adadb6;
 }
-/* Eigener "Filters"-Abschnitt mit Titel ueber dem Website-Dropdown. */
-.lists-filters-section {
-  border-top: 1px solid var(--line);
-  padding-top: 22px;
-  margin-top: 4px;
+/* Website-Filter als Segmented Control (Jan-Wahl 2026-08-05, ersetzt
+   Dropdown + eigenen "Filters"-Abschnitt). Full-width (responsiv:
+   Mobile drei Drittel), iOS-Look: grauer Track, aktives Segment
+   weiss/erhoben. Selected = NEUTRAL (nicht Brand) — Farb-Dosierung. */
+.lists-seg {
+  display: flex;
+  width: 100%;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(26, 29, 38, 0.06);
+  border-radius: 12px;
 }
-.lists-section-title {
-  display: block;
-  font-size: 14.5px;
-  font-weight: 600;
+.lists-seg-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 0;
+  background: none;
+  border-radius: 9px;
+  padding: 10px 6px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-faint);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    color 0.14s,
+    background 0.14s,
+    box-shadow 0.14s;
+}
+.lists-seg-btn.is-on {
+  background: #ffffff;
   color: var(--ink);
-  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(8, 10, 20, 0.12);
+}
+.lists-seg-btn:hover:not(.is-on):not(:disabled) {
+  color: var(--ink-dim);
+}
+.lists-seg-btn:disabled {
+  cursor: default;
 }
 /* Generator-CTA im v2-Look: schwarz mit Icon statt Blau-Gradient. Nur
    hier — die .beta-submit der Landing/Auth bleibt Callday-Blau. */
@@ -3724,37 +3727,6 @@ h2 .accent {
 .lists-generate-btn svg {
   width: 18px;
   height: 18px;
-}
-/* Select im iOS-Settings-Look der .beta-field-Inputs. 16px Font ist
-   Pflicht (iOS-Focus-Zoom), Chevron als Data-URI weil appearance:none
-   den nativen Pfeil entfernt. */
-.lists-select {
-  appearance: none;
-  -webkit-appearance: none;
-  background-color: rgba(26, 29, 38, 0.045);
-  border: 1px solid transparent;
-  border-radius: 12px;
-  padding: 15px 44px 15px 16px;
-  font-size: 16px;
-  font-family: inherit;
-  color: var(--ink);
-  outline: none;
-  cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='rgba(26,29,38,0.42)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 15px center;
-  transition:
-    border-color 0.18s,
-    box-shadow 0.18s,
-    background-color 0.18s;
-}
-.lists-select:focus {
-  background-color: var(--bg-page);
-  border-color: rgba(74, 122, 247, 0.5);
-  box-shadow: 0 0 0 3px rgba(74, 122, 247, 0.14);
-}
-.lists-select:disabled {
-  cursor: default;
 }
 /* Vorschlags-Felder (SuggestDropdown — City via Google Places, Country
    aus lokaler Liste). Haekchen im Feld = Vorschlag eingerastet. */
@@ -4024,14 +3996,12 @@ h2 .accent {
 /* v2-Feld-Look NUR im Generator: weisse, umrandete Felder statt der
    grauen beta-Insets — die Landing-/Auth-Formulare behalten ihren
    iOS-Settings-Look. 16px Font bleibt Pflicht (iOS-Focus-Zoom). */
-.lists-console-form .beta-field input,
-.lists-console-form .lists-select {
+.lists-console-form .beta-field input {
   background-color: #ffffff;
   border: 1px solid var(--line-strong);
   border-radius: 14px;
 }
-.lists-console-form .beta-field input:focus,
-.lists-console-form .lists-select:focus {
+.lists-console-form .beta-field input:focus {
   background-color: #ffffff;
   border-color: rgba(74, 122, 247, 0.55);
   box-shadow: 0 0 0 3px rgba(74, 122, 247, 0.14);

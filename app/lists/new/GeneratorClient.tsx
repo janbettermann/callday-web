@@ -20,7 +20,6 @@ import {
 } from "../job-view";
 import {
   APP_DOWNLOAD_PATH,
-  COUNTRY_SUGGESTIONS,
   INDUSTRY_SUGGESTIONS,
 } from "@/lib/lists/config";
 import {
@@ -51,16 +50,17 @@ import type { WebsiteFilterMode } from "@/lib/lists/pipeline";
 
 const POLL_INTERVAL_MS = 5000;
 
-// "Only…"-Formulierung macht die Einschraenkung eindeutig (Jan-Copy-
-// Entscheidung 2026-07-15) — "With a website" allein liest sich auch
-// als "einschliessen" statt "einschraenken".
+// Kurze Segment-Labels (Jan-Wahl 2026-08-05: Segmented Control statt
+// Dropdown). Kurz genug fuer full-width auf Mobile (3 Drittel); der
+// "Website"-Feld-Label gibt den Kontext, deshalb "Any"/"No website"/
+// "Has website" statt der langen "Only…"-Saetze.
 const WEBSITE_FILTER_OPTIONS: Array<{
   value: WebsiteFilterMode;
   label: string;
 }> = [
-  { value: "any", label: "With and without website" },
-  { value: "without", label: "Only without website" },
-  { value: "with", label: "Only with website" },
+  { value: "any", label: "Any" },
+  { value: "without", label: "No website" },
+  { value: "with", label: "Has website" },
 ];
 
 /**
@@ -330,17 +330,9 @@ export function GeneratorClient() {
             required
           />
 
-          {/* Country + Locations in einer Zeile, darunter die Country-
-              Schnellwahl-Pillen (v2-Layout). Die Pillen leben ALS
-              Flex-Item IN der Row (volle Breite): Desktop unveraendert
-              unter der ganzen Zeile; auf schmalen Viewports stackt die
-              Row per CSS-order zu Country → Pillen → Locations, damit
-              die Country-Shortcuts unterm Country-Feld stehen (Mobile-
-              Bug, Generator-v3-Runde). Container-Query auf dem Feld-
-              Wrapper statt Viewport-Media-Query: der Umbruch haengt an
-              der CONTAINER-Breite (Paddings!), nicht am Viewport —
-              beide muessen an derselben Schwelle schalten. */}
-          <div className="beta-field lists-location-field">
+          {/* Country + Locations in einer Zeile (Desktop nebeneinander,
+              schmal untereinander — Country zuerst per Source-Order). */}
+          <div className="beta-field">
             <div className="lists-field-row">
               <div className="lists-col-country">
                 <CountryAutocomplete
@@ -358,23 +350,6 @@ export function GeneratorClient() {
                   onChange={setLocations}
                   required
                 />
-              </div>
-              <div
-                className="lists-try lists-try-country"
-                aria-label="Country shortcuts"
-              >
-                Try:
-                {COUNTRY_SUGGESTIONS.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    className="lists-try-chip"
-                    onClick={() => setCountry(suggestion)}
-                    disabled={formDisabled}
-                  >
-                    {suggestion}
-                  </button>
-                ))}
               </div>
             </div>
           </div>
@@ -423,38 +398,37 @@ export function GeneratorClient() {
             </p>
           </div>
 
-          {/* Eigener Filters-Abschnitt (Dropdown statt Chips,
-              Jan-Entscheidung 2026-07-15, Spec §13b). */}
-          <div className="lists-filters-section">
-            <span className="lists-section-title">Filters</span>
-            <div className="beta-field">
-              <label className="beta-field-label" htmlFor="gen-website-select">
-                Website
-              </label>
-              <select
-                id="gen-website-select"
-                className="lists-select"
-                value={websiteFilter}
-                onChange={(e) =>
-                  setWebsiteFilter(e.target.value as WebsiteFilterMode)
-                }
-                disabled={formDisabled}
-              >
-                {WEBSITE_FILTER_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {/* Ehrliche E-Mail-Konsequenz im Moment der Wahl (§13d):
-                  ohne Website gibt es nichts zu scrapen. */}
-              {websiteFilter === "without" && (
-                <p className="lists-field-hint">
-                  No emails on these — businesses without a website have
-                  nothing to scrape. Every lead still has a phone number.
-                </p>
-              )}
+          {/* Website-Filter als Segmented Control (Jan-Wahl 2026-08-05,
+              ersetzt Dropdown + eigenen "Filters"-Abschnitt): alle Modi
+              sichtbar, der "No website"-Hero ist ohne Aufklappen da.
+              Full-width = responsiv (Mobile drei Drittel). */}
+          <div className="beta-field">
+            <label className="beta-field-label">Website</label>
+            <div className="lists-seg" role="group" aria-label="Website filter">
+              {WEBSITE_FILTER_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={
+                    "lists-seg-btn" +
+                    (websiteFilter === option.value ? " is-on" : "")
+                  }
+                  aria-pressed={websiteFilter === option.value}
+                  onClick={() => setWebsiteFilter(option.value)}
+                  disabled={formDisabled}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
+            {/* Ehrliche E-Mail-Konsequenz im Moment der Wahl (§13d):
+                ohne Website gibt es nichts zu scrapen. */}
+            {websiteFilter === "without" && (
+              <p className="lists-field-hint">
+                No emails on these — businesses without a website have
+                nothing to scrape. Every lead still has a phone number.
+              </p>
+            )}
           </div>
 
           <button

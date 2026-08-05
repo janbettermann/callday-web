@@ -19,26 +19,21 @@ export const OUTSCRAPER_FETCH_LIMIT = 400;
 export const OUTSCRAPER_MAX_SCAN_LIMIT = 500;
 
 /**
- * Kuratierte Branchen-Vorschlaege fuer die Chips unter dem Industry-Feld.
- * Scharf auf Cold-Calling-taugliche B2B-Branchen (Spec §11) — Freitext
- * bleibt moeglich, die Chips senken nur die Muell-Query-Quote.
- * Im GMB-Singular-Stil, damit sie exakt Eintraege der Autocomplete-
- * Liste (lib/lists/gmb-categories.ts) treffen und das Haekchen kriegen.
+ * Kuratierte Branchen-BEISPIELE fuer die Chips unter dem Industry-Feld
+ * ("Examples:"-Zeile). Bewusst nur vier + kurze Namen (Jan-Wahl Set A,
+ * 2026-08-05): auf Mobile max. 2 Zeilen statt 3. Je ein Sektor —
+ * Gesundheit / Handwerk / Recht / Handel — zeigt Breite, engt nicht auf
+ * eine Nische ein. Im GMB-Singular-Stil, damit sie exakt Eintraege der
+ * Autocomplete-Liste (lib/lists/gmb-categories.ts) treffen und das
+ * Haekchen kriegen (garantiert per gmb-categories.test.ts). Freitext
+ * bleibt moeglich; die Chips senken nur die Muell-Query-Quote.
  */
 export const INDUSTRY_SUGGESTIONS = [
   "Dentist",
-  "Roofing contractor",
-  "Real estate agency",
+  "Plumber",
   "Law firm",
-  "Electrician",
   "Car dealer",
 ];
-
-/**
- * Schnellwahl-Pillen unter dem Country-Feld (ISO-Codes) — die
- * Kern-Maerkte des Generators. Wie im v2-Entwurf ("Try: US GB DE …").
- */
-export const COUNTRY_SUGGESTIONS = ["US", "GB", "DE", "CA", "AU"];
 
 /**
  * Ziel des "Get the Callday app"-CTAs. Waehrend der Beta zeigt /account

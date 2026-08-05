@@ -155,8 +155,8 @@ export function IndustryAutocomplete({
         )}
       </div>
       {suggestions && suggestions.length > 0 && (
-        <div className="lists-try" aria-label="Industry suggestions">
-          Try:
+        <div className="lists-try" aria-label="Industry examples">
+          Examples:
           {suggestions.map((suggestion) => (
             <button
               key={suggestion}
