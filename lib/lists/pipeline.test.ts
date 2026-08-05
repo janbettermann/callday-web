@@ -164,6 +164,39 @@ describe("toCallableLeads", () => {
     });
     expect(bare.custom_fields).toEqual({});
   });
+
+  it("uebersetzt englische Tages-Schluessel in die Markt-Sprache", () => {
+    // Seit "immer language=en" liefert Outscraper Monday/Tuesday/… —
+    // fuer de-Maerkte werden sie zu Montag/Dienstag, Zeiten unveraendert.
+    const [de] = toCallableLeads(
+      [
+        place({
+          working_hours: { Monday: ["08:00-16:00"], Sunday: ["Closed"] },
+        }),
+      ],
+      null,
+      "de",
+    );
+    expect(de.custom_fields.opening_hours).toBe(
+      "Montag: 08:00-16:00; Sonntag: Closed",
+    );
+
+    // Unbekannte Keys (Alt-Daten mit deutschen Keys) passieren unveraendert.
+    const [passthrough] = toCallableLeads(
+      [place({ working_hours: { Montag: ["08:00-16:00"] } })],
+      null,
+      "de",
+    );
+    expect(passthrough.custom_fields.opening_hours).toBe("Montag: 08:00-16:00");
+
+    // en = reines Passthrough, fr via Intl.
+    const [fr] = toCallableLeads(
+      [place({ working_hours: { Monday: ["09:00-17:00"] } })],
+      null,
+      "fr",
+    );
+    expect(fr.custom_fields.opening_hours).toBe("lundi: 09:00-17:00");
+  });
 });
 
 describe("filterByWebsite", () => {

@@ -99,15 +99,52 @@ function formatRating(place: OutscraperPlace): string | null {
     : `${place.rating} ★`;
 }
 
-/** { "Montag": ["08:00-16:00"], ... } → "Montag: 08:00-16:00; ..." */
+/**
+ * Seit "immer language=en" (2026-08-05, Spec §6b/§14b) liefert Outscraper
+ * englische Tages-Schluessel ("Monday") — fuer nicht-englische Maerkte
+ * uebersetzen wir sie in die Markt-Sprache. Via Intl statt Hand-Tabellen:
+ * deckt alle LANGUAGE_OVERRIDES-Sprachen deterministisch ab. Unbekannte
+ * Schluessel (z. B. deutsche Keys aus Alt-Läufen) passieren unveraendert.
+ */
+const dayMapCache = new Map<string, Record<string, string>>();
+
+function dayNameMap(language: string): Record<string, string> {
+  let map = dayMapCache.get(language);
+  if (!map) {
+    map = {};
+    try {
+      const format = new Intl.DateTimeFormat(language, {
+        weekday: "long",
+        timeZone: "UTC",
+      });
+      const english = new Intl.DateTimeFormat("en", {
+        weekday: "long",
+        timeZone: "UTC",
+      });
+      for (let i = 0; i < 7; i++) {
+        // 2024-01-01 war ein Montag; UTC haelt den Wochentag stabil.
+        const date = new Date(Date.UTC(2024, 0, 1 + i));
+        map[english.format(date).toLowerCase()] = format.format(date);
+      }
+    } catch {
+      // Unbekannte Locale → leere Map, Keys passieren unveraendert.
+    }
+    dayMapCache.set(language, map);
+  }
+  return map;
+}
+
+/** { "Monday": ["08:00-16:00"], ... } → "Montag: 08:00-16:00; ..." */
 function formatWorkingHours(
   hours: OutscraperPlace["working_hours"],
+  language: string,
 ): string | null {
   if (!hours || typeof hours !== "object" || Array.isArray(hours)) return null;
+  const days = language === "en" ? {} : dayNameMap(language);
   const parts: string[] = [];
   for (const [day, ranges] of Object.entries(hours)) {
     const value = Array.isArray(ranges) ? ranges.join(", ") : String(ranges);
-    if (value) parts.push(`${day}: ${value}`);
+    if (value) parts.push(`${days[day.toLowerCase()] ?? day}: ${value}`);
   }
   return parts.length > 0 ? parts.join("; ") : null;
 }
@@ -129,11 +166,14 @@ function cleanWebsite(raw: string | undefined): string | null {
   return value.slice(0, cut) || null;
 }
 
-function toCustomFields(place: OutscraperPlace): Record<string, string> {
+function toCustomFields(
+  place: OutscraperPlace,
+  language: string,
+): Record<string, string> {
   const fields: Record<string, string> = {};
   const rating = formatRating(place);
   if (rating) fields.google_rating = rating;
-  const hours = formatWorkingHours(place.working_hours);
+  const hours = formatWorkingHours(place.working_hours, language);
   if (hours) fields.opening_hours = hours;
   if (typeof place.verified === "boolean") {
     fields.google_profile_claimed = place.verified ? "Yes" : "No";
@@ -171,6 +211,9 @@ function groupByPlace(places: OutscraperPlace[]): OutscraperPlace[][] {
 export function toCallableLeads(
   places: OutscraperPlace[],
   fallbackIndustry: string | null,
+  /** Markt-Sprache des Jobs (countries.ts) — nur fuer die Tages-Namen
+   *  der Oeffnungszeiten; "en" = Passthrough. */
+  language = "en",
 ): CallableLead[] {
   const seenPhones = new Set<string>();
   const leads: CallableLead[] = [];
@@ -200,7 +243,7 @@ export function toCallableLeads(
       contact_name: null,
       industry: place.category?.trim() || fallbackIndustry,
       location: (place.address ?? place.full_address)?.trim() || null,
-      custom_fields: toCustomFields(place),
+      custom_fields: toCustomFields(place, language),
     });
   }
 
@@ -209,10 +252,13 @@ export function toCallableLeads(
 
 /**
  * Website-Filter — der Ziel-Filter fuer die Web-Agentur-Zielgruppe
- * ("Betriebe ohne Website anrufen"). Outscrapers Quick-Filter sind
- * UI-only (API unterstuetzt sie nicht, Staff-bestaetigt), deshalb
- * filtert diese Stufe client-seitig; das website-Feld kommt im
- * Basis-Preis mit.
+ * ("Betriebe ohne Website anrufen"). Seit "immer language=en"
+ * (2026-08-05) filtert Outscraper das bereits server-seitig (nur
+ * Treffer werden geliefert/berechnet) — diese Stufe bleibt als
+ * Garantie-Netz: sie prueft dieselbe Bedingung nochmal client-seitig,
+ * damit ein stiller Filter-Ausfall bei Outscraper nie eine falsche
+ * Liste produziert. (Die alte "Quick-Filter sind UI-only"-Notiz von
+ * Mai war ueberholt — filters IST ein API-Param, nur en-gebunden.)
  */
 export function filterByWebsite(
   leads: CallableLead[],
