@@ -192,6 +192,114 @@ eine Liste wollen).
   Die €/1.000-Zahlen (sekundär: ~$3/1.000 Basis, ~$6 mit Email-Enrichment) **vor
   dem Kostenmodell live im eingeloggten Dashboard bestätigen.**
 
+## 6b. Outscraper-Funktionsweise — empirisch verifiziert (2026-08-05)
+
+Jan + Claude haben die Mechanik mit echten Läufen (Dashboard + roher API-Call)
+ausgemessen. Diese Fakten sind die Grundlage für Multi-Location/State-Support
+(§14b) — **nicht erneut herleiten, hier nachlesen.** Ausführliche Fassung inkl.
+aller Testdaten: Memory `reference_outscraper_architecture`.
+
+### API = wörtliche Durchreiche, KEIN server-seitiges Tiling
+
+- Eine Text-`query` = exakt **eine** Google-Maps-Suche. Beweis:
+  `"dentist, Bayern, DE"` mit `limit=500`, `language=de`, `region=DE`
+  (roher API-Call, identisch zu unserem Generator-Pfad) lieferte **59 Records**
+  — die eine Suche war erschöpft, alle 59 Zeilen tragen unveränderten
+  unseren Query-String. Kein Auffächern, keine Sub-Queries.
+- Das PLZ-Tiling, das man vom Dashboard kennt, ist ein **Client-Feature des
+  Dashboard-Formulars**: Der Standort-Baukasten (Land>State>Stadt>PLZ, 4
+  Ebenen, Mehrfachauswahl) generiert die Micro-Queries VOR dem Submit
+  (Task-Metadata: `useZipCodes: true`, `locations: [...]`, `queries_amount` —
+  Köln→45 Queries, Essen→32). Der Dashboard-Toggle „Einfache Abfragen" =
+  Rohmodus, entspricht unserem API-Pfad.
+- Micro-Query-Format (aus echten Dashboard-Exports):
+  `zahnarzt, 45131, Essen, Nordrhein-Westfalen, DE` — falls wir Fan-out je
+  selbst bauen, ist DAS die Vorlage.
+- Die API nimmt **mehrere Queries pro Request** an; `dropDuplicates`
+  dedupliziert dann über die Queries hinweg (reduziert doppelt bezahlte
+  Records an Gebietsgrenzen). `skipPlaces` = manuelle Pagination in
+  20er-Schritten innerhalb EINER Query (Reihenfolge über Wochen nicht
+  garantiert stabil → nur Kosten-Optimierung, nie Korrektheits-Anker).
+
+### Suchtiefe + State-Queries
+
+- Google deckelt eine Einzelsuche bei grob ~120 Listings (deshalb baut
+  Outscraper das PLZ-Tiling überhaupt). Unser Bayern-Lauf versiegte bei 59.
+- **State als eine Query ist unbrauchbar** — nicht nur flach, sondern
+  unzuverlässig: „dentist, Bayern, DE" lieferte 22/59 Treffer in BERLIN
+  (Google matchte u. a. „Bayerische Str." in Wilmersdorf!), Rest fast nur
+  München, 20 Records ohne Kategorie. State-Support geht nur über Fan-out
+  (§14b).
+- ⚠️ OFFEN: Maximal-Tiefe einer Einzel-**Stadt**-Query (z. B.
+  `dentist, Köln, DE` ohne Filter bis zum Versiegen) ist ungemessen — bei
+  Bedarf ~$1 Testlauf; relevant für „Max list size"-Erwartungen bei
+  Ein-Stadt-Listen.
+
+### Ranking-Jitter + language-Effekt auf die Firmen-Menge (A/B 2026-08-05)
+
+Drei Läufe `dentist, Köln, DE` limit 50 (en / de / de-Kontrolle):
+- **Zwei IDENTISCHE de-Läufe teilen nur 35/50 Betriebe (70%)** — Googles
+  Ranking würfelt pro Lauf. Konsequenzen: (a) `skipPlaces`-Fortsetzung
+  ist unzuverlässig (Reihenfolge schon zwischen zwei Läufen instabil) —
+  der eigene Ausschluss-Filter ist der EINZIGE verlässliche
+  Fortsetzungs-Mechanismus; (b) Overlap-Vergleiche zwischen Läufen nie
+  ohne Kontroll-Lauf interpretieren.
+- **en vs de: 29–31/50 Overlap** — gegen die 70%-Baseline fast
+  vollständig Jitter. Die Firmen-MENGE ist praktisch sprachunabhängig,
+  Qualität identisch (46–47/50 korrekt).
+- **Roh-API anglisiert NICHT:** `address` sagt auch bei `language=en`
+  „Köln"/„Straße"; `category` kommt immer im Lokal-Label. Das
+  „Cologne" stammte aus der geparsten city-Spalte des DASHBOARDS.
+  Das City-Sort-Argument für language=de ist damit hinfällig.
+- **Absicherungs-Stichproben (gleicher Tag):** Wien (Exonym-Härtetest):
+  en-Lauf 50/50 Adressen „Wien", 0× „Vienna"; Kategorien bleiben auch
+  unter en lokal („Elektriker" 30/50). Paderborn (Kleinstadt): en-Lauf
+  lieferte 50, de-Lauf nur 34 — en ist gleich gut oder ERGIEBIGER.
+  `working_hours`-Tages-Schlüssel lokalisieren als einziges Feld
+  (en→„Monday", de→„Montag") — gelöst durch Intl-Mapping in der
+  Pipeline.
+- **ENTSCHEIDUNG (Jan, 2026-08-05): JEDER Markt läuft mit `language=en`
+  + Server-Filtern** (`with_phone`, `operational_only`, Website-Filter
+  wenn gesetzt). Umgesetzt in generate/route.ts; Pipeline übersetzt
+  Tages-Namen via Intl in die Markt-Sprache (pipeline.ts, alle
+  LANGUAGE_OVERRIDES-Sprachen abgedeckt, unbekannte Keys Passthrough).
+  Kostenhebel: Website-Filter-Läufe (~5 % Trefferquote) liefern und
+  berechnen nur Treffer — Faktor ~20 bei „without"-Listen, wichtig
+  weil der Filter als Marketing-Feature beworben wird und mit
+  Credits/Multi-Location 500er-Listen über mehrere Bundesländer
+  realistisch werden. Der Sprach-Hybrid (§13b) und der Zwei-Phasen-
+  Fetch-Plan (§13b unten) sind damit OBSOLET.
+
+### Sprache: drei getrennte Achsen (nicht verwechseln!)
+
+1. **`language`-Param**: gated Server-Features — Quick-Filter
+   (`only_without_website` etc.) und „exact match categories" gibt es NUR
+   bei `language=en`. Auf die Ergebnis-Daten wirkt er (entgegen der
+   alten Annahme) fast nicht: Adressen + `category` bleiben lokal, nur
+   `working_hours`-Tage lokalisieren. **Seit 2026-08-05 immer „en"**
+   (Entscheidung oben); der frühere Sprach-Hybrid ist Geschichte.
+2. **Query-Text** ist sprachtolerant: Google matcht semantisch auf die
+   interne Kategorie. A/B-verifiziert (je limit 50, alle voll geliefert):
+   Dentist/Essen 49/50 korrekt vs. Zahnarzt/Essen 47/50; Tax
+   consultant/Köln 41/50 vs. Steuerberater/Köln 44/50. Deutsche Begriffe
+   sind in DACH NICHT schlechter — englische Kanonik gewinnt wegen
+   **Markt-Universalität** („Dentist" geht überall, „Zahnarzt" nur DACH),
+   nicht wegen Qualität. (Niedrige Overlaps zwischen den A/B-Läufen waren
+   Tiling-Artefakte — verschiedene ZIP-Kacheln —, kein Sprach-Effekt.)
+3. **Outscrapers Kategorie-SYSTEM ist englisch verankert**: Die vordefinierte
+   Kategorienliste kennt „zahnarzt" nicht (Dashboard bietet nur
+   „als neue Kategorie hinzufügen"; Task-Metadata flaggt deutsche Begriffe
+   als `includesForeignCategory: true`). Deutsche Begriffe laufen als
+   Custom-Freitext — funktionieren als Text-Suche, hängen aber außerhalb
+   der Kategorie-Features.
+
+### Billing (erneut bestätigt)
+
+- Abgerechnet werden **gelieferte Records** ($3/1k), nie das Scan-Limit —
+  Bayern-Test: 59 geliefert ≈ $0,18 trotz limit 500. (Bei aktivem
+  Server-Filter zählt `limit` gescannte Plätze, geliefert/bezahlt werden
+  nur Treffer — wie gehabt, §13b.)
+
 ## 7. Datenmapping (Outscraper → Callday `leads`)
 
 Reuse der **bestehenden Import→`lead_list`→`leads`-Pipeline** (Outscraper ist nur
@@ -411,17 +519,15 @@ machen (schlaegt selbstgebaute Ads fast immer).
   Karten-Stack (Anti-Prokrastination). Daten liegen lokal
   (leads.website), kein Sync-Thema. Bei groesseren Maerkten +
   Filter-Undershoot: `skipPlaces`-Pagination als Tiefenscan-Ausbau.
-- **Geplante Optimierung: Zwei-Phasen-Fetch fuer gefilterte
-  DACH-Laeufe** (Jan-Einwand 2026-07-12, berechtigt): Client-Filter
-  bezahlt den vollen Raw-Scan — bei 5 % Trefferquote ~$1,20 pro Liste
-  fuer 20 Leads; auf Kampagnen-Volumen (1.000 Listen/Monat) vierstellig
-  vermeidbar. Loesung OHNE en-Zwang: (1) `language=en` + Server-Filter
-  → nur Treffer werden geliefert/berechnet, nur `place_id`s verwenden;
-  (2) place_ids als Batch-Query mit `language=de` nachladen (bis 1.000
-  Queries/Request) → deutsche Labels, City-Sort intakt. Extremfall
-  $0,12 statt $1,20. Preis: zweite Async-Stufe im Job (Latenz +
-  State). **Trigger:** vor DACH-Meta-Kampagne ODER >~200 gefilterte
-  DACH-Listen/Monat in lead_gen_jobs. **Billing-Annahme VALIDIERT (2026-07-12, Jans
+- ~~**Geplante Optimierung: Zwei-Phasen-Fetch fuer gefilterte
+  DACH-Laeufe**~~ — **OBSOLET seit 2026-08-05:** Alle Maerkte laufen
+  jetzt direkt mit `language=en` + Server-Filtern (§6b, Entscheidung
+  Jan) — die A/B-Tests zeigten, dass die Anglisierung, die der
+  Zwei-Phasen-Plan vermeiden sollte, im Roh-API-Adressfeld gar nicht
+  existiert. Die Oekonomie-Zahlen unten bleiben als Beleg gueltig
+  (jetzt ohne zweite Async-Stufe erreicht). Historischer Plan: (1)
+  `language=en` + Server-Filter nur place_ids; (2) Batch-Reload mit
+  `language=de`. **Billing-Annahme VALIDIERT (2026-07-12, Jans
   Usage-Dashboard):** El-Paso-Filter-Lauf (15 Treffer bei Scan-Limit
   500) wurde mit exakt 15 Records abgerechnet; Fahrschulen-Koeln
   (unfiltered, DE) mit 119 = zurueckgegebene Records. Outscraper
@@ -557,6 +663,142 @@ Duplicate-Keep, Export-Format-Wahl, API-Request-Drawer, Task-Tags).
 - ~~**Email-Enrichment** (`leads_n_contacts`) optional + teurer — später zuschaltbar~~ —
   **ERSETZT 2026-07-15:** laeuft immer, auch Free-Liste, nie als Auswahl (§13d).
 - **Raw-CSV bei bezahlten Listen** ist Standard; bei der Gratis-Liste auch (§5).
+
+## 14b. Generator-v3-Runde — Design-Stand 2026-08-05 (VOR Umsetzung)
+
+Jans Optimierungs-Runde vom 2026-08-05, Bearbeitungs-Reihenfolge 1→5.
+Status-Legende: ✅ = Jan-entschieden, 🔷 = Claude-Empfehlung, noch nicht
+bestätigt. Faktenbasis für alles Location-bezogene: §6b.
+
+1. **„List size" → „Max list size"** (✅): Label + Hint ehrlich machen —
+   Limit, keine Garantie („up to"). Quickie.
+2. **Mobile-Fix Länder-Pillen** (✅): „Try:"-Chips hängen unter der ganzen
+   Country+City-Zeile → beim Mobile-Stacking stehen sie unter City. In die
+   Country-Spalte ziehen.
+3. **Deutsche Industry-Aliase** (✅ UMGESETZT 2026-08-05): Alias-Asset
+   `lib/lists/category-aliases.ts` (locale-scoped `de`, ~340 Aliase über
+   alle Kategorien, mehrere pro Kanonik erlaubt) + `searchCategories` in
+   `gmb-categories.ts` sucht Kanonik UND Aliase (diakritik-/ß-tolerant,
+   Dedupe pro Kanonik: Direkt-Treffer schlägt Alias). Dropdown zeigt
+   Alias mit Kanonik als Sublabel (City-Feld-Optik), **Klick setzt die
+   englische Kanonik** („Dentist") ins Feld — Markt-Universalität (§6b).
+   Häkchen (`isKnownCategory`) bleibt kanonik-only, Freitext (auch
+   deutsch) bleibt gültig, Pipeline/API unberührt. Integritäts-Vitest:
+   jedes Alias-Ziel muss exakt in `GMB_CATEGORIES` existieren; keine
+   Alias/Kanonik-Kollisionen. Dabei ergänzt: Kategorie **„Tax
+   consultant"** (fehlte; ist die live-verifizierte GMB-Kategorie für
+   Steuerberater). Kommentar in `gmb-categories.ts` auf A/B-Beleg
+   präzisiert. Kosten-Hinweis: Server-Filter für en-Märkte bleiben wie
+   gehabt; `exactMatch` (en-only, würde Rausch-Records sparen, riskiert
+   aber verwandte Kategorien) bewusst GEPARKT — erst A/B-testen, wenn
+   Volumen es rechtfertigt.
+4. **Credit-Modell** (✅ PHASE 1 UMGESETZT + DEPLOYED 2026-08-05):
+   - **Entschieden (Jan, 2026-08-05, per MC):** 250 Free-Credits pro
+     Account (einmalig); Abo = 500/Monat-**Drip** (auch Jahres-Abo, kein
+     Upfront-Topf), Grants **ab Trial-Start**, Stacking-Cap **1.500**
+     (bestätigt die §10-Entscheidung, Jans 3.000er-Idee verworfen);
+     Kündigung: Listen bleiben, Credits werden am **Perioden-Ende**
+     gewiped, Re-Sub startet bei 0. Credits triggern NICHT die Paywall
+     (die bleibt der App-First-Call-Gate). 1 Credit = 1 tatsächlich in
+     der Liste gelandeter Lead (nach Pipeline-Filter + Dedupe + Cap).
+     Weiterhin genau EIN aktiver Job pro Account.
+   - **Phase 1 (LIVE):** Migration **0052** (`lead_credits`-Ledger:
+     append-only, SUM(delta)=Kontostand, partial-unique-Idempotenz für
+     signup_grant/job-Abrechnung; Free-Cap-1-Index ersetzt durch
+     Ein-aktiver-Job-Index; Backfill: 24 Bestands-User je +250, 6
+     gelieferte Listen rückwirkend verrechnet, alle Konten 85–250).
+     `lib/lists/credits.ts` (Konstanten + Clamps + Ledger-Helpers,
+     getestet), generate-Route (Lazy-Grant, Balance-Check → 403
+     `credits_exhausted`, 409 = `job_running`, `max_size` in params,
+     Scan-Limit skaliert mit Wunschgröße), jobs.ts (Slice nach
+     max_size, idempotente Abrechnung NACH Ready — Fehlerfall = Liste
+     ohne Abrechnung, nie umgekehrt), Status-Route liefert
+     `credits {balance, signupTotal}` (nach Self-Heal gelesen).
+     UI: Max list size bedienbar (1..min(500, balance), Default
+     min(250, balance), Blur-Clamp), Credit-Hint unterm Feld,
+     0-Credits-Sperrkarte OHNE Pricing („More credits are coming
+     soon"), fertige Listen sperren nichts mehr.
+   - **Phase 2 (mit IAP/RevenueCat, NICHT gebaut):** `sub_grant`
+     500/Monat am Abo-Jahrestag via RC-Webhook (auch im Trial), Cap
+     1.500 beim Grant durchsetzen (Grant = min(500, 1500-balance)),
+     `sub_expiry_wipe` am Perioden-Ende, Anti-Churn-Hinweis „Du
+     verlierst X Credits" wenn RC auto-renew-off meldet. Kontostand
+     prominent ins Dashboard. Reasons sind im 0052-Schema schon
+     angelegt.
+   - Max list size pro Liste hard-capped auf 500 (realistische
+     Liefer-Tiefe einer Einzel-Query) — fällt mit Multi-Location.
+5. **Multi-Location-Feld** (✅ Grundidee: Chips mit X, Städte UND
+   Bundesländer/States, Feld umbenennen): baut auf 4 auf.
+   - **Städte-Chips:** eine Query pro Chip (API kann mehrere Queries pro
+     Request), mergen + Telefon-Dedupe, Round-Robin über Locations beim
+     Cap (🔷 damit eine Großstadt nicht alles frisst). 🔷 Cap ~5 Chips;
+     Freitext-Enter wird Chip; Label „Locations".
+   - **State-Chips = Fan-out, NIE eine State-Query** (Beweis §6b):
+     kuratiertes statisches Asset Top-10–20-Städte pro DE-Bundesland +
+     US-State → Stadt-Queries, per-Query-Limit klein halten
+     (≈ MaxSize/Städtezahl + Puffer). Places-Autocomplete muss Regionen
+     mit vorschlagen (heute `(cities)`-Type-Filter).
+   - **Coverage-Ledger** (Design-Baustein, Umsetzung mit diesem Paket oder
+     direkt danach): pro Account (Branche, Gebiet, Zeitpunkt, geliefert)
+     abhaken; Gebiet GENERISCH typisieren (`city | zip`) — v1 läuft auf
+     Stadt-Granularität, PLZ-Tiefenausbau ist späteres Upgrade im selben
+     Schema (Detail-Design im Unterabschnitt unten). Wiederholungs-Suchen:
+     eigener Ausschluss-Filter gegen vorhandene Leads des Accounts
+     (Telefon/place_id) IMMER als Garantie-Netz; `skipPlaces` nur als
+     Kosten-Optimierung. Outscraper-seitiges Cross-Task-Filtern existiert
+     nicht (§6b).
+   - **Geo-Daten-Asset** (Jan-Frage 2026-08-05, Entscheidung: Hybrid):
+     Quelle = GeoNames-Dumps (CC-BY, Attribution nötig; `cities1000` +
+     Postal-Code-Dumps: DE ~8.200 PLZ, US ~41k ZIP, AU komplett, CA nur
+     FSA-3-Zeichen-Gebiete frei — reicht als Tile-Granularität). KEINE
+     Runtime-API (Latenz/Rate-Limits/Drift der Ledger-Schlüssel), sondern
+     Import-Script → eigene Tabellen (`geo_areas`, `geo_tiles` mit
+     Einwohnerzahl für Sortierung), Refresh ~jährlich per Script-Rerun,
+     nur additiv (Tile-IDs sind Ledger-Referenzen, nie umbenennen).
+     Nebeneffekt: „Top-Städte pro State" für v1-Fan-out fällt gratis aus
+     `geo_tiles` (Sort nach Einwohnern) — keine Hand-Kuratierung.
+
+### 14b.1 Ablauf-Design Fan-out + Coverage (erarbeitet 2026-08-05, Beispiel „Dentist, Bayern")
+
+1. **Chip → Tiles:** State-Chip (`DE-BY`) expandiert via `geo_tiles` zu
+   geordneten Tiles (Einwohnerdichte absteigend; v1 Stadt-Tiles, später
+   PLZ-Tiles ~2.050 für BY). Tile = atomare Query-Einheit.
+2. **Coverage-Lookup:** `lead_gen_coverage (user_id, category_canon,
+   tile_id, result_count, queried_at, job_id; PK user+cat+tile)` filtert
+   schon abgesuchte Tiles raus. `category_canon` = normalisierte
+   Kategorie (Alias-Klick → englische Kanonik; Freitext lowercase/trim)
+   — „Zahnarzt" und „Dentist" treffen DIESELBE Coverage.
+3. **Wellen:** pro Welle ~25 offene Tiles als EIN Outscraper-Request
+   (Multi-Query, `dropDuplicates`, kleines per-Query-Limit), Request-ID
+   je Welle in `lead_gen_job_tiles (job_id, tile_id, wave,
+   outscraper_request_id, status)`. Webhook-Handler verarbeitet UND
+   stößt die nächste Welle an (Event-Kette, kein Langläufer — passt zu
+   Vercel); bestehender Status-Poll heilt verlorene Webhooks pro Welle.
+   Stop: Ziel erreicht / Tiles leer / Welle liefert ~nichts /
+   Sicherheits-Cap (Wellen+Kosten).
+4. **Abhaken bei EMPFANG, nie beim Senden** (Kern-Invariante):
+   Coverage-Upsert erst wenn Ergebnisse da (Zeilen→Tile-Zuordnung über
+   die `query`-Spalte der Response, live verifiziert). `result_count: 0`
+   wird AUCH abgehakt (bezahlte Erkenntnis „hier ist nichts").
+   Crash zwischen Senden+Empfang ⇒ Tile bleibt offen ⇒ Folge-Lauf sucht
+   erneut — Fehlerfall kostet Cents, Coverage lügt NIE.
+5. **Cap + Spillover:** Round-Robin über Städte beim Füllen bis
+   max_list_size/Credits. Überschüssige valide Leads aus ABGEHAKTEN
+   Tiles gehen in `lead_gen_spillover (user, category_canon, tile_id,
+   lead_data jsonb)` — sonst wären sie für den User für immer verloren
+   (Tile wird ja übersprungen). Folge-Lauf gleicher Kategorie leert
+   Spillover ZUERST (0 Outscraper-Kosten, zählt nur gegen Credits).
+6. **Wiederholungslauf:** Spillover → dann Wellen ab erstem offenen
+   Tile. UI kann ehrlich fortschreiben („last list covered Munich &
+   Nuremberg — continuing with Augsburg"). Alles abgehakt ⇒ klare
+   Ansage statt Leer-Liste; Coverage-TTL/Refresh (z. B. 12 Mon. via
+   `queried_at`) = spätere Produktentscheidung, Schema kann es ab Tag 1.
+
+Stabilitäts-Prinzipien: Tile-IDs nur aus dem versionierten Geo-Snapshot
+(nie aus Live-APIs → kein Ledger-Drift); Idempotenz auf jeder Stufe
+(Upserts, Request-IDs, Poll-Heilung); konservatives Abhaken; „ein Job
+gleichzeitig pro Account" (Jan-Regel) eliminiert Coverage-Races; v1
+Stadt-Tiles und PLZ-Ausbau teilen Schema + Pipeline.
 
 ## 15. Verweise
 
