@@ -3603,8 +3603,9 @@ h2 .accent {
 }
 /* Industry-Einrast-Feld (Design-Variante B, 2026-08-05): gleiche
    Box-Grammatik wie .lists-locbox; bei erkannter Kategorie kippt die
-   Box in den gerasteten Look — Brand-Toenung, semibold, rechts
-   ✓ + Kanonik (ellipsiert, nie Text-Kollision). */
+   Box in den gerasteten Look — Brand-Toenung, rechts ✓ + Kanonik
+   (ellipsiert, nie Text-Kollision). Textgewicht bleibt normal wie im
+   Country-Feld (kein semibold — das konkurrierte mit dem Label). */
 .lists-snapfield {
   display: flex;
   align-items: center;
@@ -3627,9 +3628,6 @@ h2 .accent {
 .lists-snapfield.is-snapped {
   background: rgba(74, 122, 247, 0.05);
   border-color: rgba(74, 122, 247, 0.45);
-}
-.lists-snapfield.is-snapped input {
-  font-weight: 600;
 }
 .lists-snapfield.is-disabled {
   background-color: rgba(26, 29, 38, 0.045);
@@ -3763,19 +3761,51 @@ h2 .accent {
 .lists-suggest-wrap input {
   width: 100%;
 }
-/* Absoluter Positionierer fuers CheckBadge in klassischen Inputs
-   (Country) — Inhalt ist das geteilte .lists-check-badge. */
-.lists-suggest-check {
+/* Laender-Flagge links im Country-Feld (statt Check) — bestaetigt die
+   Wahl + Wiedererkennung. 3:2-SVG, leicht gerundet; 1px-Ring gibt
+   Definition fuer Flaggen mit weissem Rand (Japan etc.) auf weissem
+   Feld. Der Input bekommt bei Auswahl paddingLeft (inline) fuer Platz. */
+.lists-country-flag {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: auto;
+  border-radius: 2.5px;
+  box-shadow: 0 0 0 1px rgba(26, 29, 38, 0.1);
+  pointer-events: none;
+}
+/* Dropdown-Chevron rechts (Affordance): pointer-events none, damit der
+   Klick auf den Input durchfaellt und die Liste oeffnet. */
+.lists-country-chevron {
   position: absolute;
   top: 50%;
   right: 14px;
   transform: translateY(-50%);
   display: inline-flex;
+  color: var(--ink-faint);
   pointer-events: none;
+  transition: transform 0.16s ease;
 }
-/* Geteiltes Bestaetigungs-Badge (Design-Variante B): Stroke-Check im
-   gruenen Tint-Kreis — identisch in Country + Industry (+ kuenftigen
-   Einrast-Feldern). */
+.lists-country-chevron.is-open {
+  transform: translateY(-50%) rotate(180deg);
+}
+/* X-Clear: nur Positionierung an der Chevron-Stelle (rechts, ersetzt
+   ihn). Der Kreis-Look kommt aus der geteilten .lists-loc-chip-x
+   (identisch zu den Location-Chips). */
+.lists-country-clear {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+}
+/* Geteiltes Bestaetigungs-Badge: Stroke-Check im blauen Tint-Kreis —
+   identisch in Country + Industry (+ kuenftigen Einrast-Feldern). Blau
+   statt Gruen (Jan 2026-08-05): kollabiert den "erkannt"-Zustand auf
+   EINE Farbe (blauer Snap-Tint + blauer Check), und laesst das Gold
+   dem Live-Punkt als singulaeres Marken-Signal. Gruen biss sich mit
+   Gold + Blau auf derselben Flaeche. */
 .lists-check-badge {
   display: inline-flex;
   align-items: center;
@@ -3783,8 +3813,8 @@ h2 .accent {
   width: 19px;
   height: 19px;
   border-radius: 50%;
-  background: rgba(29, 154, 92, 0.13);
-  color: var(--green-deep);
+  background: rgba(37, 99, 232, 0.12);
+  color: var(--blue-deep);
   flex: 0 0 auto;
 }
 .lists-suggest-dropdown {

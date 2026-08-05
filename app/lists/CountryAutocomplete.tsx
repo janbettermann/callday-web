@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   findCountry,
   searchCountries,
   type CountryOption,
 } from "@/lib/lists/countries";
 import {
-  CheckBadge,
   SuggestDropdown,
   handleSuggestKeys,
   type SuggestOption,
@@ -49,7 +48,13 @@ export function CountryAutocomplete({
   const [options, setOptions] = useState<SuggestOption[]>([]);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [focused, setFocused] = useState(false);
   const selected = code !== null;
+  // Rechts-Icon-Logik: im Ruhezustand der Dropdown-Chevron; sobald man
+  // das Feld bearbeitet (Fokus) UND etwas drinsteht, ersetzt ihn das
+  // X-Clear (Chip-Style-Kreis) — nie beide gleichzeitig.
+  const showClear = focused && text.trim().length > 0 && !disabled;
 
   // Aendert der Parent den Code von aussen (Schnellwahl-Pillen), muss
   // das Feld den passenden Laendernamen nachziehen — der Initializer
@@ -79,8 +84,20 @@ export function CountryAutocomplete({
     setOpen(false);
   }
 
+  // X-Clear: Land + Text weg → exakt der Leer-Zustand (wie beim Mount).
+  // Fokus bleibt, damit man direkt neu tippen kann; onFocus zeigt dann
+  // die Kern-Maerkte.
+  function handleClear() {
+    setText("");
+    onChange(null);
+    setOptions([]);
+    setOpen(false);
+    inputRef.current?.focus();
+  }
+
   function handleBlur() {
     setOpen(false);
+    setFocused(false);
     if (selected) return;
     // Exakt getippter Laendername zaehlt wie ein Klick auf den Vorschlag.
     const needle = text.trim().toLowerCase();
@@ -103,14 +120,35 @@ export function CountryAutocomplete({
         Country
       </label>
       <div className="lists-suggest-wrap">
+        {/* Bestaetigung des gewaehlten Landes = Flagge links (statt
+            Check): das Land wurde ausgewaehlt, nicht "erkannt" — die
+            Flagge bestaetigt die Wahl und traegt Wiedererkennung. SVGs
+            liegen als statische Assets in public/flags (ISO-2, aus
+            country-flag-icons; volle Abdeckung der Laenderliste). Der
+            Check bleibt Industry vorbehalten (dort = erkannte Kanonik). */}
+        {code && (
+          <img
+            className="lists-country-flag"
+            src={`/flags/${code}.svg`}
+            alt=""
+            aria-hidden="true"
+            onError={(e) => {
+              e.currentTarget.style.visibility = "hidden";
+            }}
+          />
+        )}
         <input
+          ref={inputRef}
           id="lists-country-input"
           type="text"
           value={text}
           onChange={(e) => handleText(e.target.value)}
           // Focus auf ein eingerastetes Feld zeigt die Kern-Maerkte als
           // Schnellwechsel; sonst die Treffer zum aktuellen Text.
-          onFocus={() => showMatches(selected ? "" : text)}
+          onFocus={() => {
+            setFocused(true);
+            showMatches(selected ? "" : text);
+          }}
           onKeyDown={(e) =>
             handleSuggestKeys(e, {
               open,
@@ -130,11 +168,45 @@ export function CountryAutocomplete({
           role="combobox"
           aria-expanded={open}
           aria-autocomplete="list"
-          style={selected ? { paddingRight: 44 } : undefined}
+          // Links Platz fuer die Flagge, rechts fuer genau EIN Icon
+          // (Chevron oder X — sie ersetzen sich).
+          style={{
+            paddingLeft: code ? 40 : undefined,
+            paddingRight: 40,
+          }}
         />
-        {selected && (
-          <span className="lists-suggest-check" aria-hidden="true">
-            <CheckBadge />
+        {showClear ? (
+          // X-Clear im Chip-Kreis-Style (geteilte .lists-loc-chip-x),
+          // ersetzt den Chevron beim Bearbeiten. preventDefault haelt
+          // den Fokus, sonst schnappt der Blur den Klick weg.
+          <button
+            type="button"
+            className="lists-loc-chip-x lists-country-clear"
+            aria-label="Clear country"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={handleClear}
+          >
+            ×
+          </button>
+        ) : (
+          // Dropdown-Chevron: reine Affordance (pointer-events none) —
+          // der Klick faellt auf den Input durch und oeffnet die Liste.
+          <span
+            className={"lists-country-chevron" + (open ? " is-open" : "")}
+            aria-hidden="true"
+          >
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
           </span>
         )}
         {open && (
