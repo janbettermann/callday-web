@@ -405,11 +405,20 @@ export function GeneratorClient() {
               />
               <span className="lists-size-unit">leads</span>
             </div>
-            <p id="gen-listsize-hint" className="lists-field-hint">
-              {credits
-                ? `You have ${credits.balance} of ${credits.signupTotal} free lead credits — only leads that land in your list use them. If your search finds fewer, the list is smaller.`
-                : "If your search finds fewer, the list is smaller."}
-            </p>
+            {/* Kurzer Hinweis, nur die uebrigen Credits (Zahl in Gold =
+                Credit-Faden). Das volle "X von Y"-Bild traegt der
+                Header-Ring + der /account-Balken; hier reicht die
+                handlungsrelevante Restzahl. Paid-Copy ("You have X
+                credits") kommt mit der IAP-Verdrahtung. */}
+            {credits && (
+              <p id="gen-listsize-hint" className="lists-field-hint">
+                You have{" "}
+                <span className="lists-credit-num">
+                  {credits.balance.toLocaleString()}
+                </span>{" "}
+                free lead credits left
+              </p>
+            )}
           </div>
 
           {/* Website-Filter als Segmented Control (Jan-Wahl 2026-08-05,

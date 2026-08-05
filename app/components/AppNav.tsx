@@ -75,6 +75,12 @@ function SparkleIcon() {
   );
 }
 
+// Fortschritts-Ring um die Avatar-Pille: Radius/Umfang fuer die
+// stroke-dasharray-Mathe. r=17.75 laesst um den 30px-Avatar (r15) einen
+// schmalen Spalt zum 2.5px-Ring.
+const RING_R = 17.75;
+const RING_CIRC = 2 * Math.PI * RING_R;
+
 export function AppNav({
   active,
   initial = "?",
@@ -83,9 +89,39 @@ export function AppNav({
   initial?: string;
 }) {
   const [open, setOpen] = useState(false);
+  // Credit-Stand fuer den Ring — client-seitig geladen, damit der Ring
+  // ohne Prop-Threading auf jeder Seite erscheint (GET /api/credits ist
+  // seiteneffektfrei). Fuellung = used/total.
+  const [credits, setCredits] = useState<{
+    used: number;
+    total: number;
+  } | null>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
   const panelCloseRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/credits")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (active && data?.credits) {
+          setCredits({ used: data.credits.used, total: data.credits.total });
+        }
+      })
+      .catch(() => {
+        // Ring bleibt leer (nur Track) — kein harter Fehler im Header.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const usedFraction =
+    credits && credits.total > 0
+      ? Math.min(1, Math.max(0, credits.used / credits.total))
+      : 0;
+  const ringOffset = RING_CIRC * (1 - usedFraction);
 
   const closeMenu = useCallback(() => {
     setOpen(false);
@@ -182,8 +218,9 @@ export function AppNav({
             <MenuIcon />
           </button>
           {/* Avatar ganz rechts — auch rechts vom Burger (Jan 2026-07-24):
-              Identitaet sitzt am aeusseren Rand, die blaue Pille markiert
-              sie als das eine Marken-Element im Header. */}
+              Identitaet sitzt am aeusseren Rand. Drumherum der Gold-
+              Fortschritts-Ring (verbraucht/gesamt) — Klick geht wie
+              gehabt auf /account (dort der volle Balken). */}
           <Link
             href="/account"
             aria-label="Manage account"
@@ -191,7 +228,27 @@ export function AppNav({
               "appnav-account" + (active === "account" ? " is-active" : "")
             }
           >
-            <span className="appnav-avatar">{initial}</span>
+            <span className="appnav-ring">
+              <svg className="appnav-ring-svg" viewBox="0 0 40 40" aria-hidden="true">
+                <circle
+                  className="appnav-ring-track"
+                  cx="20"
+                  cy="20"
+                  r={RING_R}
+                />
+                <circle
+                  className="appnav-ring-fill"
+                  cx="20"
+                  cy="20"
+                  r={RING_R}
+                  style={{
+                    strokeDasharray: RING_CIRC,
+                    strokeDashoffset: ringOffset,
+                  }}
+                />
+              </svg>
+              <span className="appnav-avatar">{initial}</span>
+            </span>
           </Link>
         </div>
       </div>

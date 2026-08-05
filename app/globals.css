@@ -1239,6 +1239,33 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
   margin: 0 0 16px;
   color: var(--ink);
 }
+/* Lead-Credits-Balken (Account) — Gold-Fill, spiegelt den Header-Ring. */
+.credits-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+.credits-card-num {
+  font-size: 13px;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.credits-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(26, 29, 38, 0.08);
+  overflow: hidden;
+}
+.credits-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--sun);
+  transition: width 0.5s ease;
+}
 .account-status {
   display: inline-flex;
   align-items: center;
@@ -4033,6 +4060,12 @@ h2 .accent {
   margin: 3px 0 0;
   padding-left: 2px;
 }
+/* Restliche Credits im Max-size-Hinweis hervorgehoben — tiefes Gold
+   (text-sicher) haelt den "Gold = Credits"-Faden von Ring + Balken. */
+.lists-credit-num {
+  color: var(--sun-deep);
+  font-weight: 600;
+}
 /* Listengroesse — im Free-State fix + deaktiviert (der bediente Regler
    kommt mit Credits). Zahl schmal, "leads" daneben, gedaempft. */
 .lists-size-row {
@@ -4347,7 +4380,38 @@ h2 .accent {
 .appnav-account:hover .appnav-avatar {
   opacity: 0.85;
 }
+/* Gold-Fortschritts-Ring um den Avatar (Credit-Stand: verbraucht/gesamt,
+   Jan-Wahl "Gold-Paket" 2026-08-05). 40px-Container, Avatar 30px zentriert
+   drin; der Fill startet oben (svg um -90deg gedreht) und animiert beim
+   Laden von leer auf seinen Wert. */
+.appnav-ring {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.appnav-ring-svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+.appnav-ring-track {
+  fill: none;
+  stroke: rgba(26, 29, 38, 0.1);
+  stroke-width: 2.5;
+}
+.appnav-ring-fill {
+  fill: none;
+  stroke: var(--sun);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
+}
 .appnav-avatar {
+  position: absolute;
+  top: 5px;
+  left: 5px;
   width: 30px;
   height: 30px;
   border-radius: 50%;

@@ -92,6 +92,42 @@ export async function getCreditBalance(
   return (data ?? []).reduce((sum, row) => sum + (row.delta ?? 0), 0);
 }
 
+/** Verbraucht / Gesamt / Kontostand — Basis fuer Ring + Balken. */
+export interface CreditSummary {
+  /** Bisher verbrauchte Credits (total - balance). */
+  used: number;
+  /** Alle bisher vergebenen Credits (Summe der positiven Deltas). */
+  total: number;
+  /** Aktueller Kontostand (Summe aller Deltas). */
+  balance: number;
+}
+
+/**
+ * Zusammenfassung fuer die Anzeige (Ring/Balken): Fuellung = used/total
+ * (0 verbraucht → leer, alles verbraucht → voll). used = total (alles
+ * Vergebene) minus balance (was noch da ist). Hat ein User noch keinen
+ * Ledger-Eintrag (Signup-Grant kommt erst beim ersten Generator-Kontakt),
+ * zeigen wir den Start-Zustand — ohne hier einen Grant zu schreiben
+ * (GET bleibt seiteneffektfrei).
+ */
+export async function getCreditSummary(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<CreditSummary> {
+  const { data, error } = await admin
+    .from("lead_credits")
+    .select("delta")
+    .eq("user_id", userId);
+  if (error) throw new Error(`credit summary failed: ${error.message}`);
+  const rows = data ?? [];
+  if (rows.length === 0) {
+    return { used: 0, total: SIGNUP_CREDITS, balance: SIGNUP_CREDITS };
+  }
+  const balance = rows.reduce((sum, row) => sum + (row.delta ?? 0), 0);
+  const total = rows.reduce((sum, row) => sum + Math.max(0, row.delta ?? 0), 0);
+  return { used: Math.max(0, total - balance), total, balance };
+}
+
 /**
  * Gelieferte Leads eines ready-Jobs abrechnen. Idempotent (eine
  * Abrechnung pro Job); delta=0 wird nie geschrieben (CHECK-Constraint —

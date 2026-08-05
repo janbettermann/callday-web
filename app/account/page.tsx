@@ -5,6 +5,8 @@ import type { Metadata } from "next";
 import { AppNav } from "../components/AppNav";
 import { AppShell } from "../components/AppShell";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
+import { getServerSupabase } from "@/lib/supabase-server";
+import { getCreditSummary, type CreditSummary } from "@/lib/lists/credits";
 import { parseUserAgent } from "@/lib/user-agent";
 import { deleteAccountAction, signOutAction } from "./actions";
 import { avatarInitial } from "@/lib/dashboard/data";
@@ -119,6 +121,19 @@ export default async function AccountPage() {
     subscription_plan: null,
   };
 
+  // Credit-Stand fuer den Balken (service-role, Tabelle ist RLS-only).
+  // Fehler duerfen die Account-Seite nicht mitreissen — dann Karte weg.
+  let credits: CreditSummary | null = null;
+  try {
+    credits = await getCreditSummary(getServerSupabase(), user.id);
+  } catch (err) {
+    console.error("[account] credit summary failed", err);
+  }
+  const creditsPct =
+    credits && credits.total > 0
+      ? Math.min(100, (credits.used / credits.total) * 100)
+      : 0;
+
   // Read-only Subscription-Label. Die Spalten werden heute von Stripe-
   // Legacy-Daten, ab App-Store-Launch vom RevenueCat-Webhook gefuellt
   // (supabase/functions/revenuecat-webhook im App-Repo) — die Anzeige
@@ -180,6 +195,32 @@ export default async function AccountPage() {
               >
                 Get the app
               </a>
+            </section>
+          )}
+
+          {/* Lead credits — Gold-Balken (verbraucht/gesamt). Kein
+              Upgrade-CTA vorerst (Pre-Launch-Regel, kein Pricing); der
+              kommt mit IAP. Spiegelt den Header-Ring. */}
+          {credits && (
+            <section className="account-card">
+              <div className="credits-card-top">
+                <h2 className="account-card-title" style={{ margin: 0 }}>
+                  Free lead credits
+                </h2>
+                <span className="credits-card-num">
+                  {credits.balance.toLocaleString()} left of{" "}
+                  {credits.total.toLocaleString()}
+                </span>
+              </div>
+              <div className="credits-bar">
+                <span
+                  className="credits-bar-fill"
+                  style={{ width: `${creditsPct}%` }}
+                />
+              </div>
+              <p className="account-hint" style={{ marginTop: 9 }}>
+                Only leads that land in your lists use credits.
+              </p>
             </section>
           )}
 
