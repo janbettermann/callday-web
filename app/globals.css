@@ -3684,7 +3684,7 @@ h2 .accent {
   border: 0;
   background: none;
   border-radius: 9px;
-  padding: 10px 6px;
+  padding: 10px 16px;
   font-family: inherit;
   font-size: 14px;
   font-weight: 500;
@@ -3708,6 +3708,14 @@ h2 .accent {
 }
 .lists-seg-btn:disabled {
   cursor: default;
+}
+/* NUR am Handy (Jan-Wunsch 2026-08-05): "All" schrumpft auf seine
+   Textbreite, den Rest teilen sich "No website" + "Has website" (mehr
+   Platz, wo es eng ist). Desktop + Tablet behalten gleiche Drittel. */
+@media (max-width: 600px) {
+  .lists-seg-btn:first-child {
+    flex: 0 0 auto;
+  }
 }
 /* Generator-CTA im v2-Look: schwarz mit Icon statt Blau-Gradient. Nur
    hier — die .beta-submit der Landing/Auth bleibt Callday-Blau. */

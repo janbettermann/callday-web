@@ -20,20 +20,15 @@ export const OUTSCRAPER_MAX_SCAN_LIMIT = 500;
 
 /**
  * Kuratierte Branchen-BEISPIELE fuer die Chips unter dem Industry-Feld
- * ("Examples:"-Zeile). Bewusst nur vier + kurze Namen (Jan-Wahl Set A,
- * 2026-08-05): auf Mobile max. 2 Zeilen statt 3. Je ein Sektor —
- * Gesundheit / Handwerk / Recht / Handel — zeigt Breite, engt nicht auf
- * eine Nische ein. Im GMB-Singular-Stil, damit sie exakt Eintraege der
- * Autocomplete-Liste (lib/lists/gmb-categories.ts) treffen und das
- * Haekchen kriegen (garantiert per gmb-categories.test.ts). Freitext
- * bleibt moeglich; die Chips senken nur die Muell-Query-Quote.
+ * ("Examples:"-Zeile). Bewusst nur drei + kurze Namen (Jan 2026-08-05):
+ * auf Mobile eine Zeile. Verschiedene Sektoren (Gesundheit / Handwerk /
+ * Recht) zeigen Breite, engen nicht auf eine Nische ein. Im
+ * GMB-Singular-Stil, damit sie exakt Eintraege der Autocomplete-Liste
+ * (lib/lists/gmb-categories.ts) treffen und das Haekchen kriegen
+ * (garantiert per gmb-categories.test.ts). Freitext bleibt moeglich;
+ * die Chips senken nur die Muell-Query-Quote.
  */
-export const INDUSTRY_SUGGESTIONS = [
-  "Dentist",
-  "Plumber",
-  "Law firm",
-  "Car dealer",
-];
+export const INDUSTRY_SUGGESTIONS = ["Dentist", "Plumber", "Law firm"];
 
 /**
  * Ziel des "Get the Callday app"-CTAs. Waehrend der Beta zeigt /account

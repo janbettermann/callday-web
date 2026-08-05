@@ -50,17 +50,31 @@ import type { WebsiteFilterMode } from "@/lib/lists/pipeline";
 
 const POLL_INTERVAL_MS = 5000;
 
-// Kurze Segment-Labels (Jan-Wahl 2026-08-05: Segmented Control statt
-// Dropdown). Kurz genug fuer full-width auf Mobile (3 Drittel); der
-// "Website"-Feld-Label gibt den Kontext, deshalb "Any"/"No website"/
-// "Has website" statt der langen "Only…"-Saetze.
+// Segmented-Control-Optionen (Jan 2026-08-05). Kurze Labels fuers
+// Segment, der Subtitle darunter formuliert den Modus aus (immer
+// sichtbar, auch bei "All"). "All" ist bewusst kurz — das Segment
+// schrumpft auf seine Breite, No/Has website kriegen den Rest (CSS
+// :first-child).
 const WEBSITE_FILTER_OPTIONS: Array<{
   value: WebsiteFilterMode;
   label: string;
+  subtitle: string;
 }> = [
-  { value: "any", label: "Any" },
-  { value: "without", label: "No website" },
-  { value: "with", label: "Has website" },
+  {
+    value: "any",
+    label: "All",
+    subtitle: "Businesses with and without a website",
+  },
+  {
+    value: "without",
+    label: "No website",
+    subtitle: "Only businesses without a website",
+  },
+  {
+    value: "with",
+    label: "Has website",
+    subtitle: "Only businesses with a website",
+  },
 ];
 
 /**
@@ -421,8 +435,16 @@ export function GeneratorClient() {
                 </button>
               ))}
             </div>
-            {/* Ehrliche E-Mail-Konsequenz im Moment der Wahl (§13d):
-                ohne Website gibt es nichts zu scrapen. */}
+            {/* Subtitle immer sichtbar — formuliert den gewaehlten Modus
+                aus (auch bei "All"). Bei "No website" folgt darunter die
+                ehrliche E-Mail-Konsequenz (§13d): ohne Website gibt es
+                nichts zu scrapen. */}
+            <p className="lists-field-hint">
+              {
+                WEBSITE_FILTER_OPTIONS.find((o) => o.value === websiteFilter)
+                  ?.subtitle
+              }
+            </p>
             {websiteFilter === "without" && (
               <p className="lists-field-hint">
                 No emails on these — businesses without a website have
