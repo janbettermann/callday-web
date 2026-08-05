@@ -23,12 +23,20 @@ export interface JobView {
     city?: string;
     country?: string;
     website?: WebsiteFilterMode;
+    max_size?: number;
   };
   createdAt: string;
 }
 
+/** Credit-Kontostand (Phase 1: nur Signup-Credits; Abo-Grants mit IAP). */
+export interface CreditsView {
+  balance: number;
+  signupTotal: number;
+}
+
 export interface StatusResponse {
   job: JobView | null;
+  credits?: CreditsView;
 }
 
 export async function fetchJobStatus(jobId?: string): Promise<StatusResponse> {

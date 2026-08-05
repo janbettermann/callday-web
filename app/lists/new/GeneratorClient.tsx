@@ -21,9 +21,12 @@ import {
 import {
   APP_DOWNLOAD_PATH,
   COUNTRY_SUGGESTIONS,
-  FREE_LIST_SIZE,
   INDUSTRY_SUGGESTIONS,
 } from "@/lib/lists/config";
+import {
+  DEFAULT_LIST_SIZE,
+  MAX_LIST_SIZE,
+} from "@/lib/lists/credits";
 import type { WebsiteFilterMode } from "@/lib/lists/pipeline";
 
 /**
@@ -94,6 +97,10 @@ export function GeneratorClient() {
   const [city, setCity] = useState("");
   const [country, setCountry] = useState<string | null>("DE");
   const [websiteFilter, setWebsiteFilter] = useState<WebsiteFilterMode>("any");
+  const [maxSize, setMaxSize] = useState(String(DEFAULT_LIST_SIZE));
+  // Solange der User das Feld nicht angefasst hat, folgt es dem
+  // Kontostand (min(250, balance)) — danach gewinnt seine Eingabe.
+  const maxSizeEditedRef = useRef(false);
 
   // True sobald diese Session einen Job hat laufen sehen — unterscheidet
   // "frisch fertig gebaut" (→ Redirect zu /lists) vom Revisit (→ Form
@@ -120,6 +127,7 @@ export function GeneratorClient() {
   }, []);
 
   const job = statusData?.job ?? null;
+  const credits = statusData?.credits ?? null;
   const jobRunning =
     job !== null && (job.status === "pending" || job.status === "processing");
 
@@ -127,10 +135,19 @@ export function GeneratorClient() {
     if (jobRunning) sawBuildingRef.current = true;
   }, [jobRunning]);
 
-  // Free-Cap 1: eine fertige Liste sperrt den Generator — das Formular
-  // bleibt sichtbar (eine URL, ein Ort), ist aber ausgegraut mit Hinweis.
-  const freeUsed = job?.status === "ready";
-  const justBuilt = freeUsed && sawBuildingRef.current;
+  // Credit-Modell (Phase 1): gesperrt wird erst bei 0 Credits — fertige
+  // Listen sperren nichts mehr, es darf nachgelegt werden, bis das
+  // Konto leer ist. Das Formular bleibt sichtbar (eine URL, ein Ort),
+  // im 0-Zustand ausgegraut mit Hinweis.
+  const creditsExhausted = credits !== null && credits.balance < 1;
+  const justBuilt = job?.status === "ready" && sawBuildingRef.current;
+
+  // Max-size-Vorbelegung folgt dem Kontostand, solange unangetastet.
+  useEffect(() => {
+    if (credits && credits.balance > 0 && !maxSizeEditedRef.current) {
+      setMaxSize(String(Math.min(DEFAULT_LIST_SIZE, credits.balance)));
+    }
+  }, [credits]);
 
   useEffect(() => {
     if (justBuilt) router.replace("/lists");
@@ -152,9 +169,9 @@ export function GeneratorClient() {
   const handleGenerate = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      // freeUsed-Guard ist Gurt zur Hose: server-seitig erzwingt der
-      // partial unique index den Free-Cap ohnehin (409).
-      if (submitting || freeUsed) return;
+      // Guard ist Gurt zur Hose: server-seitig erzwingen Kontostand
+      // (403) und der Ein-aktiver-Job-Index (409) die Regeln ohnehin.
+      if (submitting || creditsExhausted) return;
       setFormError(null);
 
       if (!industry.trim() || !city.trim()) {
@@ -176,13 +193,21 @@ export function GeneratorClient() {
             city,
             country,
             website: websiteFilter,
+            maxSize: Number.parseInt(maxSize, 10) || DEFAULT_LIST_SIZE,
           }),
         });
 
         if (response.status === 409) {
-          // Free-Slot schon belegt (Race/Doppel-Tab) — Status zeigt die
-          // Wahrheit: laufender Job oder fertige Liste.
+          // Es laeuft schon eine Generierung (Race/Doppel-Tab) — Status
+          // zeigt die Wahrheit und uebernimmt mit der Building-Ansicht.
           setStatusData(await fetchJobStatus());
+          return;
+        }
+        if (response.status === 403) {
+          // Konto leer (Race mit anderem Tab) — Status bringt die
+          // 0-Credits-Sperre mit.
+          setStatusData(await fetchJobStatus());
+          setFormError("You've used all your free lead credits.");
           return;
         }
         if (!response.ok) {
@@ -202,7 +227,7 @@ export function GeneratorClient() {
         setSubmitting(false);
       }
     },
-    [submitting, freeUsed, industry, city, country, websiteFilter],
+    [submitting, creditsExhausted, industry, city, country, websiteFilter, maxSize],
   );
 
   if (statusData === undefined) {
@@ -220,7 +245,7 @@ export function GeneratorClient() {
     );
   }
 
-  const formDisabled = submitting || freeUsed;
+  const formDisabled = submitting || creditsExhausted;
 
   return (
     <div className="lists-inner-account">
@@ -237,16 +262,17 @@ export function GeneratorClient() {
         </p>
       )}
 
-      {freeUsed && (
+      {/* 0-Credits-Sperre — bewusst OHNE Pricing-Wording (Pre-Launch-
+          Regel): was danach kommt, bleibt offen. */}
+      {creditsExhausted && (
         <div className="lists-locked-note" role="status">
           <div>
             <p className="lists-locked-title">
-              Your free list is already built.
+              You&apos;ve used all {credits?.signupTotal} free lead credits.
             </p>
             <p className="lists-locked-body">
-              One free list per account — yours is synced to the Callday app
-              and waiting in your lists. Need another one? That&apos;s coming
-              soon.
+              Every lead we delivered used one credit — your lists are synced
+              to the Callday app and stay yours. More credits are coming soon.
             </p>
           </div>
           <Link
@@ -258,7 +284,7 @@ export function GeneratorClient() {
         </div>
       )}
 
-      <div className={"lists-console" + (freeUsed ? " is-locked" : "")}>
+      <div className={"lists-console" + (creditsExhausted ? " is-locked" : "")}>
         <form className="beta-form lists-console-form" onSubmit={handleGenerate} noValidate>
           <IndustryAutocomplete
             value={industry}
@@ -269,8 +295,16 @@ export function GeneratorClient() {
           />
 
           {/* Country + City in einer Zeile, darunter die Country-
-              Schnellwahl-Pillen (v2-Layout). */}
-          <div className="beta-field">
+              Schnellwahl-Pillen (v2-Layout). Die Pillen leben ALS
+              Flex-Item IN der Row (volle Breite): Desktop unveraendert
+              unter der ganzen Zeile; auf schmalen Viewports stackt die
+              Row per CSS-order zu Country → Pillen → City, damit die
+              Country-Shortcuts unterm Country-Feld stehen statt unter
+              City (Mobile-Bug, Generator-v3-Runde). Container-Query auf
+              dem Feld-Wrapper statt Viewport-Media-Query: der Umbruch
+              haengt an der CONTAINER-Breite (Paddings!), nicht am
+              Viewport — beide muessen an derselben Schwelle schalten. */}
+          <div className="beta-field lists-location-field">
             <div className="lists-field-row">
               <div className="lists-col-country">
                 <CountryAutocomplete
@@ -288,45 +322,67 @@ export function GeneratorClient() {
                   onChange={setCity}
                 />
               </div>
-            </div>
-            <div className="lists-try" aria-label="Country shortcuts">
-              Try:
-              {COUNTRY_SUGGESTIONS.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  className="lists-try-chip"
-                  onClick={() => setCountry(suggestion)}
-                  disabled={formDisabled}
-                >
-                  {suggestion}
-                </button>
-              ))}
+              <div
+                className="lists-try lists-try-country"
+                aria-label="Country shortcuts"
+              >
+                Try:
+                {COUNTRY_SUGGESTIONS.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    className="lists-try-chip"
+                    onClick={() => setCountry(suggestion)}
+                    disabled={formDisabled}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Listengroesse — im Free-State fix (250), deaktiviert. Der
-              bediente Regler kommt mit der Credits-Runde; hier bewusst
-              OHNE Credits-/Pricing-Wording (Pre-Launch-Regel). */}
+          {/* Max-Listengroesse — seit dem Credit-Modell bedienbar,
+              gedeckelt auf Rest-Credits (Server klammert nochmal).
+              "Max" + Hint machen ehrlich, dass das ein Limit ist, keine
+              Garantie: kleine Suchen liefern kleinere Listen, und nur
+              gelieferte Leads kosten Credits (Spec §14b Punkt 4). */}
           <div className="beta-field">
             <label className="beta-field-label" htmlFor="gen-listsize">
-              List size
+              Max list size
             </label>
             <div className="lists-size-row">
               <input
                 id="gen-listsize"
                 className="lists-size-input"
                 type="text"
-                value={FREE_LIST_SIZE}
+                value={maxSize}
                 inputMode="numeric"
-                disabled
-                readOnly
+                maxLength={4}
+                onChange={(e) => {
+                  maxSizeEditedRef.current = true;
+                  setMaxSize(e.target.value.replace(/\D/g, ""));
+                }}
+                onBlur={() => {
+                  const parsed = Number.parseInt(maxSize, 10);
+                  const cap = Math.min(
+                    MAX_LIST_SIZE,
+                    credits?.balance ?? MAX_LIST_SIZE,
+                  );
+                  const clamped = Number.isNaN(parsed)
+                    ? Math.min(DEFAULT_LIST_SIZE, cap)
+                    : Math.max(1, Math.min(parsed, cap));
+                  setMaxSize(String(clamped));
+                }}
+                disabled={formDisabled}
                 aria-describedby="gen-listsize-hint"
               />
               <span className="lists-size-unit">leads</span>
             </div>
             <p id="gen-listsize-hint" className="lists-field-hint">
-              Your free list includes up to {FREE_LIST_SIZE} leads.
+              {credits
+                ? `You have ${credits.balance} of ${credits.signupTotal} free lead credits — only leads that land in your list use them. If your search finds fewer, the list is smaller.`
+                : "If your search finds fewer, the list is smaller."}
             </p>
           </div>
 

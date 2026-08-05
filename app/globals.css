@@ -3524,6 +3524,33 @@ h2 .accent {
   flex: 1 1 260px;
   min-width: 200px;
 }
+/* Country-Schnellwahl-Pillen als volle Flex-Zeile IN der Field-Row:
+   breit wie gehabt unter Country+City; sobald die Row stackt, schiebt
+   sich die Pillen-Zeile per order zwischen Country und City, damit die
+   Shortcuts beim Country-Feld bleiben (Mobile-Stacking-Bug). margin-top
+   entfaellt hier — den Abstand liefert das Row-gap.
+   CONTAINER-Query statt Viewport-Media-Query: die Row bricht bei
+   Container-Breite < 472px um — Flex-Zeilenumbruch rechnet mit den
+   flex-BASIS-Werten (200 Country + 260 City + 12 gap), NICHT mit den
+   min-widths; und die Schwelle haengt an Paddings, nicht am Viewport.
+   Die Query schaltet exakt an derselben Grenze, Umbruch und
+   Umsortierung koennen nicht auseinanderlaufen. Bei Aenderung der
+   flex-basis/gap oben die 472 mitziehen! */
+.lists-location-field {
+  container-type: inline-size;
+}
+.lists-try-country {
+  flex-basis: 100%;
+  margin-top: 0;
+}
+@container (width < 472px) {
+  .lists-try-country {
+    order: 2;
+  }
+  .lists-col-city {
+    order: 3;
+  }
+}
 /* Eigener "Filters"-Abschnitt mit Titel ueber dem Website-Dropdown. */
 .lists-filters-section {
   border-top: 1px solid var(--line);
@@ -3809,7 +3836,7 @@ h2 .accent {
 .lists-fail-banner {
   margin: 0 0 20px;
 }
-/* Free-Cap verbraucht: Hinweis-Karte ueber der ausgegrauten Konsole —
+/* Credits aufgebraucht: Hinweis-Karte ueber der ausgegrauten Konsole —
    erklaert warum das Formular gesperrt ist und zeigt zur Liste. */
 .lists-locked-note {
   display: flex;

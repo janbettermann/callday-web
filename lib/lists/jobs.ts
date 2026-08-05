@@ -13,7 +13,8 @@ import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { ListReady } from "@/emails/list-ready";
-import { FREE_LIST_SIZE } from "./config";
+import { chargeJobDelivery, resolveStoredMaxSize } from "./credits";
+import { findCountry } from "./countries";
 import { getRequestResults } from "./outscraper";
 import {
   buildCustomFieldDefs,
@@ -32,6 +33,8 @@ export interface LeadGenJobParams {
   country?: string;
   /** Website-Filter der Anfrage — "without" ist der Agentur-Use-Case. */
   website?: WebsiteFilterMode;
+  /** Max. Listengroesse (Credit-Modell) — alte Jobs haben das Feld nicht. */
+  max_size?: number;
 }
 
 export interface LeadGenJob {
@@ -147,11 +150,19 @@ export async function processJobIfFinished(
     return failJob(admin, job.id, "outscraper_failed");
   }
 
-  const callable = toCallableLeads(results.places, job.params.industry ?? null);
+  // Markt-Sprache nur noch fuer die Tages-Namen der Oeffnungszeiten —
+  // die Outscraper-Query selbst laeuft seit 2026-08-05 immer mit
+  // language=en (Server-Filter, Spec §6b/§14b).
+  const marketLanguage = findCountry(job.params.country)?.language ?? "en";
+  const callable = toCallableLeads(
+    results.places,
+    job.params.industry ?? null,
+    marketLanguage,
+  );
   const filtered = filterByWebsite(callable, job.params.website ?? "any");
   const leads = sortByCityMatch(filtered, job.params.city ?? null).slice(
     0,
-    FREE_LIST_SIZE,
+    resolveStoredMaxSize(job.params.max_size),
   );
   if (leads.length === 0) {
     return failJob(admin, job.id, "no_results");
@@ -188,6 +199,22 @@ export async function processJobIfFinished(
   }
 
   const readyJob = ready as LeadGenJob;
+
+  // Credits abrechnen — NACH dem Ready-Update: schlaegt hier etwas
+  // fehl, hat der User im Zweifel eine unberechnete Liste (kulant),
+  // nie eine berechnete Nicht-Liste. Idempotent pro Job; Fehler laut
+  // loggen statt den fertigen Job zu kippen.
+  try {
+    await chargeJobDelivery(admin, {
+      userId: readyJob.user_id,
+      jobId: readyJob.id,
+      deliveredCount: leads.length,
+    });
+  } catch (err) {
+    console.error("[lists] credit charge failed", err);
+    Sentry.captureException(err, { tags: { area: "lead-credits" } });
+  }
+
   await sendReadyEmail(admin, readyJob, listName);
   return readyJob;
 }

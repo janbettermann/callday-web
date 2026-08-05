@@ -1,14 +1,10 @@
 /**
  * Callday Lists — zentrale Konstanten des Lead-Generators.
  *
- * Free-Groesse und Overfetch sind bewusste Stellschrauben (siehe
- * specs/lists-generator.md §5/§11): 250 gelieferte anrufbare Leads ist
- * der Free-Hook; angefragt wird mehr, weil der Callable-Filter
- * (Telefonnummer + operational + Dedupe) einen Teil der rohen
- * Google-Maps-Ergebnisse verwirft.
+ * Die Groessen-Konstanten des Credit-Modells (SIGNUP_CREDITS,
+ * DEFAULT_LIST_SIZE, MAX_LIST_SIZE) leben in lib/lists/credits.ts —
+ * hier bleiben die Outscraper-Stellschrauben.
  */
-
-export const FREE_LIST_SIZE = 250;
 
 /** Outscraper-Limit pro Query (Hard-Cap der API: 500). */
 export const OUTSCRAPER_FETCH_LIMIT = 400;

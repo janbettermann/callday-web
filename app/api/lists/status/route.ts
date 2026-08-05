@@ -18,6 +18,11 @@ import { NextRequest } from "next/server";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
 import {
+  ensureSignupGrant,
+  getCreditBalance,
+  SIGNUP_CREDITS,
+} from "@/lib/lists/credits";
+import {
   buildListName,
   fetchLatestJobForUser,
   processJobIfFinished,
@@ -45,6 +50,15 @@ export async function GET(request: NextRequest) {
 
   const admin = getServerSupabase();
 
+  // Lazy-Grant: der erste Kontakt eines Accounts mit dem Generator legt
+  // die 250 Start-Credits an. Der Kontostand selbst wird erst NACH dem
+  // Self-Heal gelesen — der kann gerade eine Lieferung abgerechnet haben.
+  await ensureSignupGrant(admin, user.id);
+  const readCredits = async () => ({
+    balance: await getCreditBalance(admin, user.id),
+    signupTotal: SIGNUP_CREDITS,
+  });
+
   let job: LeadGenJob | null;
   if (jobParam) {
     const { data, error } = await admin
@@ -65,7 +79,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!job) {
-    return Response.json({ job: null });
+    return Response.json({ job: null, credits: await readCredits() });
   }
 
   if (job.status === "pending") {
@@ -89,5 +103,6 @@ export async function GET(request: NextRequest) {
       params: job.params,
       createdAt: job.created_at,
     },
+    credits: await readCredits(),
   });
 }
