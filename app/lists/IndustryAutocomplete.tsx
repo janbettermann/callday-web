@@ -18,6 +18,12 @@ import {
  * Query ist Text-Suche); das Haekchen zeigt nur "erkannte Kategorie"
  * und ist pur aus dem Wert abgeleitet, damit auch Chip-Klicks im
  * Parent es korrekt setzen.
+ *
+ * Seit Generator-v3 (§14b) matcht die Suche auch deutsche Aliase:
+ * "Zahnarzt" erscheint mit der Kanonik als Sublabel ("Dentist"), der
+ * Klick setzt IMMER die englische Kategorie ins Feld — sie funktioniert
+ * in jedem Markt (§6b). Wer den deutschen Freitext stehen laesst, kann
+ * das weiterhin — dann ohne Haekchen.
  */
 
 interface Props {
@@ -43,10 +49,9 @@ export function IndustryAutocomplete({
   const recognized = isKnownCategory(value);
 
   function showMatches(query: string) {
-    const matches = searchCategories(query).map((category) => ({
-      value: category,
-      label: category,
-    }));
+    // CategorySuggestion ist strukturell eine SuggestOption — Alias-
+    // Treffer bringen label (Alias) + sublabel (Kanonik) schon mit.
+    const matches = searchCategories(query);
     setOptions(matches);
     setOpen(matches.length > 0);
     setActiveIndex(-1);

@@ -1,13 +1,23 @@
 /**
  * Kuratierte Google-Business-Kategorien fuers Industry-Autocomplete
- * (Spec §13d Phase 0b). Bewusst NICHT die volle ~4.000er-GMB-Liste:
- * kuratiert auf Cold-Calling-taugliche Branchen (lokale Dienstleister,
- * B2B-Services) — Bahnhoefe und Parks schlagen hier niemandem vor.
- * Freitext bleibt im Feld immer gueltig; die Liste senkt nur die
- * Muell-Query-Quote und zeigt per Haekchen "erkannte Kategorie".
- * Namen im GMB-Stil (englisch, singular) — die Outscraper-Query ist
- * Text-Suche, englische Kategorien funktionieren in allen Maerkten.
+ * (Spec §13d Phase 0b, Alias-Suche seit Generator-v3 §14b). Bewusst
+ * NICHT die volle ~4.000er-GMB-Liste: kuratiert auf Cold-Calling-
+ * taugliche Branchen (lokale Dienstleister, B2B-Services) — Bahnhoefe
+ * und Parks schlagen hier niemandem vor. Freitext bleibt im Feld immer
+ * gueltig; die Liste senkt nur die Muell-Query-Quote und zeigt per
+ * Haekchen "erkannte Kategorie".
+ *
+ * Namen im GMB-Stil (englisch, singular). Englisch ist die Kanonik-
+ * Sprache: Outscrapers Kategorie-System ist englisch verankert, und
+ * englische Begriffe funktionieren als Text-Suche in JEDEM Markt —
+ * A/B-verifiziert 2026-08-05 (Dentist/Zahnarzt in Essen 49 vs. 47/50
+ * korrekt, Tax consultant/Steuerberater in Koeln 41 vs. 44/50; Details
+ * Spec §6b). Deutsche Begriffe sind in DACH gleichwertig, aber eben NUR
+ * dort — darum setzen die Aliase (category-aliases.ts) beim Klick immer
+ * die englische Kanonik ins Feld.
  */
+
+import { CATEGORY_ALIASES } from "./category-aliases";
 
 export const GMB_CATEGORIES: string[] = [
   // Bau + Handwerk
@@ -180,6 +190,7 @@ export const GMB_CATEGORIES: string[] = [
   "Notary public",
   "Accounting firm",
   "Certified public accountant",
+  "Tax consultant",
   "Tax preparation service",
   "Bookkeeping service",
   "Payroll service",
@@ -340,23 +351,73 @@ export const GMB_CATEGORIES: string[] = [
 const MAX_SUGGESTIONS = 8;
 
 /**
- * Lokale Suche wie im City-/Country-Feld: Substring-Match, fruehe
- * Treffer-Position gewinnt (Prefix vor Mitte), dann alphabetisch.
+ * Vorschlags-Eintrag der Kategorie-Suche. Strukturell kompatibel zur
+ * SuggestOption des Dropdowns (app/lists/suggest.tsx) — lib importiert
+ * bewusst nicht aus app. `value` ist IMMER die englische Kanonik;
+ * bei Alias-Treffern zeigt `label` den Alias und `sublabel` die Kanonik
+ * (gleiche Optik wie Stadt + Region im City-Feld).
  */
-export function searchCategories(query: string): string[] {
-  const needle = query.trim().toLowerCase();
+export interface CategorySuggestion {
+  value: string;
+  label: string;
+  sublabel?: string;
+}
+
+/**
+ * Diakritik- und ß-tolerantes Matching: "backerei" findet "Bäckerei",
+ * "waschstrasse" findet "Waschstraße". Beide Seiten (Eingabe + Liste)
+ * laufen durch dieselbe Normalisierung.
+ */
+function normalizeTerm(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/ß/g, "ss")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
+/**
+ * Lokale Suche wie im City-/Country-Feld: Substring-Match ueber
+ * Kanonik-Namen UND Sprach-Aliase (category-aliases.ts), fruehe
+ * Treffer-Position gewinnt (Prefix vor Mitte). Pro Kanonik erscheint
+ * genau EIN Eintrag (Dedupe): Direkt-Treffer schlaegt Alias, unter
+ * Aliassen gewinnt die fruehere Trefferposition.
+ */
+export function searchCategories(query: string): CategorySuggestion[] {
+  const needle = normalizeTerm(query);
   if (needle.length < 2) return [];
-  return GMB_CATEGORIES.map((category) => ({
-    category,
-    index: category.toLowerCase().indexOf(needle),
-  }))
-    .filter((match) => match.index !== -1)
+
+  const best = new Map<
+    string,
+    { index: number; direct: boolean; label: string }
+  >();
+  for (const category of GMB_CATEGORIES) {
+    const index = normalizeTerm(category).indexOf(needle);
+    if (index === -1) continue;
+    best.set(category, { index, direct: true, label: category });
+  }
+  for (const [alias, canonical] of Object.entries(CATEGORY_ALIASES.de)) {
+    const index = normalizeTerm(alias).indexOf(needle);
+    if (index === -1) continue;
+    const existing = best.get(canonical);
+    if (existing && (existing.direct || existing.index <= index)) continue;
+    best.set(canonical, { index, direct: false, label: alias });
+  }
+
+  return [...best.entries()]
     .sort(
-      (a, b) =>
-        a.index - b.index || a.category.localeCompare(b.category),
+      ([, a], [, b]) =>
+        a.index - b.index ||
+        Number(b.direct) - Number(a.direct) ||
+        a.label.localeCompare(b.label),
     )
     .slice(0, MAX_SUGGESTIONS)
-    .map((match) => match.category);
+    .map(([canonical, match]) =>
+      match.direct
+        ? { value: canonical, label: canonical }
+        : { value: canonical, label: match.label, sublabel: canonical },
+    );
 }
 
 /** Exakter (case-insensitiver) Listen-Treffer — steuert das Haekchen. */
