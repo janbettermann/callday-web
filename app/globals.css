@@ -3904,6 +3904,53 @@ h2 .accent {
 .lists-workhead {
   margin-bottom: 28px;
 }
+/* Brand-Moment: pulsierender Sun-Gold-Punkt links vom Titel (Header-
+   Variante 1, Jan 2026-08-05) — "live/aktiv"-Signal in der Marken-
+   Zweitfarbe. Dot-Groesse skaliert grob mit der clamp()-Titelskala. */
+.lists-worktitle-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+.lists-worktitle-row .lists-worktitle {
+  margin: 0;
+}
+.lists-live-dot {
+  position: relative;
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--sun);
+}
+/* Pulsierender Ring nach aussen — eigenes Element, damit der Kern-Dot
+   voll sichtbar bleibt. */
+.lists-live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--sun);
+  animation: lists-live-pulse 2.4s ease-out infinite;
+}
+@keyframes lists-live-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(3.6);
+    opacity: 0;
+  }
+}
+/* Seriositaet vor Effekt: kein Puls bei reduzierter Bewegung — der Dot
+   bleibt als statisches Gold-Signal stehen. */
+@media (prefers-reduced-motion: reduce) {
+  .lists-live-dot::after {
+    animation: none;
+  }
+}
 /* h1 — kanonische Account-Titel-Skala (siehe .account-headline). */
 .lists-worktitle {
   font-family: var(--font-geist-sans), sans-serif;

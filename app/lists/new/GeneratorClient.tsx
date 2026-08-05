@@ -278,9 +278,17 @@ export function GeneratorClient() {
   return (
     <div className="lists-inner-account">
       <header className="lists-workhead">
-        <h1 className="lists-worktitle">Generate a new list</h1>
+        {/* Brand-Moment (Jan-Wahl aus 5 Header-Varianten, 2026-08-05):
+            pulsierender Sun-Gold-Punkt = "live/aktiv"-Signal in der
+            Marken-Zweitfarbe, dezent statt Namedropping. Copy in
+            Callday-Voice, verbindet die Liste mit dem Anrufen. Puls
+            respektiert prefers-reduced-motion. */}
+        <div className="lists-worktitle-row">
+          <span className="lists-live-dot" aria-hidden="true" />
+          <h1 className="lists-worktitle">Call list Generator</h1>
+        </div>
         <p className="lists-worksub">
-          Scan Google for your ideal customers.
+          Scan Google Maps for your ideal customers.
         </p>
       </header>
 
