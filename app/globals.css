@@ -4784,6 +4784,164 @@ h2 .accent {
   gap: 14px;
   align-items: stretch;
 }
+
+/* === CALLDAYS CARD/LIST-VIEW (nur /calldays, NICHT Dashboard) ===
+   Toggle 1:1 aus der App (components/swipe/ControlBar.tsx): Segmented-
+   Control, beide Icons gleiche Farbe, aktives Segment mit subtiler
+   Tint-Pille. Card-View = Sticker-Grid, List-View = ruhige Zeilen
+   (Datum links, Stats rechts — "Variante A"). */
+.calldays-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.calldays-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* Zeit-Granularitaet — Text-Segmented-Control (Days/Weeks/Months), im
+   selben Look wie der Card/List-Toggle. */
+.cd-segtoggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 4px;
+  background: #fff;
+  border: 0.5px solid var(--line);
+  border-radius: 10px;
+}
+.cd-seg-btn {
+  height: 30px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.cd-seg-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+.cd-seg-btn.is-active {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--ink);
+}
+.cd-viewtoggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 4px;
+  background: #fff;
+  border: 0.5px solid var(--line);
+  border-radius: 10px;
+}
+.cd-vt-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cd-vt-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+.cd-vt-btn.is-active {
+  background: rgba(0, 0, 0, 0.08);
+}
+.cd-vt-btn:active {
+  opacity: 0.6;
+}
+
+/* Zeilen laufen ueber die volle Breite, KEINE Card / kein Hintergrund —
+   die Hairlines zwischen den Zeilen tragen die Struktur direkt auf dem
+   Seiten-Grund. Kein horizontales Row-Padding, damit Datum (links) und
+   Stats (rechts) mit Titel + Toggle fluchten. */
+.callday-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 0.5px solid var(--line);
+}
+.callday-row:first-child {
+  border-top: none;
+}
+.callday-date {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.1px;
+}
+/* Copy-Icon rechts in der Zeile (List-View "Variante A"): kopiert dasselbe
+   Sticker-Bild wie der Card-View; bei Erfolg wird das Icon kurz zum gruenen
+   Haken (color #2ba968 wie der App-Copy-Success). */
+.callday-row-copy {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.callday-row-copy:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--ink);
+}
+.callday-row-copy.is-copied {
+  color: #2ba968;
+}
+.callday-row-copy:disabled {
+  cursor: default;
+}
+/* Feste Spalten (Zahl rechtsbuendig + Label linksbuendig, jeweils fixe
+   Breite), damit die Angaben ueber alle Zeilen exakt fluchten — unabhaengig
+   von Ziffernzahl (1 vs 10) und Singular/Plural (call/calls, meeting/
+   meetings). Der Block hat dadurch eine fixe Gesamtbreite und wackelt nicht
+   mehr, obwohl er rechtsbuendig sitzt. */
+.callday-stats {
+  display: grid;
+  grid-template-columns: 3ch 4em 3ch 4.6em;
+  column-gap: 6px;
+  align-items: baseline;
+  font-size: 14px;
+  color: var(--ink-dim);
+}
+.callday-num {
+  text-align: right;
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.callday-num.is-zero {
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+.callday-lbl {
+  text-align: left;
+}
 /* Recent lists: 2 groessere Karten (Jan 2026-07-15). Recent Calldays
    nutzen das Basis-3er-Grid. */
 .dash-duo-lists {
@@ -4943,12 +5101,6 @@ h2 .accent {
   background: var(--blue);
   border-color: var(--blue);
   color: #fff;
-  /* Etwas mehr Luft rechts — das Icon links macht den Button sonst
-     linkslastig, der Text klebt am rechten Rand. */
-  padding-right: 16px;
-}
-.dash-tile-action-primary svg {
-  color: #fff;
 }
 .dash-tile-action-primary:hover {
   background: var(--blue-deep);
@@ -4966,6 +5118,7 @@ h2 .accent {
 /* Callday-Sticker (App: components/share/ShareCard.tsx, light-Theme).
    Feste Sticker-Farben — bewusst nicht themebar, wie die App-Vorlage. */
 .dash-sticker {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 196px;
@@ -4987,10 +5140,12 @@ h2 .accent {
   gap: 10px;
 }
 .dash-stat-num {
-  font-size: 46px;
+  /* 48px + Default-Line-Height (kein line-height gesetzt) — 1:1 wie die
+     App-ShareCard (fontSize 48, keine Line-Height). Das enge line-height:1.05
+     hatte die zwei Zahlen vertikal zu eng zusammengezogen. */
+  font-size: 48px;
   font-weight: 600;
   letter-spacing: -1.4px;
-  line-height: 1.05;
   color: #111111;
   font-variant-numeric: tabular-nums;
 }
@@ -5022,6 +5177,76 @@ h2 .accent {
   font-size: 12px;
   letter-spacing: 0.2px;
   color: #a8a8a3;
+}
+/* Typ-Tag oben rechts fuer Wochen-/Monats-Sticker ("Variante C", 08/2026):
+   macht auf einen Blick scannbar, ob es eine Woche (blau) oder ein Monat
+   (gold) ist. Braucht .dash-sticker position:relative als Anker. */
+.dash-sticker-tag {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.dash-sticker-tag-week {
+  background: rgba(47, 109, 240, 0.1);
+  color: #1c4fb0;
+}
+.dash-sticker-tag-month {
+  /* Jan-Wahl: Schrift im Credit-Gelb (var(--sun) = #fbbf24, exakt der
+     Credit-Balken), Pille als leichter Sun-Tint. */
+  background: var(--sun-tint);
+  color: var(--sun);
+}
+/* Card-View auf /calldays: die ganze Karte ist der Copy-Button (Jan 08/2026,
+   analog zur App-Share-Seite). Klick → Sticker in die Zwischenablage → kurz
+   gruen mit "Copied ✓". Der gruene Overlay (App-Gruen: heller Tint-Fill +
+   dunkelgruener Text) wird erst nach dem Capture gezeigt, ist also kein Teil
+   des Bildes. */
+.callday-copycard {
+  position: relative;
+  border-radius: 22px;
+  cursor: pointer;
+}
+.callday-copycard .dash-sticker {
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.callday-copycard:hover .dash-sticker {
+  border-color: rgba(0, 0, 0, 0.14);
+  box-shadow: 0 10px 26px -14px rgba(8, 10, 20, 0.16);
+}
+.callday-copycard:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+}
+.callday-copied {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 22px;
+  background: #e0f9eb;
+  border: 1px solid rgba(61, 219, 133, 0.45);
+  color: #2ba968;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+/* Off-screen Render mit FESTER Breite (= App-Referenz) — die Capture-Quelle
+   fuer den Export. Off-Screen statt display:none, damit der Sticker echt
+   layoutet und html-to-image ihn erfassen kann. */
+.callday-export-stage {
+  position: absolute;
+  left: -99999px;
+  top: 0;
+  width: 300px;
+  pointer-events: none;
 }
 
 /* First-Run: der leere Slot IST der CTA (volle Inhaltsbreite). */

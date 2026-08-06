@@ -6,10 +6,31 @@ import type { DashboardCallday } from "@/lib/dashboard/data";
  * Linie mit Datum unten links + callday.io unten rechts. Kein Name, kein
  * Wochentag (Redesign 2026-07-16). Geteilt von /dashboard (letzte drei)
  * und /calldays (volle Historie).
+ *
+ * `period` = "day" (Default, kein Tag) | "week" (blau) | "month" (gold).
+ * Bei week/month traegt der Sticker zusaetzlich ein Eck-Tag oben rechts
+ * ("Variante C", 2026-08-06) — Layout sonst identisch; das `day.label`
+ * traegt dann die Range ("Aug 4–10") bzw. den Monatsnamen ("August"). Die
+ * Wochen-/Monats-Aggregation + der Days/Weeks/Months-Toggle + der
+ * Share-Export sind der Post-Launch-Ausbau; dieser Sticker rendert den
+ * Card-Teil davon schon fertig.
  */
-export function CalldaySticker({ day }: { day: DashboardCallday }) {
+export type CalldayPeriod = "day" | "week" | "month";
+
+export function CalldaySticker({
+  day,
+  period = "day",
+}: {
+  day: DashboardCallday;
+  period?: CalldayPeriod;
+}) {
   return (
     <div className="dash-sticker">
+      {period !== "day" && (
+        <span className={`dash-sticker-tag dash-sticker-tag-${period}`}>
+          {period === "week" ? "Week" : "Month"}
+        </span>
+      )}
       <div className="dash-sticker-stats">
         <div className="dash-stat">
           <span className="dash-stat-num">{day.calls}</span>
