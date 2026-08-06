@@ -292,21 +292,6 @@ export function GeneratorClient() {
 
   return (
     <div className="lists-inner-account">
-      <header className="lists-workhead">
-        {/* Brand-Moment (Jan-Wahl aus 5 Header-Varianten, 2026-08-05):
-            pulsierender Sun-Gold-Punkt = "live/aktiv"-Signal in der
-            Marken-Zweitfarbe, dezent statt Namedropping. Copy in
-            Callday-Voice, verbindet die Liste mit dem Anrufen. Puls
-            respektiert prefers-reduced-motion. */}
-        <div className="lists-worktitle-row">
-          <span className="lists-live-dot" aria-hidden="true" />
-          <h1 className="lists-worktitle">Call list Generator</h1>
-        </div>
-        <p className="lists-worksub">
-          Scan Google Maps for your ideal customers.
-        </p>
-      </header>
-
       {job?.status === "failed" && (
         <p className="beta-submit-error lists-fail-banner" role="alert">
           {failureMessage(job)}
@@ -337,6 +322,23 @@ export function GeneratorClient() {
 
       <div className={"lists-console" + (creditsExhausted ? " is-locked" : "")}>
         <form className="beta-form lists-console-form" onSubmit={handleGenerate} noValidate>
+          {/* Titel lebt IN der Card (Jan-Wahl 2026-08-06, Variante A ohne
+              Trennlinie) — der Generator wirkt als geschlossenes Tool in
+              einer Flaeche. Eigene .lists-card*-Klassen, damit der
+              Building-Screen-Header (.lists-workhead/.lists-worktitle,
+              weiter unten geteilt genutzt) unveraendert bleibt. Der
+              Brand-Moment (pulsierender Sun-Gold-Punkt) + die Copy wandern
+              1:1 mit. */}
+          <header className="lists-cardhead">
+            <div className="lists-worktitle-row">
+              <span className="lists-live-dot" aria-hidden="true" />
+              <h1 className="lists-cardtitle">Call list Generator</h1>
+            </div>
+            <p className="lists-worksub">
+              Scan Google Maps for your ideal customers.
+            </p>
+          </header>
+
           <IndustryAutocomplete
             value={industry}
             disabled={formDisabled}

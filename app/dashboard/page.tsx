@@ -13,6 +13,7 @@ import {
 import { AppNav } from "../components/AppNav";
 import { AppShell } from "../components/AppShell";
 import { CalldaySticker, EmptyCalldaySticker } from "../components/CalldaySticker";
+import { ListCardActions } from "../components/ListCardActions";
 import { DashboardGreeting } from "./DashboardGreeting";
 
 export const metadata: Metadata = {
@@ -154,30 +155,35 @@ function ArrowRight() {
 /**
  * Listen-Kachel — Design aus der App (components/listen/ListCard.tsx):
  * 16px-Titel, ACTIVE-Badge, Fortschrittsbalken, "X / Y leads in list" + %.
- * Web-Anpassung: ganze Kachel verlinkt auf /lists (kein Web-Listen-Detail,
- * kein Actions-Menue — kommt spaeter).
+ * Web-Anpassung: der Kachel-Koerper verlinkt auf /lists, darunter der
+ * geteilte ListCardActions-Footer (Open in Callday + Download list). Der
+ * Footer liegt als Sibling NEBEN dem Link — nicht darin —, sonst waeren die
+ * Buttons in einem <a> genestet (invalides HTML + kaputte Klicks).
  */
 function ListTile({ list, active }: { list: DashboardList; active: boolean }) {
   const denominator = Math.max(list.totalLeads, 1);
   const pct = Math.round((list.totalDone / denominator) * 100);
 
   return (
-    <Link href="/lists" className="dash-tile">
-      <div className="dash-tile-top">
-        <span className="dash-tile-name">{list.name}</span>
-        {active && <span className="dash-badge">Active</span>}
-      </div>
-      <p className="dash-tile-sub">{list.metaLine}</p>
-      <div className="dash-bar">
-        <span style={{ width: `${pct}%` }} />
-      </div>
-      <div className="dash-tile-foot">
-        <span>
-          {list.totalDone.toLocaleString("en-US")} /{" "}
-          {list.totalLeads.toLocaleString("en-US")} leads in list
-        </span>
-        <b>{pct}%</b>
-      </div>
-    </Link>
+    <div className="dash-tile">
+      <Link href="/lists" className="dash-tile-linkbody">
+        <div className="dash-tile-top">
+          <span className="dash-tile-name">{list.name}</span>
+          {active && <span className="dash-badge">Active</span>}
+        </div>
+        <p className="dash-tile-sub">{list.metaLine}</p>
+        <div className="dash-bar">
+          <span style={{ width: `${pct}%` }} />
+        </div>
+        <div className="dash-tile-foot">
+          <span>
+            {list.totalDone.toLocaleString("en-US")} /{" "}
+            {list.totalLeads.toLocaleString("en-US")} leads in list
+          </span>
+          <b>{pct}%</b>
+        </div>
+      </Link>
+      <ListCardActions listId={list.id} listName={list.name} />
+    </div>
   );
 }

@@ -4024,8 +4024,8 @@ h2 .accent {
 .lists-live-dot {
   position: relative;
   flex: 0 0 auto;
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: var(--sun);
 }
@@ -4073,6 +4073,26 @@ h2 .accent {
   margin: 0;
 }
 
+/* In-Card-Header (Jan-Wahl 2026-08-06, Variante A ohne Trennlinie): der
+   Titel lebt IN der Generator-Card, damit das Tool als geschlossene Flaeche
+   wirkt. Eigene Klassen statt .lists-workhead/.lists-worktitle, damit der
+   Building-Screen-Header (der die geteilt nutzt) unveraendert bleibt.
+   .lists-worktitle-row + .lists-live-dot + .lists-worksub bleiben geteilt. */
+.lists-cardhead {
+  /* +10px auf den 16px .beta-form-Flex-Gap = ~26px Luft zur ersten Zeile,
+     ohne Trennlinie. */
+  margin-bottom: 10px;
+}
+.lists-cardtitle {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  line-height: 1.15;
+  color: var(--ink);
+  margin: 0;
+}
+
 /* Generator-Konsole: EIN Formular als Card (v2-Look, Jan 2026-07-15) —
    Live-Summary + How-it-works-Strip sind raus (Mobile-first, das Panel
    saesse dort eh unterm Formular). .lists-console bleibt als Hook fuer
@@ -4117,10 +4137,12 @@ h2 .accent {
   margin: 3px 0 0;
   padding-left: 2px;
 }
-/* Restliche Credits im Max-size-Hinweis hervorgehoben — tiefes Gold
-   (text-sicher) haelt den "Gold = Credits"-Faden von Ring + Balken. */
+/* Restliche Credits im Max-size-Hinweis hervorgehoben — Brandblau
+   (Jan-Wahl 2026-08-06): bewusst NICHT im Credit-Gold, sondern als
+   Brand-Akzent, damit die Restzahl im Hint als markanter Wert liest.
+   Ring + Balken auf /account bleiben gold. */
 .lists-credit-num {
-  color: var(--sun-deep);
+  color: var(--blue);
   font-weight: 600;
 }
 /* Label + Info-"?" in einer Zeile (das Label traegt seine margin sonst
@@ -4914,6 +4936,31 @@ h2 .accent {
 .dash-tile-action:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+/* Primaerer Kachel-Button "Open in Callday" — brandblau gefuellt statt
+   Ghost. Sitzt links vom sekundaeren "Download list". */
+.dash-tile-action-primary {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+  /* Etwas mehr Luft rechts — das Icon links macht den Button sonst
+     linkslastig, der Text klebt am rechten Rand. */
+  padding-right: 16px;
+}
+.dash-tile-action-primary svg {
+  color: #fff;
+}
+.dash-tile-action-primary:hover {
+  background: var(--blue-deep);
+  border-color: var(--blue-deep);
+}
+/* Kachel-Koerper als Block-Link (Dashboard-ListTile): der Actions-Footer
+   liegt als Sibling daneben, damit die Buttons nicht im <a> genestet sind. */
+.dash-tile-linkbody {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
 
 /* Callday-Sticker (App: components/share/ShareCard.tsx, light-Theme).
