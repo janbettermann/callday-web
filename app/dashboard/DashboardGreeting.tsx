@@ -3,15 +3,17 @@
 import { useEffect, useState } from "react";
 
 /**
- * Zeitabhaengige Begruessung wie im App-Home ("Good morning/afternoon/
- * evening"). Tageszeit ist geraetelokal → Client. Der Name kommt vom
- * Server; bis der Effect laeuft, zeigen wir eine neutrale Variante, um
- * einen Hydration-Mismatch zu vermeiden.
+ * Zeitabhaengige Begruessung — 1:1 wie im App-Home (utils/format/greeting.ts,
+ * germanGreeting): gleiche Texte, gleiche Emojis (👋/👋/🌆) und gleiche
+ * Buckets (Morgen 05–11, Nachmittag 12–17, sonst Abend — 00–05 zaehlt also
+ * als Abend). Tageszeit ist geraetelokal → Client. Der Name kommt vom
+ * Server; bis der Effect laeuft, zeigen wir eine neutrale Variante, um einen
+ * Hydration-Mismatch zu vermeiden.
  */
 function timeGreeting(): { word: string; emoji: string } {
   const h = new Date().getHours();
-  if (h < 12) return { word: "Good morning", emoji: "☕" };
-  if (h < 18) return { word: "Good afternoon", emoji: "📞" };
+  if (h >= 5 && h < 12) return { word: "Good morning", emoji: "👋" };
+  if (h >= 12 && h < 18) return { word: "Good afternoon", emoji: "👋" };
   return { word: "Good evening", emoji: "🌆" };
 }
 

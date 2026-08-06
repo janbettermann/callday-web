@@ -4590,7 +4590,7 @@ h2 .accent {
 /* === Mobile Slide-In-Panel (< 900px) ===
    Overlay + Panel sind IMMER im DOM (kein conditional mount), damit die
    CSS-Transform-Animation beim Oeffnen/Schliessen greift. Im geschlossenen
-   Zustand sitzt das Panel offscreen (translateX(100%)) und das Overlay ist
+   Zustand sitzt das Panel offscreen links (translateX(-100%)) und das Overlay ist
    opacity:0 + pointer-events:none — kein visueller/interaktiver Impact.
    `inert` (in AppNav.tsx) macht die Panel-Kinder zusaetzlich nicht
    tabbable und nicht klickbar.
@@ -4616,9 +4616,9 @@ h2 .accent {
 .appnav-panel {
   position: fixed;
   top: 0;
-  right: 0;
+  left: 0;
   bottom: 0;
-  width: 90%;
+  width: 80%;
   max-width: 380px;
   z-index: 100;
   background: #FAF9F5;
@@ -4628,9 +4628,9 @@ h2 .accent {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  transform: translateX(100%);
+  transform: translateX(-100%);
   transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: -16px 0 40px rgba(8, 10, 20, 0.18);
+  box-shadow: 16px 0 40px rgba(8, 10, 20, 0.18);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -4638,7 +4638,7 @@ h2 .accent {
   transform: translateX(0);
 }
 .appnav-panel-close {
-  align-self: flex-end;
+  align-self: flex-start;
   width: 38px;
   height: 38px;
   border-radius: 10px;
@@ -4716,9 +4716,12 @@ h2 .accent {
   .appnav-burger {
     display: grid;
   }
-  /* New-list-Button rutscht auf Mobile ins Panel — im Header nur noch
-     Logo, Burger und Avatar. */
+  /* New-list-Button rutscht auf Mobile ins Panel; das Logo entfaellt ganz
+     (Jan 08/2026) — im Header links nur der Burger, rechts der Avatar. */
   .appnav-new-btn {
+    display: none;
+  }
+  .appnav-left .logo {
     display: none;
   }
   .appnav-overlay {

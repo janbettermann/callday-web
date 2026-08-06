@@ -12,12 +12,12 @@ import { CalldayLogo } from "./CalldayLogo";
  * (Jan-Entscheidung 2026-07-15, ersetzt den frueheren "Google Maps
  * scraper"-Tab). "Manage account" (Avatar) ganz rechts als Identitaet.
  *
- * Mobile (< 900px): der Header traegt nur noch Logo, Burger und Avatar.
- * Der "New list"-Button rutscht in ein Slide-In-Panel von rechts (90%
- * Screen-Breite, gecappt bei 380px), das ueber den Header drueber liegt
- * und den Hintergrund via Overlay dimmt. Als CTA oben im Panel, gefolgt
- * von den Nav-Items. Vier Close-Trigger: Overlay-Tap, Close-X, Escape,
- * Route-Change (Nav-Item-Tap navigiert und schliesst).
+ * Mobile (< 900px): der Header traegt links den Burger, rechts den Avatar
+ * (kein Logo mehr — Jan 08/2026). Der "New list"-Button rutscht in ein
+ * Slide-In-Panel von links (80% Screen-Breite, gecappt bei 380px), das ueber
+ * den Header drueber liegt und den Hintergrund via Overlay dimmt. Als CTA
+ * oben im Panel, gefolgt von den Nav-Items. Vier Close-Trigger: Overlay-Tap,
+ * Close-X, Escape, Route-Change (Nav-Item-Tap navigiert und schliesst).
  *
  * Sitzt im bestehenden `.site-nav`-Shell (fixed, --nav-h, safe-area).
  */
@@ -178,6 +178,21 @@ export function AppNav({
     <nav className="site-nav appnav" data-scrolled="true">
       <div className="container nav-inner appnav-inner">
         <div className="appnav-left">
+          {/* Burger sitzt seit 08/2026 im LINKEN Slot: auf Mobile links der
+              Burger, rechts der Avatar, kein Logo (das entfaellt per CSS).
+              Auf Desktop ist der Burger display:none — dort ankert das Logo
+              weiter die Inline-Nav, unveraendert. */}
+          <button
+            ref={burgerRef}
+            type="button"
+            className="appnav-burger"
+            aria-expanded={open}
+            aria-controls="appnav-panel"
+            aria-label={open ? "Close menu" : "Open menu"}
+            onClick={() => setOpen((v) => !v)}
+          >
+            <MenuIcon />
+          </button>
           <Link
             href="/dashboard"
             className="logo"
@@ -206,21 +221,10 @@ export function AppNav({
             <SparkleIcon />
             Generate list
           </Link>
-          <button
-            ref={burgerRef}
-            type="button"
-            className="appnav-burger"
-            aria-expanded={open}
-            aria-controls="appnav-panel"
-            aria-label={open ? "Close menu" : "Open menu"}
-            onClick={() => setOpen((v) => !v)}
-          >
-            <MenuIcon />
-          </button>
-          {/* Avatar ganz rechts — auch rechts vom Burger (Jan 2026-07-24):
-              Identitaet sitzt am aeusseren Rand. Drumherum der Gold-
-              Fortschritts-Ring (verbraucht/gesamt) — Klick geht wie
-              gehabt auf /account (dort der volle Balken). */}
+          {/* Avatar ganz rechts (Jan 2026-07-24): Identitaet sitzt am
+              aeusseren Rand. Drumherum der Gold-Fortschritts-Ring
+              (verbraucht/gesamt) — Klick geht wie gehabt auf /account (dort
+              der volle Balken). */}
           <Link
             href="/account"
             aria-label="Manage account"
