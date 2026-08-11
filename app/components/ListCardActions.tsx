@@ -29,6 +29,7 @@ export function ListCardActions({
         className="dash-tile-action dash-tile-action-primary"
         aria-label={`Open ${listName} in Callday`}
       >
+        <CalldayMark />
         Open in Callday
       </Link>
       <a
@@ -40,5 +41,20 @@ export function ListCardActions({
         Download list
       </a>
     </div>
+  );
+}
+
+function CalldayMark() {
+  return (
+    <svg width="18" height="18" viewBox="18 18 84 84" fill="none" aria-hidden="true">
+      <path
+        d="M 84.6 42.8 A 30 30 0 1 0 84.6 77.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="8"
+        strokeLinecap="round"
+      />
+      <circle cx="60" cy="60" r="12" fill="var(--sun)" />
+    </svg>
   );
 }

@@ -5105,6 +5105,9 @@ h2 .accent {
   border-color: var(--blue);
   color: #fff;
 }
+.dash-tile-action-primary svg {
+  color: inherit;
+}
 .dash-tile-action-primary:hover {
   background: var(--blue-deep);
   border-color: var(--blue-deep);
@@ -5369,10 +5372,10 @@ h2 .accent {
 @media (max-width: 560px) {
   .dash-duo,
   .dash-duo-lists {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .dash-empty-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 480px) {
