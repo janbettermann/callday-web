@@ -5,7 +5,7 @@ import { ListCardActions } from "../components/ListCardActions";
 
 /**
  * Listen-Uebersicht auf /lists (eingeloggt) — dieselben Kacheln wie das
- * Dashboard (.dash-duo-lists: 2-spaltig, skalierte .dash-tile), nur nicht
+ * Dashboard (.dash-duo-lists: 2-spaltig), nur nicht
  * verlinkt (.dash-tile-plain) und mit Quelle-Pill oben rechts. Datenquelle
  * sind die synced Listen (lead_lists, Demo ausgeblendet); ein laufender
  * Generator-Job sitzt als pollende Building-Kachel oben. Kein In-Page-

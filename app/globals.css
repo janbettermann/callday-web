@@ -4350,9 +4350,9 @@ h2 .accent {
 }
 
 /* Listen-Uebersicht (/lists eingeloggt) — dieselben Kacheln wie das
-   Dashboard (.dash-duo-lists: 2-spaltig, skalierte .dash-tile), nur nicht
-   verlinkt: kein Klick-Hover, Quelle-Pill oben rechts, und die Building-
-   Bar braucht position:relative fuers absolute Lade-Segment. */
+   Dashboard (.dash-duo-lists: 2-spaltig), nur nicht verlinkt: kein
+   Klick-Hover, Quelle-Pill oben rechts, und die Building-Bar braucht
+   position:relative fuers absolute Lade-Segment. */
 .dash-tile.dash-tile-plain {
   cursor: default;
 }
@@ -4384,8 +4384,8 @@ h2 .accent {
   background: rgba(26, 29, 38, 0.06);
   color: var(--ink-dim);
 }
-/* Building-Kachel: unbestimmtes Segment laeuft durch die (skalierte)
-   .dash-bar; braucht den .dash-tile-plain .dash-bar { position:relative }
+/* Building-Kachel: unbestimmtes Segment laeuft durch die .dash-bar;
+   braucht den .dash-tile-plain .dash-bar { position:relative }
    Override oben. */
 .lists-card-bar-load {
   position: absolute;
@@ -5057,43 +5057,15 @@ h2 .accent {
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
 }
-/* Recent lists: 2 groessere Karten (Jan 2026-07-15). Recent Calldays
-   nutzen das Basis-3er-Grid. */
+/* Recent lists: 2 Karten pro Reihe statt der Basis-3er (Dashboard-only
+   Layout). Innen-Massen bleiben unveraendert = 1:1 App-ListCard
+   (Jan 2026-08-12 Rueckbau, vorher waren Padding/Fonts/Bar ~1.3x hoch-
+   skaliert). Der geteilte ListCardActions-Footer (Open in Callday +
+   Download list) mit Hairline drueber bleibt davon unberuehrt — der
+   lebt als Sibling unter dem Kachel-Koerper und traegt seine eigenen
+   Massen. */
 .dash-duo-lists {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-/* Die 2 breiteren Listen-Karten proportional groesser (~1.3x auf allen
-   Innen-Massen: Padding/Radius/Fonts/Bar/Abstaende → auch die Hoehe
-   waechst mit). */
-.dash-duo-lists .dash-tile {
-  padding: 24px;
-  border-radius: 18px;
-}
-.dash-duo-lists .dash-tile-top {
-  gap: 10px;
-  margin-bottom: 4px;
-}
-.dash-duo-lists .dash-tile-name {
-  font-size: 19px;
-  letter-spacing: -0.3px;
-}
-.dash-duo-lists .dash-badge {
-  font-size: 11px;
-  padding: 4px 10px;
-}
-.dash-duo-lists .dash-tile-sub {
-  font-size: 14.5px;
-  margin: 0 0 18px;
-}
-.dash-duo-lists .dash-bar {
-  height: 8px;
-}
-.dash-duo-lists .dash-tile-foot {
-  margin-top: 8px;
-  font-size: 13.5px;
-}
-.dash-duo-lists .dash-tile-foot b {
-  font-size: 13.5px;
 }
 
 /* Listen-Kachel (App: components/listen/ListCard.tsx). */
