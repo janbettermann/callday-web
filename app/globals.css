@@ -4583,33 +4583,26 @@ h2 .accent {
   transition: opacity 0.15s;
 }
 
-/* === AVATAR-POPOVER (2026-08-12, Variante 02 "Sub-cards") ===
-   Sitzt unter der Avatar-Pille rechts oben. Popover-Grund = warmer BG
-   (--bg), darin schwimmen zwei kleine weisse Sub-Cards: Credits +
-   Menue. Bewusst schmal (280px), auf Mobile rueckt es auf 16px
-   Fensterrand statt am Avatar zu kleben. `inert` steuert Tabbability
-   im geschlossenen Zustand; Opacity/Transform-Transition gibt der
-   Bewegung Halt. */
+/* === AVATAR-POPOVER (Variante 03 "Rail", 2026-08-12) ===
+   Schmal (244px), eine einzelne weisse Karte statt Sub-Cards. Sektionen
+   trennt eine dünne Hairline. Aufbau: Identitaet oben (Avatar + Name +
+   Email), Credits mit Gold-Faden, Upgrade als Textlink, Menue unten.
+   Viewport-fixiert mit 10px zum rechten Bildschirmrand (User-Wahl); top
+   haengt an der Nav-Hoehe. `inert` steuert Tabbability im geschlossenen
+   Zustand; Opacity/Transform-Transition gibt der Bewegung Halt. */
 .appnav-pop {
-  /* Viewport-fixiert statt am Wrap-Anker: der User hat 10px zum rechten
-     Bildschirmrand angefragt, unabhaengig von Nav-Padding oder Wrap-
-     Position. top haengt an der Nav-Hoehe damit der Abstand zur Nav
-     gleich bleibt (10px unter der Nav-Unterkante). */
   position: fixed;
   top: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 10px);
   right: 10px;
-  width: 280px;
-  padding: 8px;
-  background: var(--bg);
+  width: 244px;
+  padding: 4px 0;
+  background: var(--bg-page);
   border: 0.5px solid var(--line-strong);
   border-radius: 14px;
   box-shadow:
     0 1px 2px rgba(8, 10, 20, 0.04),
     0 12px 32px -12px rgba(8, 10, 20, 0.14),
     0 24px 60px -24px rgba(8, 10, 20, 0.18);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   z-index: 60;
   opacity: 0;
   transform: translateY(-4px) scale(0.98);
@@ -4633,74 +4626,113 @@ h2 .accent {
     transform: none;
   }
 }
-.appnav-pop-card {
-  background: var(--bg-page);
-  border: 0.5px solid var(--line-strong);
-  border-radius: 10px;
-  padding: 12px 14px;
+
+/* Identitaetsstreifen oben — kleiner Avatar (28px, kein Ring, der lebt
+   am echten Avatar in der Nav) + Name/Email in zwei Zeilen. */
+.appnav-pop-ident {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px 8px;
 }
-.appnav-pop-credits-top {
+.appnav-pop-ident-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--blue);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.appnav-pop-ident-txt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.appnav-pop-ident-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.appnav-pop-ident-mail {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.appnav-pop-divider {
+  height: 0.5px;
+  background: var(--line);
+  margin: 4px 0;
+}
+
+/* Credits — Label + Zahl in einer Zeile, Gold-Faden drunter (3px, greift
+   den Ring am Avatar visuell auf). */
+.appnav-pop-credits {
+  padding: 8px 14px 10px;
+}
+.appnav-pop-credits-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 6px;
+}
+.appnav-pop-credits-label {
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+.appnav-pop-credits-num {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.appnav-pop-thread {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(26, 29, 38, 0.08);
+  overflow: hidden;
+}
+.appnav-pop-thread > i {
+  display: block;
+  height: 100%;
+  background: var(--sun);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.appnav-pop-upgrade-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin: 0 0 10px;
+  padding: 2px 14px 10px;
 }
-.appnav-pop-credits-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink);
+.appnav-pop-upgrade-hint {
+  font-size: 11.5px;
+  color: var(--ink-faint);
 }
-/* Gold-Ring-Motiv als Mini-Anker fuer die Credits-Sektion — greift den
-   Nav-Ring visuell auf, ohne einen zweiten Progress-Wert zu behaupten
-   (Sektion trennt Balance-Zahl davon). */
-.appnav-pop-credits-mark {
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: conic-gradient(var(--sun) 0 88%, rgba(26, 29, 38, 0.08) 88% 100%);
-  -webkit-mask: radial-gradient(circle, transparent 42%, #000 44%);
-          mask: radial-gradient(circle, transparent 42%, #000 44%);
-  flex-shrink: 0;
-}
-.appnav-pop-upgrade {
-  padding: 5px 11px;
-  background: var(--ink);
-  color: #fff;
-  border-radius: 8px;
+.appnav-pop-upgrade-link {
   font-size: 11.5px;
   font-weight: 500;
+  color: var(--blue-deep);
   text-decoration: none;
-  white-space: nowrap;
-  transition: opacity 0.15s;
+  transition: color 0.15s;
 }
-.appnav-pop-upgrade:hover {
-  opacity: 0.85;
+.appnav-pop-upgrade-link:hover {
+  color: var(--blue);
 }
-.appnav-pop-credits-grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  row-gap: 6px;
-  column-gap: 16px;
-  margin: 0;
-  font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-}
-.appnav-pop-credits-grid dt {
-  color: var(--ink-faint);
-  margin: 0;
-}
-.appnav-pop-credits-grid dd {
-  margin: 0;
-  text-align: right;
-  color: var(--ink);
-  font-weight: 600;
-}
+
 .appnav-pop-menu {
-  padding: 4px;
+  padding: 4px 6px 6px;
 }
 .appnav-pop-menu form {
   margin: 0;
@@ -4710,7 +4742,7 @@ h2 .accent {
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 9px 10px;
+  padding: 9px 8px;
   background: transparent;
   border: 0;
   border-radius: 6px;
@@ -4739,9 +4771,9 @@ h2 .accent {
 @media (max-width: 480px) {
   .appnav-pop {
     /* Schmale Screens: Breite darf sich der Viewport anpassen (rechts
-       10px, links entsprechend Puffer), aber gecappt bei 320px damit es
-       auf iPad-mini nicht ueberdimensioniert wirkt. */
-    width: min(320px, calc(100vw - 20px));
+       10px, links entsprechend Puffer), aber gecappt bei 280px — die
+       Rail soll dicht bleiben, nicht auf Mobile ausufern. */
+    width: min(280px, calc(100vw - 20px));
   }
 }
 .appnav-burger {
