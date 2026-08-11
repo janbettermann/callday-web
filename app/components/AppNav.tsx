@@ -15,7 +15,7 @@ import { signOutAction } from "../account/actions";
  *
  * Mobile (< 900px): der Header traegt links den Burger, rechts den Avatar
  * (kein Logo mehr — Jan 08/2026). Der "New list"-Button rutscht in ein
- * Slide-In-Panel von links (80% Screen-Breite, gecappt bei 380px), das ueber
+ * Slide-In-Panel von links (90% Screen-Breite, gecappt bei 380px), das ueber
  * den Header drueber liegt und den Hintergrund via Overlay dimmt. Als CTA
  * oben im Panel, gefolgt von den Nav-Items. Vier Close-Trigger: Overlay-Tap,
  * Close-X, Escape, Route-Change (Nav-Item-Tap navigiert und schliesst).
