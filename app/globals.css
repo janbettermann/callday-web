@@ -4591,9 +4591,13 @@ h2 .accent {
    im geschlossenen Zustand; Opacity/Transform-Transition gibt der
    Bewegung Halt. */
 .appnav-pop {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
+  /* Viewport-fixiert statt am Wrap-Anker: der User hat 10px zum rechten
+     Bildschirmrand angefragt, unabhaengig von Nav-Padding oder Wrap-
+     Position. top haengt an der Nav-Hoehe damit der Abstand zur Nav
+     gleich bleibt (10px unter der Nav-Unterkante). */
+  position: fixed;
+  top: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 10px);
+  right: 10px;
   width: 280px;
   padding: 8px;
   background: var(--bg);
@@ -4734,11 +4738,10 @@ h2 .accent {
 }
 @media (max-width: 480px) {
   .appnav-pop {
-    /* Auf schmalen Screens sonst rutscht rechts unter den 16px-Rand.
-       Fester Abstand zur rechten Kante haelt den Ankerpunkt beim
-       Avatar, aber die Card selber wird breiter. */
-    right: 8px;
-    width: min(320px, calc(100vw - 32px));
+    /* Schmale Screens: Breite darf sich der Viewport anpassen (rechts
+       10px, links entsprechend Puffer), aber gecappt bei 320px damit es
+       auf iPad-mini nicht ueberdimensioniert wirkt. */
+    width: min(320px, calc(100vw - 20px));
   }
 }
 .appnav-burger {
