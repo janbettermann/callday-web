@@ -336,13 +336,24 @@ export function AppNav({
         >
           <CloseIcon />
         </button>
+        {/* Panel-CTA im App-Style (2026-08-12): weisser Grund, blaue
+            Hairline, Sparkle in blauer Icon-Kachel links, Titel + Sub-
+            Line rechts. 1:1 zum Generate-Card in der iOS-App (file.tsx
+            im Import-Screen). Ohne Chevron rechts (Jan-Wahl). */}
         <Link
           href="/lists/new"
           className="appnav-panel-cta"
           onClick={closeMenu}
         >
-          <SparkleIcon />
-          Generate list
+          <span className="appnav-panel-cta-ic" aria-hidden="true">
+            <SparkleIcon />
+          </span>
+          <span className="appnav-panel-cta-body">
+            <span className="appnav-panel-cta-title">Generate a new list</span>
+            <span className="appnav-panel-cta-sub">
+              Scan Google for your ideal customers
+            </span>
+          </span>
         </Link>
         <div className="appnav-panel-divider" role="presentation" />
         <div className="appnav-panel-nav">

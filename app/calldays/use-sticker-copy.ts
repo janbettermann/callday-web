@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DashboardCallday } from "@/lib/dashboard/data";
 
 export type CopyStatus = "idle" | "busy" | "copied";
@@ -38,19 +38,27 @@ function fileName(label: string): string {
 }
 
 /**
- * Geteilte Copy-Logik fuer den Card-View (ShareableSticker) und die
- * List-Zeile (ShareableRow). Capture-Quelle ist der off-screen
- * Fixed-300px-Sticker am zurueckgegebenen `exportRef` — so ist der Export
- * ueberall identisch geformt (siehe EXPORT_WIDTH-Analyse). `status` treibt
- * das Feedback (Card = gruener Overlay, Zeile = gruener Haken).
+ * Copy-Logik der /calldays-Karte: Capture-Quelle ist der off-screen
+ * Fixed-300px-Sticker am zurueckgegebenen `exportRef` — so ist der
+ * Export ueberall identisch geformt. `status` treibt den gruenen
+ * Overlay (siehe ShareableSticker).
  *
- * clipboard.write laeuft synchron im Klick-Gesture (Safari) — der Blob geht
- * als Promise an ClipboardItem. Ohne Image-Clipboard-Support → Download.
+ * clipboard.write laeuft synchron im Klick-Gesture (Safari) — der Blob
+ * geht als Promise an ClipboardItem. Ohne Image-Clipboard-Support →
+ * Download. Der Timer wird beim Unmount + bei jedem neuen Flash sauber
+ * gecleart, damit ein zweiter Copy den ersten nicht in ein flackerndes
+ * Zwischenrendering wirft.
  */
 export function useStickerCopy(day: DashboardCallday) {
   const exportRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<CopyStatus>("idle");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
 
   function flashCopied() {
     setStatus("copied");

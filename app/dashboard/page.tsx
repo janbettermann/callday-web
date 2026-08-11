@@ -56,7 +56,7 @@ export default async function DashboardPage() {
       console.error("[dashboard] recent lists failed", err);
       return [] as DashboardList[];
     }),
-    fetchRecentCalldays(admin, user.id, 3).catch((err) => {
+    fetchRecentCalldays(admin, user.id, 1).catch((err) => {
       console.error("[dashboard] recent calldays failed", err);
       return [] as DashboardCallday[];
     }),
@@ -116,17 +116,15 @@ export default async function DashboardPage() {
           )}
         </section>
 
-        {/* ---------- Recent Calldays ---------- */}
+        {/* ---------- Last Callday ---------- */}
         <section className="dash-sec">
           <div className="dash-sec-head">
-            <h2>Recent Calldays</h2>
+            <h2>Last Callday</h2>
           </div>
 
           {calldays.length > 0 ? (
-            <div className="dash-duo dash-duo-calldays">
-              {calldays.map((day) => (
-                <CalldaySticker key={day.isoDate} day={day} />
-              ))}
+            <div className="dash-last-callday">
+              <CalldaySticker key={calldays[0].isoDate} day={calldays[0]} />
             </div>
           ) : (
             <div className="dash-empty-row">

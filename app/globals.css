@@ -4825,33 +4825,64 @@ h2 .accent {
 .appnav-panel-close:hover {
   border-color: var(--ink-faint);
 }
-/* CTA matched Desktop-Header-Button farblich (weiss, dunkler Text,
-   blauer Sparkle als einziger Brand-Akzent), behaelt aber die Panel-
-   Form: full-width im Panel, groesseres Padding fuer Menu-Prominenz.
-   Der Sparkle-Icon-Anker verbindet App-Card, Desktop-Header und
-   Mobile-Panel — dieselbe Aktion ueberall am selben Icon erkennbar. */
+/* Panel-CTA im iOS-App-Style (2026-08-12, 1:1 mit dem Generate-Card in
+   listen/import/file.tsx): weisser Grund, blau getoente Hairline, Sparkle
+   in einer blauen Icon-Kachel links, Titel + Sub-Zeile rechts. Ohne
+   Chevron rechts (Jan-Wahl). Der Sparkle bleibt der geteilte Anker zu
+   App-Card und Desktop-Header — dieselbe Aktion, ueberall am selben Icon
+   erkennbar. */
 .appnav-panel-cta {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 14px 20px;
-  border-radius: 12px;
-  background: #fff;
-  border: 0.5px solid var(--line-strong);
-  color: var(--ink);
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--bg-page);
+  border: 0.5px solid rgba(74, 122, 247, 0.28);
+  color: var(--blue-deep);
   text-decoration: none;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.1px;
   transition: border-color 0.15s, background 0.15s;
 }
-.appnav-panel-cta svg {
-  color: var(--blue);
-}
 .appnav-panel-cta:hover {
-  border-color: var(--ink-faint);
-  background: var(--bg-page);
+  border-color: var(--blue);
+  background: #fff;
+}
+.appnav-panel-cta:active {
+  transform: scale(0.99);
+}
+.appnav-panel-cta-ic {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--blue-tint);
+  display: grid;
+  place-items: center;
+  color: var(--blue);
+  flex: none;
+}
+.appnav-panel-cta-ic svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+.appnav-panel-cta-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.appnav-panel-cta-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--blue-deep);
+  letter-spacing: -0.15px;
+}
+.appnav-panel-cta-sub {
+  font-size: 12px;
+  color: var(--ink-faint);
+  letter-spacing: -0.1px;
+  line-height: 16px;
 }
 .appnav-panel-divider {
   height: 0.5px;
@@ -4959,162 +4990,40 @@ h2 .accent {
   align-items: stretch;
 }
 
-/* === CALLDAYS CARD/LIST-VIEW (nur /calldays, NICHT Dashboard) ===
-   Toggle 1:1 aus der App (components/swipe/ControlBar.tsx): Segmented-
-   Control, beide Icons gleiche Farbe, aktives Segment mit subtiler
-   Tint-Pille. Card-View = Sticker-Grid, List-View = ruhige Zeilen
-   (Datum links, Stats rechts — "Variante A"). */
-.calldays-head {
+/* === /calldays — "Show more"-Pagination (2026-08-12) ===
+   Days/Weeks/Months- und Card/List-Toggles sind raus; die Seite zeigt
+   nur noch Tages-Kacheln im dash-duo-3er-Grid, initial 9 (3x3), dann
+   per Button jeweils 9 mehr. Der Button lebt zentriert unter dem Grid,
+   ruhig wie ein Ghost-Button — Restanzahl als kleiner Faint-Chip
+   rechts vom Label. */
+.calldays-more-wrap {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 24px;
 }
-.calldays-controls {
-  display: flex;
+.calldays-more {
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-}
-/* Zeit-Granularitaet — Text-Segmented-Control (Days/Weeks/Months), im
-   selben Look wie der Card/List-Toggle. */
-.cd-segtoggle {
-  display: inline-flex;
-  flex-shrink: 0;
-  gap: 2px;
-  padding: 4px;
-  background: #fff;
-  border: 0.5px solid var(--line);
-  border-radius: 10px;
-}
-.cd-seg-btn {
-  height: 30px;
-  padding: 0 12px;
-  display: inline-flex;
-  align-items: center;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--ink-dim);
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: var(--bg-page);
+  border: 0.5px solid var(--line-strong);
+  color: var(--ink);
+  font-family: inherit;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
+  transition: border-color 0.15s, background 0.15s;
 }
-.cd-seg-btn:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-.cd-seg-btn.is-active {
-  background: rgba(0, 0, 0, 0.08);
-  color: var(--ink);
-}
-.cd-viewtoggle {
-  display: inline-flex;
-  flex-shrink: 0;
-  gap: 2px;
-  padding: 4px;
+.calldays-more:hover {
+  border-color: var(--ink-faint);
   background: #fff;
-  border: 0.5px solid var(--line);
-  border-radius: 10px;
 }
-.cd-vt-btn {
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--ink);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.cd-vt-btn:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-.cd-vt-btn.is-active {
-  background: rgba(0, 0, 0, 0.08);
-}
-.cd-vt-btn:active {
-  opacity: 0.6;
-}
-
-/* Zeilen laufen ueber die volle Breite, KEINE Card / kein Hintergrund —
-   die Hairlines zwischen den Zeilen tragen die Struktur direkt auf dem
-   Seiten-Grund. Kein horizontales Row-Padding, damit Datum (links) und
-   Stats (rechts) mit Titel + Toggle fluchten. */
-.callday-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 0;
-  border-top: 0.5px solid var(--line);
-}
-.callday-row:first-child {
-  border-top: none;
-}
-.callday-date {
-  flex: 1;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--ink);
-  letter-spacing: -0.1px;
-}
-/* Copy-Icon rechts in der Zeile (List-View "Variante A"): kopiert dasselbe
-   Sticker-Bild wie der Card-View; bei Erfolg wird das Icon kurz zum gruenen
-   Haken (color #2ba968 wie der App-Copy-Success). */
-.callday-row-copy {
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
+.calldays-more-count {
+  font-size: 11.5px;
   color: var(--ink-faint);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.callday-row-copy:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--ink);
-}
-.callday-row-copy.is-copied {
-  color: #2ba968;
-}
-.callday-row-copy:disabled {
-  cursor: default;
-}
-/* Feste Spalten (Zahl rechtsbuendig + Label linksbuendig, jeweils fixe
-   Breite), damit die Angaben ueber alle Zeilen exakt fluchten — unabhaengig
-   von Ziffernzahl (1 vs 10) und Singular/Plural (call/calls, meeting/
-   meetings). Der Block hat dadurch eine fixe Gesamtbreite und wackelt nicht
-   mehr, obwohl er rechtsbuendig sitzt. */
-.callday-stats {
-  display: grid;
-  grid-template-columns: 3ch 4em 3ch 4.6em;
-  column-gap: 6px;
-  align-items: baseline;
-  font-size: 14px;
-  color: var(--ink-dim);
-}
-.callday-num {
-  text-align: right;
-  color: var(--ink);
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
-}
-.callday-num.is-zero {
-  color: var(--ink-faint);
-  font-weight: 500;
-}
-.callday-lbl {
-  text-align: left;
 }
 /* Recent lists: 2 groessere Karten (Jan 2026-07-15). Recent Calldays
    nutzen das Basis-3er-Grid. */
@@ -5355,35 +5264,11 @@ h2 .accent {
   letter-spacing: 0.2px;
   color: #a8a8a3;
 }
-/* Typ-Tag oben rechts fuer Wochen-/Monats-Sticker ("Variante C", 08/2026):
-   macht auf einen Blick scannbar, ob es eine Woche (blau) oder ein Monat
-   (gold) ist. Braucht .dash-sticker position:relative als Anker. */
-.dash-sticker-tag {
-  position: absolute;
-  top: 16px;
-  right: 18px;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.7px;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: 6px;
-}
-.dash-sticker-tag-week {
-  background: rgba(47, 109, 240, 0.1);
-  color: #1c4fb0;
-}
-.dash-sticker-tag-month {
-  /* Jan-Wahl: Schrift im Credit-Gelb (var(--sun) = #fbbf24, exakt der
-     Credit-Balken), Pille als leichter Sun-Tint. */
-  background: var(--sun-tint);
-  color: var(--sun);
-}
 /* Card-View auf /calldays: die ganze Karte ist der Copy-Button (Jan 08/2026,
    analog zur App-Share-Seite). Klick → Sticker in die Zwischenablage → kurz
-   gruen mit "Copied ✓". Der gruene Overlay (App-Gruen: heller Tint-Fill +
-   dunkelgruener Text) wird erst nach dem Capture gezeigt, ist also kein Teil
-   des Bildes. */
+   gruen mit "✓ Copied". Der gruene Overlay wird per opacity ein-/ausgeblendet
+   (Overlay bleibt immer im DOM, damit ein zweiter Copy auf einer anderen
+   Karte den Ausblende-Uebergang hier nicht abschneidet). */
 .callday-copycard {
   position: relative;
   border-radius: 22px;
@@ -5414,6 +5299,24 @@ h2 .accent {
   font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+.callday-copied.is-on {
+  opacity: 1;
+}
+.callday-copied svg {
+  /* Safari/Flex-Gotcha: SVG kann sonst auf 0 kollabieren, dann fehlt
+     der Haken neben dem Text. flex:none + display:block fixiert die
+     18x18 Groesse, currentColor erbt das Gruen. */
+  display: block;
+  flex: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .callday-copied {
+    transition: opacity 0.05s linear;
+  }
 }
 /* Off-screen Render mit FESTER Breite (= App-Referenz) — die Capture-Quelle
    fuer den Export. Off-Screen statt display:none, damit der Sticker echt
@@ -5508,6 +5411,12 @@ h2 .accent {
   gap: 22px;
   align-items: center;
 }
+/* Dashboard-Solo-Callday (Jan 2026-08-12, "nur Last Callday zeigen"):
+   ein einzelner Sticker links, gleiche 320px-Spur wie der Empty-State,
+   damit Full- und First-Run-Zustand visuell fluchten. */
+.dash-last-callday {
+  max-width: 320px;
+}
 @media (max-width: 900px) {
   .dash-wrap {
     padding-left: 24px;
@@ -5532,12 +5441,6 @@ h2 .accent {
      Sektions-Abstand; die letzte Sektion behaelt ihren Fussabstand. */
   .dash-sec:not(:last-child) {
     margin-bottom: 20px;
-  }
-  /* Auf Mobile nur 2 Recent Calldays im Dashboard — der 3. Sticker faellt
-     weg. Gescoped: die volle /calldays-Historie (auch .dash-duo) bleibt
-     unberuehrt. */
-  .dash-duo-calldays > :nth-child(3) {
-    display: none;
   }
 }
 @media (max-width: 560px) {

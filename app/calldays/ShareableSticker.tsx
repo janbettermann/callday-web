@@ -1,27 +1,23 @@
 "use client";
 
 import type { DashboardCallday } from "@/lib/dashboard/data";
-import { CalldaySticker, type CalldayPeriod } from "../components/CalldaySticker";
+import { CalldaySticker } from "../components/CalldaySticker";
 import { useStickerCopy } from "./use-sticker-copy";
 
 /**
  * /calldays Card-View: die ganze Karte IST der Copy-Button (Jan-Wahl,
  * analog zur "Share your Callday"-Seite der App). Klick → Sticker-PNG in
- * die Zwischenablage → die Karte wird kurz gruen mit "Copied ✓".
+ * die Zwischenablage → die Karte zeigt kurz "✓ Copied".
  *
- * Copy-Logik + Capture-Quelle (off-screen Fixed-300px am exportRef) kommen
- * aus useStickerCopy — geteilt mit der List-Zeile (ShareableRow). Der gruene
- * Overlay wird erst nach dem Capture gerendert und liegt eh nicht im
- * Export-Node, landet also nie im Bild.
+ * Der gruene Overlay ist IMMER im DOM (nur opacity/pointer-events schalten),
+ * damit ein rasches Copy auf einer anderen Karte den Ausblende-Uebergang
+ * hier nicht abschneidet — ohne Mount/Unmount kann CSS eine saubere
+ * Ausblendung zeigen. Der Overlay liegt ausserhalb des Export-Nodes und
+ * landet daher nie im Bild.
  */
-export function ShareableSticker({
-  day,
-  period,
-}: {
-  day: DashboardCallday;
-  period: CalldayPeriod;
-}) {
+export function ShareableSticker({ day }: { day: DashboardCallday }) {
   const { exportRef, status, copy } = useStickerCopy(day);
+  const copied = status === "copied";
 
   return (
     <div
@@ -37,22 +33,22 @@ export function ShareableSticker({
         }
       }}
     >
-      {/* Sichtbare, responsive Karte (fuellt die Grid-Zelle). */}
-      <CalldaySticker day={day} period={period} />
+      <CalldaySticker day={day} />
 
       {/* Off-screen Fixed-Width-Render — die eigentliche Export-Quelle. */}
       <div className="callday-export-stage" aria-hidden="true">
         <div ref={exportRef}>
-          <CalldaySticker day={day} period={period} />
+          <CalldaySticker day={day} />
         </div>
       </div>
 
-      {status === "copied" && (
-        <div className="callday-copied" aria-hidden="true">
-          <CheckIcon />
-          Copied
-        </div>
-      )}
+      <div
+        className={"callday-copied" + (copied ? " is-on" : "")}
+        aria-hidden="true"
+      >
+        <CheckIcon />
+        <span>Copied</span>
+      </div>
     </div>
   );
 }
