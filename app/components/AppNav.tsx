@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalldayLogo } from "./CalldayLogo";
+import { signOutAction } from "../account/actions";
 
 /**
  * Gemeinsame Nav des eingeloggten Bereichs. Primaere Ziele (Orte) als
@@ -89,15 +90,19 @@ export function AppNav({
   initial?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [popOpen, setPopOpen] = useState(false);
   // Credit-Stand fuer den Ring — client-seitig geladen, damit der Ring
   // ohne Prop-Threading auf jeder Seite erscheint (GET /api/credits ist
   // seiteneffektfrei). Fuellung = used/total.
   const [credits, setCredits] = useState<{
     used: number;
     total: number;
+    balance: number;
   } | null>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
   const panelCloseRef = useRef<HTMLButtonElement>(null);
+  const avatarBtnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -106,7 +111,11 @@ export function AppNav({
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (active && data?.credits) {
-          setCredits({ used: data.credits.used, total: data.credits.total });
+          setCredits({
+            used: data.credits.used,
+            total: data.credits.total,
+            balance: data.credits.balance,
+          });
         }
       })
       .catch(() => {
@@ -162,7 +171,37 @@ export function AppNav({
   // ohnehin false ist.
   useEffect(() => {
     setOpen(false);
+    setPopOpen(false);
   }, [pathname]);
+
+  // Avatar-Popover: Escape schliesst, Klick ausserhalb schliesst. Getrennt
+  // vom Slide-In-Panel — nur EIN Handler pro Effekt, damit der Cleanup
+  // beim Toggle sauber ist.
+  useEffect(() => {
+    if (!popOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPopOpen(false);
+        avatarBtnRef.current?.focus();
+      }
+    };
+    const onClick = (e: MouseEvent) => {
+      const t = e.target as Node | null;
+      if (!t) return;
+      if (popRef.current?.contains(t)) return;
+      if (avatarBtnRef.current?.contains(t)) return;
+      setPopOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    // pointerdown statt click: schliesst schon beim Runter-Klick, sonst
+    // fuehrt ein Klick auf einen Link IM Popover manchmal zum Race mit
+    // dem globalen click der genau vorher schliessen wuerde.
+    window.addEventListener("pointerdown", onClick);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onClick);
+    };
+  }, [popOpen]);
 
   // Focus auf den Close-Button beim Oeffnen. Timeout gibt der Slide-In-
   // Animation Zeit zu starten bevor der Focus-Ring erscheint — sonst
@@ -223,37 +262,49 @@ export function AppNav({
           </Link>
           {/* Avatar ganz rechts (Jan 2026-07-24): Identitaet sitzt am
               aeusseren Rand. Drumherum der Gold-Fortschritts-Ring
-              (verbraucht/gesamt) — Klick geht wie gehabt auf /account (dort
-              der volle Balken). */}
-          <Link
-            href="/account"
-            aria-label="Manage account"
-            className={
-              "appnav-account" + (active === "account" ? " is-active" : "")
-            }
-          >
-            <span className="appnav-ring">
-              <svg className="appnav-ring-svg" viewBox="0 0 40 40" aria-hidden="true">
-                <circle
-                  className="appnav-ring-track"
-                  cx="20"
-                  cy="20"
-                  r={RING_R}
-                />
-                <circle
-                  className="appnav-ring-fill"
-                  cx="20"
-                  cy="20"
-                  r={RING_R}
-                  style={{
-                    strokeDasharray: RING_CIRC,
-                    strokeDashoffset: ringOffset,
-                  }}
-                />
-              </svg>
-              <span className="appnav-avatar">{initial}</span>
-            </span>
-          </Link>
+              (verbraucht/gesamt). Klick oeffnet ein Popover (Credits +
+              Account + Sign out) statt direkt nach /account zu springen. */}
+          <div className="appnav-account-wrap">
+            <button
+              ref={avatarBtnRef}
+              type="button"
+              aria-label="Account menu"
+              aria-haspopup="menu"
+              aria-expanded={popOpen}
+              aria-controls="appnav-pop"
+              className={
+                "appnav-account" + (active === "account" ? " is-active" : "")
+              }
+              onClick={() => setPopOpen((v) => !v)}
+            >
+              <span className="appnav-ring">
+                <svg className="appnav-ring-svg" viewBox="0 0 40 40" aria-hidden="true">
+                  <circle
+                    className="appnav-ring-track"
+                    cx="20"
+                    cy="20"
+                    r={RING_R}
+                  />
+                  <circle
+                    className="appnav-ring-fill"
+                    cx="20"
+                    cy="20"
+                    r={RING_R}
+                    style={{
+                      strokeDasharray: RING_CIRC,
+                      strokeDashoffset: ringOffset,
+                    }}
+                  />
+                </svg>
+                <span className="appnav-avatar">{initial}</span>
+              </span>
+            </button>
+            <AccountPopover
+              open={popOpen}
+              popRef={popRef}
+              credits={credits}
+            />
+          </div>
         </div>
       </div>
 
@@ -319,5 +370,82 @@ export function AppNav({
         </div>
       </aside>
     </nav>
+  );
+}
+
+/**
+ * Avatar-Popover (Variante 02 „Sub-cards", 2026-08-12). Sitzt auf warmem
+ * Grund, darin zwei kleine weisse Cards: 1) Lead credits — Ring + Zahlen
+ * + Upgrade-Chip. 2) Menue — Account + Sign out (server action).
+ * Bewusst KEIN „New list" hier: das ist eine Primaer-Aktion und lebt im
+ * Header („Generate list") bzw. auf /lists. Dieses Menue ist Identitaet
+ * + Status, keine zweite Nav.
+ */
+function AccountPopover({
+  open,
+  popRef,
+  credits,
+}: {
+  open: boolean;
+  popRef: React.RefObject<HTMLDivElement | null>;
+  credits: { used: number; total: number; balance: number } | null;
+}) {
+  const remaining = credits?.balance ?? 0;
+  const total = credits?.total ?? 0;
+  const remainFmt = remaining.toLocaleString("en-US");
+  const totalFmt = total.toLocaleString("en-US");
+
+  return (
+    <div
+      id="appnav-pop"
+      ref={popRef}
+      role="menu"
+      aria-label="Account menu"
+      aria-hidden={!open}
+      inert={!open ? true : undefined}
+      className={"appnav-pop" + (open ? " is-open" : "")}
+    >
+      <section className="appnav-pop-card">
+        <div className="appnav-pop-credits-top">
+          <div className="appnav-pop-credits-title">
+            <span className="appnav-pop-credits-mark" aria-hidden="true" />
+            <span>Lead credits</span>
+          </div>
+          <Link href="/account#credits" className="appnav-pop-upgrade">
+            Upgrade
+          </Link>
+        </div>
+        <dl className="appnav-pop-credits-grid">
+          <dt>Plan</dt>
+          <dd>{totalFmt}</dd>
+          <dt>Remaining</dt>
+          <dd>{remainFmt}</dd>
+        </dl>
+      </section>
+
+      <section className="appnav-pop-card appnav-pop-menu">
+        <Link href="/account" role="menuitem" className="appnav-pop-row">
+          <svg className="appnav-pop-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21a8 8 0 0 1 16 0" />
+          </svg>
+          Account
+        </Link>
+        <form action={signOutAction}>
+          <button
+            type="submit"
+            role="menuitem"
+            className="appnav-pop-row appnav-pop-row-danger"
+          >
+            <svg className="appnav-pop-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+              <path d="M10 17l-5-5 5-5" />
+              <path d="M5 12h12" />
+            </svg>
+            Sign out
+          </button>
+        </form>
+      </section>
+    </div>
   );
 }
