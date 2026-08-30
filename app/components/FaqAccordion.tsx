@@ -17,10 +17,15 @@ const ITEMS: FaqItem[] = [
     a: (
       <>
         <p>
-          Confirm your account and the download link for the Callday app
-          lands in your inbox right away, sent from{" "}
-          <strong>hello@callday.io</strong>. Install the app and sign in
-          with the same account.
+          Confirm your account and you land in your dashboard, where you
+          can generate your first lead list for free — right here on the
+          website.
+        </p>
+        <p>
+          The download link for the Callday app lands in your inbox at
+          the same time, sent from <strong>hello@callday.io</strong>.
+          Install the app, sign in with the same account, and your list
+          is already there.
         </p>
         <p>If you don&apos;t see the email, check spam.</p>
       </>

@@ -19,6 +19,8 @@
 import { Resend } from "resend";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { ApplicationConfirmation } from "@/emails/application-confirmation";
+import { AppStoreDownload } from "@/emails/app-store-download";
+import { APP_STORE_LIVE, APP_STORE_URL } from "@/lib/app-download";
 
 export interface SendTestflightInviteResult {
   status: "sent" | "failed" | "skipped";
@@ -30,8 +32,10 @@ export async function sendTestflightInvite(input: {
   toEmail: string;
   displayName: string;
 }): Promise<SendTestflightInviteResult> {
+  // Ab APP_STORE_LIVE ersetzt die Store-Download-Mail die TestFlight-
+  // Anleitung — der Env-Link wird dann nicht mehr gebraucht.
   const testflightLink = process.env.TESTFLIGHT_PUBLIC_LINK;
-  if (!testflightLink) {
+  if (!APP_STORE_LIVE && !testflightLink) {
     console.error("[sendTestflightInvite] TESTFLIGHT_PUBLIC_LINK missing");
     return {
       status: "failed",
@@ -57,16 +61,31 @@ export async function sendTestflightInvite(input: {
     error: null,
   };
 
+  // Der ""-Fallback ist toter Code (Guard oben), haelt aber den Typ
+  // stabil — testflightLink ist im Beta-Zweig immer gesetzt.
+  const mail = APP_STORE_LIVE
+    ? {
+        subject: "You're in — download Callday",
+        react: AppStoreDownload({
+          name: input.displayName,
+          appStoreLink: APP_STORE_URL,
+        }),
+      }
+    : {
+        subject: "You're in — install Callday from TestFlight",
+        react: ApplicationConfirmation({
+          name: input.displayName,
+          testflightLink: testflightLink ?? "",
+        }),
+      };
+
   try {
     const sendResult = await resend.emails.send({
       from: "Callday <hello@callday.io>",
       to: [input.toEmail],
       replyTo: "hello@callday.io",
-      subject: "You're in — install Callday from TestFlight",
-      react: ApplicationConfirmation({
-        name: input.displayName,
-        testflightLink,
-      }),
+      subject: mail.subject,
+      react: mail.react,
     });
 
     if (sendResult.error) {

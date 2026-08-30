@@ -8,6 +8,7 @@ import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { getCreditSummary, type CreditSummary } from "@/lib/lists/credits";
 import { parseUserAgent } from "@/lib/user-agent";
+import { getAppDownloadLink } from "@/lib/app-download";
 import { deleteAccountAction, signOutAction } from "./actions";
 import { avatarInitial } from "@/lib/dashboard/data";
 
@@ -98,11 +99,9 @@ export default async function AccountPage() {
     redirect("/login?next=/account");
   }
 
-  // Beta-Phase: der App-Link zeigt auf den TestFlight-Public-Link (die
-  // TestFlight-Landing erklaert Install + Join selbst). Beim App-Store-
-  // Launch wird NUR diese eine Konstante auf die App-Store-URL getauscht
-  // (https://apps.apple.com/app/id...) — Layout bleibt identisch.
-  const appLink = process.env.TESTFLIGHT_PUBLIC_LINK;
+  // TestFlight (Beta) oder App Store (ab Launch) — gesteuert zentral
+  // ueber APP_STORE_LIVE in lib/app-download.ts. Layout bleibt identisch.
+  const appLink = getAppDownloadLink();
 
   // Device-Kontext: auf Desktop ergaenzt die Karte den "auf dem iPhone
   // oeffnen"-Hinweis.
