@@ -44,7 +44,9 @@ export function ListCardActions({
   );
 }
 
-function CalldayMark() {
+/** Callday-Marke (Ring + Sonnenpunkt) fuer "Open in Callday"-CTAs — auch
+ *  im 0-Credits-Banner des Generators (GeneratorClient.tsx). */
+export function CalldayMark() {
   return (
     <svg width="18" height="18" viewBox="18 18 84 84" fill="none" aria-hidden="true">
       <path

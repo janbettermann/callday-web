@@ -4403,6 +4403,9 @@ h2 .accent {
   width: auto;
   margin-top: 0;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 .lists-console.is-locked {
   opacity: 0.55;

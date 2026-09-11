@@ -20,6 +20,7 @@ import {
   type JobView,
   type StatusResponse,
 } from "../job-view";
+import { CalldayMark } from "@/app/components/ListCardActions";
 import {
   APP_DOWNLOAD_PATH,
   INDUSTRY_SUGGESTIONS,
@@ -299,24 +300,30 @@ export function GeneratorClient() {
         </p>
       )}
 
-      {/* 0-Credits-Sperre — bewusst OHNE Pricing-Wording (Pre-Launch-
-          Regel): was danach kommt, bleibt offen. */}
+      {/* 0-Credits-Zustand = haeufigster Endpunkt des Generators (jede volle
+          250er-Liste landet hier) und der Moment, in dem der Free-User zur
+          App soll: CTA = derselbe App-Pfad wie "Open in Callday" auf den
+          Listen-Kacheln. Bewusst kein Pricing-/Abo-Satz — die Abo-Credits
+          sind Phase 2 (noch nicht gebaut); nichts versprechen, was der Code
+          nicht haelt. */}
       {creditsExhausted && (
         <div className="lists-locked-note" role="status">
           <div>
             <p className="lists-locked-title">
-              You&apos;ve used all {credits?.signupTotal} free lead credits.
+              Your {credits?.signupTotal} free credits are used up — your
+              leads are ready to call.
             </p>
             <p className="lists-locked-body">
-              Every lead we delivered used one credit — your lists are synced
-              to the Callday app and stay yours. More credits are coming soon.
+              Every lead we delivered used one credit. Open them in the
+              Callday app and start dialing.
             </p>
           </div>
           <Link
-            href="/lists"
-            className="account-btn account-btn-secondary lists-locked-btn"
+            href={APP_DOWNLOAD_PATH}
+            className="account-btn account-btn-primary lists-locked-btn"
           >
-            View your lists
+            <CalldayMark />
+            Open in Callday
           </Link>
         </div>
       )}
