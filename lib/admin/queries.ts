@@ -363,9 +363,13 @@ export async function fetchInactiveUsers(
 export type FeedbackRow = {
   id: string;
   email: string | null;
-  rating: number;
+  category: "bug" | "idea" | "rating";
+  /** Nur im Rating-Zweig gesetzt (Migration 0050). */
+  rating: number | null;
   text: string | null;
   app_version: string | null;
+  /** Herkunft (Migration 0055): App-Feedback-Seite oder Web-Generator. */
+  source: "app" | "web_generator";
   created_at: string;
 };
 
@@ -376,7 +380,7 @@ export async function fetchLatestFeedback(
   const sb = getServerSupabase();
   const { data, error } = await sb
     .from("beta_feedback")
-    .select("id, email, rating, text, app_version, created_at")
+    .select("id, email, category, rating, text, app_version, source, created_at")
     .order("created_at", { ascending: false })
     .limit(limit * 3); // ueberholen, dann clientseitig filtern
 

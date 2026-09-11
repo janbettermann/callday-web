@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CountryAutocomplete } from "../CountryAutocomplete";
+import { GeneratorFeedback } from "../GeneratorFeedback";
 import { IndustryAutocomplete } from "../IndustryAutocomplete";
 import { InfoPopover } from "../InfoPopover";
 import { LocationsField, type LocationChip } from "../LocationsField";
@@ -328,15 +329,19 @@ export function GeneratorClient() {
               Building-Screen-Header (.lists-workhead/.lists-worktitle,
               weiter unten geteilt genutzt) unveraendert bleibt. Der
               Brand-Moment (pulsierender Sun-Gold-Punkt) + die Copy wandern
-              1:1 mit. */}
+              1:1 mit. "New"-Pille + Feedback-Zeile (Jan 2026-09-11): der
+              GENERATOR ist das neue Feature, nicht die App in Beta —
+              Erwartung senken, Feedback einladen. */}
           <header className="lists-cardhead">
             <div className="lists-worktitle-row">
               <span className="lists-live-dot" aria-hidden="true" />
               <h1 className="lists-cardtitle">Call list Generator</h1>
+              <span className="lists-new-pill">New</span>
             </div>
             <p className="lists-worksub">
               Scan Google Maps for your ideal customers.
             </p>
+            <GeneratorFeedback />
           </header>
 
           <IndustryAutocomplete
