@@ -354,11 +354,21 @@ async function failJob(
   }
   // Failed Jobs sollen aktiv alarmieren, nicht nur in der Admin-Tabelle
   // liegen — bewusst ohne Query/Nutzerdaten, nur Fehlercode + Job-Ref.
-  Sentry.captureMessage(`lead-gen job failed: ${message}`, {
-    level: "error",
-    tags: { feature: "lists-generator" },
-    extra: { jobId },
-  });
+  // no_results ist User-Verhalten (Nonsense-Branche, leere Nische), kein
+  // Defekt: eigene Message + warning, damit es weder das Errors-Board
+  // noch die Alert-Mails fuellt (anderer Fingerprint als das alte
+  // error-Issue). timeout / insert_failed / outscraper_failed bleiben error.
+  const isNoResults = message === "no_results";
+  Sentry.captureMessage(
+    isNoResults
+      ? "lead-gen job ended without results"
+      : `lead-gen job failed: ${message}`,
+    {
+      level: isNoResults ? "warning" : "error",
+      tags: { feature: "lists-generator" },
+      extra: { jobId },
+    },
+  );
   return data as LeadGenJob;
 }
 
