@@ -4538,7 +4538,7 @@ h2 .accent {
 .appnav-account:hover .appnav-avatar {
   opacity: 0.85;
 }
-/* Gold-Fortschritts-Ring um den Avatar (Credit-Stand: verbraucht/gesamt,
+/* Gold-Ring um den Avatar (Credit-Stand: Rest/gesamt, leer = aufgebraucht,
    Jan-Wahl "Gold-Paket" 2026-08-05). 40px-Container, Avatar 30px zentriert
    drin; der Fill startet oben (svg um -90deg gedreht) und animiert beim
    Laden von leer auf seinen Wert. */
@@ -4590,10 +4590,12 @@ h2 .accent {
    Viewport-fixiert mit 10px zum rechten Bildschirmrand (User-Wahl); top
    haengt an der Nav-Hoehe. `inert` steuert Tabbability im geschlossenen
    Zustand; Opacity/Transform-Transition gibt der Bewegung Halt. */
+/* Absolute im .appnav-account-wrap statt fixed am Viewport: der Container
+   ist auf 1200px gecappt, fixed-right landet auf breiten Screens neben dem Avatar. */
 .appnav-pop {
-  position: fixed;
-  top: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 10px);
-  right: 10px;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
   width: 244px;
   padding: 4px 0;
   background: var(--bg-page);
@@ -4710,27 +4712,6 @@ h2 .accent {
   border-radius: 999px;
   transition: width 0.4s ease;
 }
-.appnav-pop-upgrade-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px 14px 10px;
-}
-.appnav-pop-upgrade-hint {
-  font-size: 11.5px;
-  color: var(--ink-faint);
-}
-.appnav-pop-upgrade-link {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--blue-deep);
-  text-decoration: none;
-  transition: color 0.15s;
-}
-.appnav-pop-upgrade-link:hover {
-  color: var(--blue);
-}
-
 .appnav-pop-menu {
   padding: 4px 6px 6px;
 }

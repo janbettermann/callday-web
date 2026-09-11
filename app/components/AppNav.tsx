@@ -93,7 +93,9 @@ export function AppNav({
   const [popOpen, setPopOpen] = useState(false);
   // Credit-Stand + Identity fuer Ring & Popover — client-seitig geladen,
   // damit die Werte ohne Prop-Threading auf jeder Seite erscheinen
-  // (GET /api/credits ist seiteneffektfrei). Ring-Fuellung = used/total.
+  // (GET /api/credits ist seiteneffektfrei). Ring-Fuellung = balance/total:
+  // Credits sind Guthaben, Gold zeigt was uebrig ist — wie Faden und
+  // /account-Balken (Jan 2026-09-11, vorher zeigte der Ring den Verbrauch).
   const [credits, setCredits] = useState<{
     used: number;
     total: number;
@@ -137,11 +139,11 @@ export function AppNav({
     };
   }, []);
 
-  const usedFraction =
+  const remainingFraction =
     credits && credits.total > 0
-      ? Math.min(1, Math.max(0, credits.used / credits.total))
+      ? Math.min(1, Math.max(0, credits.balance / credits.total))
       : 0;
-  const ringOffset = RING_CIRC * (1 - usedFraction);
+  const ringOffset = RING_CIRC * (1 - remainingFraction);
 
   const closeMenu = useCallback(() => {
     setOpen(false);
@@ -400,8 +402,8 @@ export function AppNav({
 /**
  * Avatar-Popover (Variante 03 „Rail", 2026-08-12). Schmal (244px), dicht,
  * eine weisse Karte statt Sub-cards. Aufbau: Identitaets-Zeile (Avatar +
- * Name + Email), Divider, Credits (Zahl + duenner Gold-Faden), Upgrade als
- * Text-Link mit „Running low?"-Hint, Divider, Menue (Account, Sign out).
+ * Name + Email), Divider, Credits (Zahl + duenner Gold-Faden), Divider,
+ * Menue (Account, Sign out). Kein Upgrade-Link, solange es kein Ziel gibt.
  * Bewusst KEIN „New list" hier — das ist Primaer-Aktion, lebt im Header
  * („Generate list") bzw. im Panel. Popover = Identitaet + Status + Weg.
  */
@@ -467,13 +469,6 @@ function AccountPopover({
           <i style={{ width: `${fillPct}%` }} />
         </div>
       </div>
-      <div className="appnav-pop-upgrade-row">
-        <span className="appnav-pop-upgrade-hint">Running low?</span>
-        <Link href="/account#credits" className="appnav-pop-upgrade-link">
-          Upgrade →
-        </Link>
-      </div>
-
       <div className="appnav-pop-divider" role="presentation" />
 
       <div className="appnav-pop-menu">

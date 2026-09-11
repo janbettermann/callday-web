@@ -130,7 +130,7 @@ export default async function AccountPage() {
   }
   const creditsPct =
     credits && credits.total > 0
-      ? Math.min(100, (credits.used / credits.total) * 100)
+      ? Math.min(100, (credits.balance / credits.total) * 100)
       : 0;
 
   // Read-only Subscription-Label. Die Spalten werden heute von Stripe-
@@ -197,9 +197,9 @@ export default async function AccountPage() {
             </section>
           )}
 
-          {/* Lead credits — Gold-Balken (verbraucht/gesamt). Kein
-              Upgrade-CTA vorerst (Pre-Launch-Regel, kein Pricing); der
-              kommt mit IAP. Spiegelt den Header-Ring. */}
+          {/* Lead credits — Gold-Balken (Rest/gesamt, wie Header-Ring und
+              Popover-Faden). Kein Upgrade-CTA, solange es kein Ziel gibt;
+              kommt mit IAP. */}
           {credits && (
             <section className="account-card">
               <div className="credits-card-top">
