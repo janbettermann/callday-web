@@ -51,6 +51,9 @@ export async function fetchJobStatus(jobId?: string): Promise<StatusResponse> {
 }
 
 export function failureMessage(job: JobView): string {
+  if (job.error === "timeout") {
+    return "That one took too long and we stopped it — no credits were used. Please try again.";
+  }
   if (job.error === "no_results") {
     return job.params.website && job.params.website !== "any"
       ? "We couldn't find callable leads matching that website filter. Try a bigger city, or set the filter back to all businesses."

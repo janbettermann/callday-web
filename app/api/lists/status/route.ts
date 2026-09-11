@@ -25,12 +25,17 @@ import {
 import {
   buildListName,
   fetchLatestJobForUser,
+  JOB_COLUMNS,
   processJobIfFinished,
   type LeadGenJob,
 } from "@/lib/lists/jobs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+// Der Self-Heal verarbeitet hier den kompletten Job (Outscraper-Fetch,
+// Pipeline, Insert, Mail) — mit dem Vercel-Default von 10 s stirbt das
+// bei grossen Listen mitten im processing und hinterlaesst einen Haenger.
+export const maxDuration = 60;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -63,9 +68,7 @@ export async function GET(request: NextRequest) {
   if (jobParam) {
     const { data, error } = await admin
       .from("lead_gen_jobs")
-      .select(
-        "id, user_id, status, params, query, webhook_secret, outscraper_request_id, list_id, raw_count, lead_count, error, is_free, ready_email_sent_at, created_at",
-      )
+      .select(JOB_COLUMNS)
       .eq("id", jobParam)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -82,7 +85,9 @@ export async function GET(request: NextRequest) {
     return Response.json({ job: null, credits: await readCredits() });
   }
 
-  if (job.status === "pending") {
+  // processing laeuft hier nur durch den Haenger-Check in
+  // processJobIfFinished — verarbeitet wird ausschliesslich pending.
+  if (job.status === "pending" || job.status === "processing") {
     try {
       job = await processJobIfFinished(admin, job);
     } catch (err) {

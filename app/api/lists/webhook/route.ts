@@ -18,6 +18,8 @@ import { fetchJobById, processJobIfFinished } from "@/lib/lists/jobs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+// Verarbeitet den kompletten Job — siehe Begruendung in status/route.ts.
+export const maxDuration = 60;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

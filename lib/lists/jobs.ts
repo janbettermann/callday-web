@@ -65,10 +65,32 @@ export interface LeadGenJob {
   is_free: boolean;
   ready_email_sent_at: string | null;
   created_at: string;
+  updated_at: string;
 }
 
-const JOB_COLUMNS =
-  "id, user_id, status, params, query, webhook_secret, outscraper_request_id, list_id, raw_count, lead_count, error, is_free, ready_email_sent_at, created_at";
+export const JOB_COLUMNS =
+  "id, user_id, status, params, query, webhook_secret, outscraper_request_id, list_id, raw_count, lead_count, error, is_free, ready_email_sent_at, created_at, updated_at";
+
+/**
+ * Haenger-Grenzen. Ohne sie sperrt ein toter Job seinen User fuer immer
+ * aus dem Generator (Ein-aktiver-Job-Index) — live so passiert mit einem
+ * pending-Job vom 2026-07-15. Massstab: ready-Jobs brauchten bis 09/2026
+ * im Schnitt 2 min, maximal 9 min; die Verarbeitung nach dem Claim
+ * dauert Sekunden, ein processing-Job ohne Update seit 5 min ist von
+ * einem Function-Timeout oder Crash gekillt worden.
+ */
+const PENDING_TIMEOUT_MS = 30 * 60 * 1000;
+const PROCESSING_TIMEOUT_MS = 5 * 60 * 1000;
+
+function isStale(job: LeadGenJob, now = Date.now()): boolean {
+  if (job.status === "pending") {
+    return now - new Date(job.created_at).getTime() > PENDING_TIMEOUT_MS;
+  }
+  if (job.status === "processing") {
+    return now - new Date(job.updated_at).getTime() > PROCESSING_TIMEOUT_MS;
+  }
+  return false;
+}
 
 export function buildListName(
   params: LeadGenJobParams,
@@ -137,6 +159,7 @@ export async function processJobIfFinished(
   admin: SupabaseClient,
   job: LeadGenJob,
 ): Promise<LeadGenJob> {
+  if (isStale(job)) return failJob(admin, job.id, "timeout");
   if (job.status !== "pending" || !job.outscraper_request_id) return job;
 
   let results: Awaited<ReturnType<typeof getRequestResults>>;
@@ -192,7 +215,11 @@ export async function processJobIfFinished(
     job.params.city ?? null,
   ).slice(0, resolveStoredMaxSize(job.params.max_size));
   if (leads.length === 0) {
-    return failJob(admin, job.id, "no_results");
+    // raw_count auch hier: im Admin unterscheidet das "Outscraper hat
+    // nichts geliefert" (0) von "Pipeline hat alles gefiltert" (>0).
+    return failJob(admin, job.id, "no_results", {
+      raw_count: results.places.length,
+    });
   }
 
   const listName = buildListName(job.params, job.query);
@@ -246,6 +273,8 @@ export async function processJobIfFinished(
   return readyJob;
 }
 
+const PHONE_FETCH_PAGE = 1000;
+
 /**
  * Alle Telefon-Schluessel der bestehenden Listen eines Accounts —
  * Grundlage des Bestands-Dedupe. Beta-Skala (wenige tausend Leads pro
@@ -267,18 +296,29 @@ async function fetchExistingPhoneKeys(
   const listIds = (lists ?? []).map((row) => row.id);
   if (listIds.length === 0) return new Set();
 
-  const { data: leads, error: leadsError } = await admin
-    .from("leads")
-    .select("phone")
-    .in("list_id", listIds);
-  if (leadsError) {
-    throw new Error(`leads phone fetch failed: ${leadsError.message}`);
-  }
+  // PostgREST liefert hoechstens 1000 Rows pro Request (Supabase-Default)
+  // — ohne Seiten sah der Dedupe bei Accounts ueber 1000 Leads nur die
+  // ersten 1000 und liess Dubletten durch (live: 1034 Leads bei einem
+  // Test-Account). Ab ein paar tausend Leads lohnt eine RPC, die
+  // serverseitig gegen die Kandidaten matcht.
   const keys = new Set<string>();
-  for (const row of leads ?? []) {
-    if (typeof row.phone === "string" && row.phone) {
-      keys.add(normalizePhoneKey(row.phone));
+  for (let from = 0; ; from += PHONE_FETCH_PAGE) {
+    const { data: leads, error: leadsError } = await admin
+      .from("leads")
+      .select("phone")
+      .in("list_id", listIds)
+      .order("id")
+      .range(from, from + PHONE_FETCH_PAGE - 1);
+    if (leadsError) {
+      throw new Error(`leads phone fetch failed: ${leadsError.message}`);
     }
+    const rows = leads ?? [];
+    for (const row of rows) {
+      if (typeof row.phone === "string" && row.phone) {
+        keys.add(normalizePhoneKey(row.phone));
+      }
+    }
+    if (rows.length < PHONE_FETCH_PAGE) break;
   }
   keys.delete("");
   return keys;
@@ -288,7 +328,30 @@ async function failJob(
   admin: SupabaseClient,
   jobId: string,
   message: string,
+  extra: { raw_count?: number } = {},
 ): Promise<LeadGenJob> {
+  // Nur aktive Jobs kippen: hat ein paralleler Lauf (Webhook vs. Poll)
+  // den Job inzwischen auf ready gebracht, bleibt das stehen.
+  const { data, error } = await admin
+    .from("lead_gen_jobs")
+    .update({
+      status: "failed",
+      error: message,
+      completed_at: new Date().toISOString(),
+      ...extra,
+    })
+    .eq("id", jobId)
+    .in("status", ["pending", "processing"])
+    .select(JOB_COLUMNS)
+    .maybeSingle();
+  if (error) {
+    throw new Error(`job fail update failed: ${error.message}`);
+  }
+  if (!data) {
+    const current = await fetchJobById(admin, jobId);
+    if (!current) throw new Error("job fail update failed: job vanished");
+    return current;
+  }
   // Failed Jobs sollen aktiv alarmieren, nicht nur in der Admin-Tabelle
   // liegen — bewusst ohne Query/Nutzerdaten, nur Fehlercode + Job-Ref.
   Sentry.captureMessage(`lead-gen job failed: ${message}`, {
@@ -296,19 +359,6 @@ async function failJob(
     tags: { feature: "lists-generator" },
     extra: { jobId },
   });
-  const { data, error } = await admin
-    .from("lead_gen_jobs")
-    .update({
-      status: "failed",
-      error: message,
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", jobId)
-    .select(JOB_COLUMNS)
-    .single();
-  if (error || !data) {
-    throw new Error(`job fail update failed: ${error?.message}`);
-  }
   return data as LeadGenJob;
 }
 

@@ -12,6 +12,7 @@
 
 import { NextRequest } from "next/server";
 import { randomBytes } from "crypto";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
 import {
@@ -27,7 +28,7 @@ import {
   type LocationInput,
 } from "@/lib/lists/fanout";
 import { getRegion } from "@/lib/lists/geo-regions";
-import { startGoogleMapsSearch } from "@/lib/lists/outscraper";
+import { OutscraperError, startGoogleMapsSearch } from "@/lib/lists/outscraper";
 import {
   WEBSITE_FILTER_MODES,
   type WebsiteFilterMode,
@@ -210,9 +211,12 @@ export async function POST(request: NextRequest) {
       language: "en",
       webhookUrl,
       filters: serverFilters,
-      // Ein Enricher, immer an, auch Free (§13d) — E-Mails fuer den
-      // Prefill; abgerechnet pro Domain, Betriebe ohne Website gratis.
-      enrichments: ["leads_n_contacts"],
+      // E-Mail-Enricher (§13d), abgerechnet pro Domain — aber NICHT bei
+      // "ohne Website": Outscraper liefert mit only_without_website +
+      // leads_n_contacts 0 Records (Sonde 2026-09-11: Filter allein 2/40,
+      // mit Enricher 0/40). Der Enricher haengt an der Domain und wirft
+      // domain-lose Treffer weg; ohne Website gibt es eh keine zu finden.
+      enrichments: websiteFilter === "without" ? [] : ["leads_n_contacts"],
     });
     await admin
       .from("lead_gen_jobs")
@@ -220,6 +224,15 @@ export async function POST(request: NextRequest) {
       .eq("id", job.id);
   } catch (err) {
     console.error("[lists/generate] outscraper start failed", err);
+    // Aktiv alarmieren: 401 heisst Outscraper-Kontingent leer — dann ist
+    // der Generator fuer ALLE User tot, bis Guthaben nachgeladen ist.
+    Sentry.captureException(err, {
+      tags: {
+        feature: "lists-generator",
+        outscraper_status:
+          err instanceof OutscraperError ? String(err.status) : "unknown",
+      },
+    });
     // failed gibt den Free-Slot wieder frei (partial index exkludiert failed).
     await admin
       .from("lead_gen_jobs")

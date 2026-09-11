@@ -11,6 +11,18 @@
 
 const OUTSCRAPER_BASE_URL = "https://api.outscraper.cloud";
 
+/** HTTP-Fehler der Outscraper-API. status 401 = Kontingent erschoepft
+ *  (kein Key-Problem, live bestaetigt), 5xx = Outscraper selbst down. */
+export class OutscraperError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "OutscraperError";
+  }
+}
+
 /**
  * Feldnamen live verifiziert (2026-07-12, echter API-Response): Website
  * heisst `website`, die volle Adresse `address`. Die OpenAPI-Doku nennt
@@ -125,8 +137,9 @@ export async function startGoogleMapsSearch(
     { headers: { "X-API-KEY": getApiKey() }, cache: "no-store" },
   );
   if (!response.ok) {
-    throw new Error(
+    throw new OutscraperError(
       `Outscraper start failed: ${response.status} ${await safeText(response)}`,
+      response.status,
     );
   }
 
@@ -151,7 +164,10 @@ export async function getRequestResults(
     { headers: { "X-API-KEY": getApiKey() }, cache: "no-store" },
   );
   if (!response.ok) {
-    throw new Error(`Outscraper request lookup failed: ${response.status}`);
+    throw new OutscraperError(
+      `Outscraper request lookup failed: ${response.status}`,
+      response.status,
+    );
   }
 
   const payload = (await response.json()) as {
