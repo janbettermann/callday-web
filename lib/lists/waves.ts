@@ -25,6 +25,10 @@ export const MAX_WAVES = 3;
 export interface WaveSummary {
   wave: number;
   request_id: string | null;
+  /** Start des Outscraper-Requests bzw. Verarbeitung — Phasen-Dauer
+   *  fuer Admin und Kosten/Zeit-Auswertung. */
+  started_at?: string;
+  finished_at?: string;
   tiles: number;
   limit: number;
   /** Outscraper-Rohzeilen der Welle (Kostenmass, wie raw_count). */

@@ -37,15 +37,29 @@ export interface JobViewParams {
   wave?: number;
   max_waves?: number;
   waves_done?: Array<{ wave: number; delivered: number }>;
+  /** Enricher erst bei Lieferung (Schritt 3): E-Mail-Suche laeuft. */
+  phase?: "enrich";
+  enrich?: { domains: number };
 }
 
 /**
- * "Round 2 of up to 3 — 12 leads so far, searching more areas." ab der
- * zweiten Welle; null in der ersten (nichts zu erklaeren). Der Nutzer
- * soll sehen, dass die Liste noch aufgefuellt wird, nicht dass sie
- * "haengt". Geteilt zwischen BuildingView und Building-Kachel.
+ * Fortschritts-Zeile jenseits der ersten Welle — null, solange es nichts
+ * zu erklaeren gibt. Der Nutzer soll sehen, dass die Liste noch
+ * aufgefuellt bzw. angereichert wird, nicht dass sie "haengt":
+ *   - "Round 2 of up to 3 — 12 leads so far, searching more areas."
+ *   - "Leads found — looking up email addresses now."
+ * Geteilt zwischen BuildingView und Building-Kachel.
  */
 export function waveLine(params: JobViewParams): string | null {
+  if (params.phase === "enrich") {
+    const soFar = (params.waves_done ?? []).reduce(
+      (sum, done) => sum + done.delivered,
+      0,
+    );
+    return soFar > 0
+      ? `${soFar} leads found — looking up email addresses now.`
+      : "Leads found — looking up email addresses now.";
+  }
   const wave = params.wave ?? 1;
   if (wave <= 1) return null;
   const soFar = (params.waves_done ?? []).reduce(

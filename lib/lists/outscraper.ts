@@ -98,7 +98,9 @@ interface StartSearchOptions {
   /**
    * Enricher (z. B. leads_n_contacts). Achtung Antwort-Shape: mit
    * Enrichment liefert Outscraper EINE ZEILE PRO E-MAIL — die
-   * Pipeline gruppiert per place_id zurueck auf einen Lead.
+   * Pipeline gruppiert per place_id zurueck auf einen Lead. Seit
+   * Schritt 3 (2026-09-13) nicht mehr genutzt: E-Mails kommen ueber
+   * startEmailsSearch nur fuer gelieferte Betriebe.
    */
   enrichments?: string[];
 }
@@ -159,6 +161,72 @@ export async function startGoogleMapsSearch(
 export async function getRequestResults(
   requestId: string,
 ): Promise<OutscraperResults> {
+  const { status, data } = await fetchRequestPayload(requestId);
+  if (status !== "success") return { status, places: [] };
+  return { status, places: flattenRows<OutscraperPlace>(data) };
+}
+
+/**
+ * Eine Zeile des Emails-and-Contacts-Endpunkts (Sonde 2026-09-13):
+ * `query` ist der wortgleiche Eingabe-String (Website-URL), `emails`
+ * traegt Adresse + Fundort — Quellen-Vokabular wie beim frueheren
+ * leads_n_contacts (URLs, "fb"), also direkt fuer emails.ts nutzbar.
+ */
+export interface OutscraperEmailResult {
+  query?: string;
+  emails?: Array<{ value?: string; source?: string }>;
+}
+
+export interface OutscraperEmailResults {
+  status: OutscraperResultStatus;
+  results: OutscraperEmailResult[];
+}
+
+/**
+ * E-Mail-Suche fuer eine Domain-/URL-Liste (Emails and Contacts Scraper,
+ * $3/1k Domains), async mit Webhook — der Enricher laeuft seit Schritt 3
+ * (2026-09-13) NICHT mehr in der Maps-Suche mit, sondern nur noch fuer
+ * die Betriebe, die wirklich in der Liste landen.
+ */
+export async function startEmailsSearch(options: {
+  queries: string[];
+  webhookUrl: string;
+}): Promise<string> {
+  const params = new URLSearchParams({
+    async: "true",
+    webhook: options.webhookUrl,
+    fields: "query,emails",
+  });
+  for (const query of options.queries) params.append("query", query);
+
+  const response = await fetch(
+    `${OUTSCRAPER_BASE_URL}/emails-and-contacts?${params.toString()}`,
+    { headers: { "X-API-KEY": getApiKey() }, cache: "no-store" },
+  );
+  if (!response.ok) {
+    throw new OutscraperError(
+      `Outscraper emails start failed: ${response.status} ${await safeText(response)}`,
+      response.status,
+    );
+  }
+  const payload = (await response.json()) as { id?: string };
+  if (!payload.id) {
+    throw new Error("Outscraper emails start returned no request id");
+  }
+  return payload.id;
+}
+
+export async function getEmailResults(
+  requestId: string,
+): Promise<OutscraperEmailResults> {
+  const { status, data } = await fetchRequestPayload(requestId);
+  if (status !== "success") return { status, results: [] };
+  return { status, results: flattenRows<OutscraperEmailResult>(data) };
+}
+
+async function fetchRequestPayload(
+  requestId: string,
+): Promise<{ status: OutscraperResultStatus; data: unknown }> {
   const response = await fetch(
     `${OUTSCRAPER_BASE_URL}/requests/${encodeURIComponent(requestId)}`,
     { headers: { "X-API-KEY": getApiKey() }, cache: "no-store" },
@@ -169,15 +237,11 @@ export async function getRequestResults(
       response.status,
     );
   }
-
   const payload = (await response.json()) as {
     status?: string;
     data?: unknown;
   };
-  const status = normalizeStatus(payload.status);
-  if (status !== "success") return { status, places: [] };
-
-  return { status, places: flattenPlaces(payload.data) };
+  return { status: normalizeStatus(payload.status), data: payload.data };
 }
 
 function normalizeStatus(raw: string | undefined): OutscraperResultStatus {
@@ -187,12 +251,13 @@ function normalizeStatus(raw: string | undefined): OutscraperResultStatus {
   return "pending";
 }
 
-function flattenPlaces(data: unknown): OutscraperPlace[] {
+/** data ist je nach Endpunkt/Query-Zahl flach oder ein Array pro Query. */
+function flattenRows<T>(data: unknown): T[] {
   if (!Array.isArray(data)) return [];
   if (data.length > 0 && Array.isArray(data[0])) {
-    return (data as OutscraperPlace[][]).flat();
+    return (data as T[][]).flat();
   }
-  return data as OutscraperPlace[];
+  return data as T[];
 }
 
 async function safeText(response: Response): Promise<string> {

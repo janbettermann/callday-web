@@ -38,11 +38,15 @@ import {
   buildTileOutcome,
   type TileOutcome,
 } from "./delivery";
+import { applyEmailEnrichment, enrichmentTargets } from "./enrichment";
 import type { LocationInput, QueryPlanEntry } from "./fanout";
 import {
+  getEmailResults,
   getRequestResults,
   OutscraperError,
+  startEmailsSearch,
   startGoogleMapsSearch,
+  type OutscraperEmailResults,
   type OutscraperResults,
 } from "./outscraper";
 import {
@@ -59,7 +63,7 @@ import {
 } from "./staging";
 import { TILE_LIMIT_MAX, type TilePlanEntry } from "./tiles";
 import {
-  outscraperOptionsFor,
+  outscraperFiltersFor,
   planNextWave,
   type PlannedWave,
 } from "./wave-planner";
@@ -113,9 +117,25 @@ export interface LeadGenJobParams {
   wave?: number;
   max_waves?: number;
   waves_done?: WaveSummary[];
+  /** Start der laufenden Welle (ISO) — wird beim Abhaken in die Bilanz
+   *  uebernommen (Phasen-Dauer). */
+  wave_started_at?: string;
   /** Webhook-Ziel des Jobs — Nachschlag-Wellen starten ausserhalb eines
    *  Requests und brauchen die Origin von der Erstellung. */
   webhook_url?: string;
+  /** Enricher erst bei Lieferung (Schritt 3): nach der letzten Welle
+   *  liegt der Job in Phase "enrich" (outscraper_request_id = Emails-
+   *  Request), alle Leads im Zwischenlager. undefined = Maps-Suche. */
+  phase?: "enrich";
+  enrich?: {
+    /** Angefragte Website-URLs (Kostenmass: $3/1k Domains). */
+    domains: number;
+    request_id: string | null;
+    /** Neu gefuellte E-Mail-Felder — steht nach dem Abschluss. */
+    filled?: number;
+    started_at?: string;
+    finished_at?: string;
+  };
 }
 
 export interface LeadGenJob {
@@ -250,6 +270,7 @@ export async function processJobIfFinished(
 ): Promise<LeadGenJob> {
   if (isStale(job)) return abandonJob(admin, job, "timeout");
   if (job.status !== "pending") return job;
+  if (job.params.phase === "enrich") return completeEnrichment(admin, job);
 
   let results: OutscraperResults;
   if (job.outscraper_request_id) {
@@ -333,6 +354,8 @@ export async function processJobIfFinished(
     ? {
         wave: claimed.params.wave ?? 1,
         request_id: claimed.outscraper_request_id,
+        started_at: claimed.params.wave_started_at ?? claimed.created_at,
+        finished_at: new Date().toISOString(),
         tiles: tiles.length,
         limit: claimed.params.tile_limit ?? 0,
         places: results.places.length,
@@ -359,12 +382,199 @@ export async function processJobIfFinished(
     }
   }
 
-  return finalizeJob(admin, claimed, {
-    leads: [...staged, ...delivery.leads],
+  return concludeWaves(admin, claimed, {
+    staged,
+    waveLeads: delivery.leads,
     currentWave,
     overflow: outcome?.spillover ?? [],
     rawCount: rollupWaves(claimed.params.waves_done).places + results.places.length,
   });
+}
+
+/**
+ * Letzte Welle ist durch: entweder direkt abschliessen oder erst die
+ * E-Mail-Suche fuer die gelieferten Betriebe starten (Schritt 3). Ohne
+ * Websites (Filter "ohne Website", leere Liste) oder ohne Webhook-Ziel
+ * (Alt-Jobs) gibt es nichts anzureichern.
+ */
+async function concludeWaves(
+  admin: SupabaseClient,
+  job: LeadGenJob,
+  input: {
+    staged: CallableLead[];
+    waveLeads: CallableLead[];
+    currentWave: WaveSummary | null;
+    overflow: TileOutcome["spillover"];
+    rawCount: number;
+  },
+): Promise<LeadGenJob> {
+  const leads = [...input.staged, ...input.waveLeads];
+  const targets =
+    (job.params.website ?? "any") === "without" ? [] : enrichmentTargets(leads);
+  if (leads.length === 0 || targets.length === 0 || !job.params.webhook_url) {
+    return finalizeJob(admin, job, {
+      leads,
+      currentWave: input.currentWave,
+      overflow: input.overflow,
+      rawCount: input.rawCount,
+    });
+  }
+  return startEnrichment(admin, job, input, targets);
+}
+
+/**
+ * Phase "enrich": alle Leads ins Zwischenlager, Ueberschuss als bezahltes
+ * Inventar in den Spillover, Bilanz der letzten Welle in die Params, Job
+ * zurueck auf pending mit dem Emails-Request. Laesst sich der Request
+ * nicht starten, wird ohne E-Mails abgeschlossen — die Liste ist wichtiger
+ * als das Prefill.
+ */
+async function startEnrichment(
+  admin: SupabaseClient,
+  job: LeadGenJob,
+  input: {
+    waveLeads: CallableLead[];
+    currentWave: WaveSummary | null;
+    overflow: TileOutcome["spillover"];
+    rawCount: number;
+  },
+  targets: string[],
+): Promise<LeadGenJob> {
+  if (input.currentWave) {
+    await insertStagedLeads(admin, job.id, input.currentWave.wave, input.waveLeads);
+  } else if (input.waveLeads.length > 0) {
+    // Alt-Job ohne Wellen-Bilanz (kommt nicht vor, defensiv): Lager-Welle 1.
+    await insertStagedLeads(admin, job.id, 1, input.waveLeads);
+  }
+  if (isTileJob(job) && input.overflow.length > 0) {
+    await insertSpillover(
+      admin,
+      input.overflow.map((row) => ({
+        user_id: job.user_id,
+        category_canon: job.params.category_canon!,
+        job_id: job.id,
+        ...row,
+      })),
+    );
+  }
+
+  const nextParams: LeadGenJobParams = {
+    ...job.params,
+    waves_done: input.currentWave
+      ? [...(job.params.waves_done ?? []), input.currentWave]
+      : job.params.waves_done,
+    phase: "enrich",
+    enrich: {
+      domains: targets.length,
+      request_id: null,
+      started_at: new Date().toISOString(),
+    },
+  };
+  const { data: reopened, error } = await admin
+    .from("lead_gen_jobs")
+    .update({
+      status: "pending",
+      outscraper_request_id: null,
+      raw_count: input.rawCount,
+      params: nextParams,
+    })
+    .eq("id", job.id)
+    .eq("status", "processing")
+    .select(JOB_COLUMNS)
+    .maybeSingle();
+  if (error || !reopened) {
+    // Zwischenlager ist komplett — der Reaper schliesst spaeter aus dem
+    // Lager ab (abandonJob), nichts geht verloren.
+    throw new Error(`job reopen for enrichment failed: ${error?.message ?? "job vanished"}`);
+  }
+  const reopenedJob = reopened as LeadGenJob;
+
+  try {
+    const requestId = await startEmailsSearch({
+      queries: targets,
+      webhookUrl: reopenedJob.params.webhook_url!,
+    });
+    await admin
+      .from("lead_gen_jobs")
+      .update({
+        outscraper_request_id: requestId,
+        params: {
+          ...reopenedJob.params,
+          enrich: { ...reopenedJob.params.enrich!, request_id: requestId },
+        },
+      })
+      .eq("id", job.id);
+    return (await fetchJobById(admin, job.id)) ?? reopenedJob;
+  } catch (err) {
+    console.error("[lists] enrichment start failed", err);
+    Sentry.captureException(err, {
+      tags: {
+        feature: "lists-generator",
+        outscraper_status:
+          err instanceof OutscraperError ? String(err.status) : "unknown",
+      },
+      extra: { jobId: job.id, domains: targets.length },
+    });
+    return abandonJob(admin, reopenedJob, "enrich_start_failed");
+  }
+}
+
+/**
+ * Phase "enrich" abschliessen: Emails-Ergebnisse holen, in die
+ * Zwischenlager-Leads schreiben, Liste bauen. Fehler oder leere Antwort
+ * kosten nur das Prefill, nie die Liste.
+ */
+async function completeEnrichment(
+  admin: SupabaseClient,
+  job: LeadGenJob,
+): Promise<LeadGenJob> {
+  // Request-ID fehlt nur im Fenster zwischen Reopen und Start — warten.
+  if (!job.outscraper_request_id) return job;
+
+  let results: OutscraperEmailResults;
+  try {
+    results = await getEmailResults(job.outscraper_request_id);
+  } catch (err) {
+    console.error("[lists] emails results fetch failed", err);
+    return job;
+  }
+  if (results.status === "pending") return job;
+
+  const staged = await fetchStagedLeads(admin, job.id);
+  const claimed = await claimJob(admin, job);
+  if (!claimed) return (await fetchJobById(admin, job.id)) ?? job;
+
+  if (results.status === "failed") {
+    Sentry.captureMessage("lead-gen email enrichment failed", {
+      level: "warning",
+      tags: { feature: "lists-generator" },
+      extra: { jobId: job.id, domains: claimed.params.enrich?.domains },
+    });
+  }
+  const { leads, filled } = applyEmailEnrichment(staged, results.results);
+
+  return finalizeJob(
+    admin,
+    {
+      ...claimed,
+      params: {
+        ...claimed.params,
+        enrich: claimed.params.enrich
+          ? {
+              ...claimed.params.enrich,
+              filled,
+              finished_at: new Date().toISOString(),
+            }
+          : undefined,
+      },
+    },
+    {
+      leads,
+      currentWave: null,
+      overflow: [],
+      rawCount: claimed.raw_count ?? rollupWaves(claimed.params.waves_done).places,
+    },
+  );
 }
 
 /**
@@ -438,6 +648,7 @@ async function startNextWave(
   const nextParams: LeadGenJobParams = {
     ...job.params,
     wave: currentWave.wave + 1,
+    wave_started_at: new Date().toISOString(),
     tiles: next.plan.tiles,
     tile_limit: next.plan.limit,
     spillover_ids: next.spilloverIds,
@@ -469,15 +680,13 @@ async function startNextWave(
   }
 
   try {
-    const options = outscraperOptionsFor(reopenedJob.params.website ?? "any");
     const requestId = await startGoogleMapsSearch({
       query: next.plan.tiles.map((tile) => tile.query),
       limit: next.plan.limit,
       region: reopenedJob.params.country ?? "DE",
       language: "en",
       webhookUrl: reopenedJob.params.webhook_url!,
-      filters: options.filters,
-      enrichments: options.enrichments,
+      filters: outscraperFiltersFor(reopenedJob.params.website ?? "any"),
     });
     await admin
       .from("lead_gen_jobs")
@@ -531,7 +740,7 @@ async function abandonJob(
     leads: staged,
     currentWave: null,
     overflow: [],
-    rawCount: rollupWaves(current.params.waves_done).places,
+    rawCount: current.raw_count ?? rollupWaves(current.params.waves_done).places,
   });
 }
 

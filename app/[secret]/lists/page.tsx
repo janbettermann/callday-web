@@ -273,6 +273,9 @@ export default async function ListsAdminPage({ params, searchParams }: PageProps
                           {job.params.coverage
                             ? `, ${job.params.coverage.visited_before ?? job.params.coverage.covered_before}/${job.params.coverage.total} besucht`
                             : ""}
+                          {job.params.enrich
+                            ? `, Mails ${job.params.enrich.filled ?? "…"}/${job.params.enrich.domains}`
+                            : ""}
                           )
                         </span>
                       )}

@@ -135,10 +135,10 @@ export async function planNextWave(
 }
 
 /**
- * Outscraper-Optionen pro Website-Filter. Seit 2026-08-05 laeuft JEDER
- * Markt mit language=en + Server-Filtern (Jan-Entscheidung; Spec
- * §6b/§14b): Server-Quick-Filter gibt es nur bei language=en, und die
- * A/B-Tests (Koeln/Wien/Paderborn) haben belegt, dass en weder
+ * Server-Filter der Maps-Suche pro Website-Filter. Seit 2026-08-05
+ * laeuft JEDER Markt mit language=en + Server-Filtern (Jan-Entscheidung;
+ * Spec §6b/§14b): Server-Quick-Filter gibt es nur bei language=en, und
+ * die A/B-Tests (Koeln/Wien/Paderborn) haben belegt, dass en weder
  * Firmen-Menge noch Adressen/Kategorien verschlechtert — Adressen
  * bleiben lokal ("Wien", nicht "Vienna"). Nur die working_hours-Tages-
  * Schluessel kommen englisch; die Pipeline uebersetzt sie in die
@@ -146,20 +146,14 @@ export async function planNextWave(
  * immer. Der Kostenhebel: beim Website-Filter (~5 % Trefferquote) werden
  * nur Treffer geliefert und berechnet statt des vollen Raw-Scans.
  *
- * E-Mail-Enricher (§13d), abgerechnet pro Domain — aber NICHT bei "ohne
- * Website": Outscraper liefert mit only_without_website + leads_n_contacts
- * 0 Records (Sonde 2026-09-11). Der Enricher haengt an der Domain und
- * wirft domain-lose Treffer weg; ohne Website gibt es eh keine zu finden.
+ * Kein Enricher mehr in der Maps-Suche (Schritt 3, 2026-09-13): E-Mails
+ * holt jobs.ts nach der letzten Welle nur fuer die gelieferten Betriebe
+ * (lib/lists/enrichment.ts) — vorher zahlte jede Welle den Enricher auch
+ * fuer Dubletten und Spillover.
  */
-export function outscraperOptionsFor(filter: WebsiteFilterMode): {
-  filters: string[];
-  enrichments: string[];
-} {
+export function outscraperFiltersFor(filter: WebsiteFilterMode): string[] {
   const filters = ["with_phone", "operational_only"];
   if (filter === "without") filters.push("only_without_website");
   if (filter === "with") filters.push("only_with_website");
-  return {
-    filters,
-    enrichments: filter === "without" ? [] : ["leads_n_contacts"],
-  };
+  return filters;
 }

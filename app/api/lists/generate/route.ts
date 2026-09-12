@@ -42,7 +42,7 @@ import {
 } from "@/lib/lists/pipeline";
 import { categoryCanon } from "@/lib/lists/tiles";
 import {
-  outscraperOptionsFor,
+  outscraperFiltersFor,
   planNextWave,
   type PlannedWave,
 } from "@/lib/lists/wave-planner";
@@ -225,6 +225,7 @@ export async function POST(request: NextRequest) {
     wave: 1,
     max_waves: MAX_WAVES,
     waves_done: [],
+    wave_started_at: new Date().toISOString(),
     webhook_url: webhookUrl,
   };
 
@@ -264,19 +265,18 @@ export async function POST(request: NextRequest) {
     return Response.json({ jobId: job.id });
   }
 
-  const options = outscraperOptionsFor(websiteFilter);
   try {
     const requestId = await startGoogleMapsSearch({
       // EIN Request fuer die ganze Welle, ein Limit pro Tile (§14b.1
       // Punkt 3; kein totalLimit — sonst waere "nicht erreicht" von
-      // "0 Treffer" nicht unterscheidbar, §6b).
+      // "0 Treffer" nicht unterscheidbar, §6b). Kein Enricher: E-Mails
+      // kommen nach der letzten Welle nur fuer gelieferte Betriebe.
       query: wave.tiles.map((tile) => tile.query),
       limit: wave.limit,
       region: countryConfig.code,
       language: "en",
       webhookUrl,
-      filters: options.filters,
-      enrichments: options.enrichments,
+      filters: outscraperFiltersFor(websiteFilter),
     });
     await admin
       .from("lead_gen_jobs")

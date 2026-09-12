@@ -30,8 +30,12 @@ export interface LeadGenStats {
   pending: number;
   /** Summe gelieferter Outscraper-Records (= Abrechnungseinheit). */
   rawRecords: number;
+  /** Summe der E-Mail-Suchen (Domains, $3 / 1.000 — seit Schritt 3
+   *  nur fuer gelieferte Betriebe). */
+  enrichedDomains: number;
   deliveredLeads: number;
-  /** Grobe Outscraper-Kosten in USD ($3 / 1.000 Records, Medium-Tier). */
+  /** Grobe Outscraper-Kosten in USD ($3 / 1.000 Records + $3 / 1.000
+   *  Domains, Medium-Tier). */
   estimatedSpendUsd: number;
 }
 
@@ -99,7 +103,7 @@ export async function fetchLeadGenStats(days = 30): Promise<LeadGenStats> {
 
   const { data, error } = await admin
     .from("lead_gen_jobs")
-    .select("status, raw_count, lead_count")
+    .select("status, raw_count, lead_count, params")
     .gte("created_at", since);
   if (error) throw new Error(`lead_gen_jobs stats failed: ${error.message}`);
 
@@ -109,6 +113,7 @@ export async function fetchLeadGenStats(days = 30): Promise<LeadGenStats> {
     failed: 0,
     pending: 0,
     rawRecords: 0,
+    enrichedDomains: 0,
     deliveredLeads: 0,
     estimatedSpendUsd: 0,
   };
@@ -118,9 +123,12 @@ export async function fetchLeadGenStats(days = 30): Promise<LeadGenStats> {
     else if (job.status === "failed") stats.failed += 1;
     else stats.pending += 1;
     stats.rawRecords += job.raw_count ?? 0;
+    stats.enrichedDomains +=
+      (job.params as LeadGenJobParams | null)?.enrich?.domains ?? 0;
     stats.deliveredLeads += job.lead_count ?? 0;
   }
   stats.estimatedSpendUsd =
-    Math.round((stats.rawRecords / 1000) * 3 * 100) / 100;
+    Math.round(((stats.rawRecords + stats.enrichedDomains) / 1000) * 3 * 100) /
+    100;
   return stats;
 }
