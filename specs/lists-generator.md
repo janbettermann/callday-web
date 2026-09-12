@@ -1003,21 +1003,52 @@ Abweichungen zur Skizze oben sind fett):**
   Park, O'Fallon, Lakewood/CO, Parma/OH, Moore/OK.
 - **Query-Format** `Dentist, 50354, Hürth` — Ort der PLZ, nicht der
   Chip-Name (fuer Nachbar-PLZ in der Box ist das die richtige Stadt).
-- **Welle** (`lib/lists/tiles.ts planWave`): `needed = max_size −
-  verfuegbarer Spillover` (nur Rows, die den Filter erfuellen); Groesse
-  clamp(ceil(needed / **20**), 3, 25) — kalibriert nach den ersten
-  Live-Laeufen (sieben Koeln/Huerth-Tiles: 13–50 Plaetze, Schnitt 29; mit
-  dem Startwert 12 holte eine 250er-Liste ~600 Records fuer 250 Leads,
-  vorher 350). **Erschoepfung mit Puffer:** `result_count < limit − 5` ⇒
-  abgehakt, alles darueber ⇒ Retry — `dropDuplicates` schlaegt Grenz-
-  Treffer dem Nachbar-Tile zu (live 48/50 fuer eine Innenstadt-PLZ).
-  Round-Robin ueber Chips, ein State-Chip
+- **Welle = KAUFEN NACH BEDARF** (`lib/lists/tiles.ts planWave`; Jan-
+  Entscheidung 2026-09-13, ersetzt „50 pro Tile, min 3 Tiles" vom 12.09.):
+  `needed = max_size − verfuegbarer Spillover` (nur Rows, die den Filter
+  erfuellen). **Tiles = clamp(ceil(needed / 20), 1, 25)**, ohne
+  Untergrenze (Filter-Laeufe: / 5, weil nur ein Bruchteil durchkommt).
+  **Limit pro Tile = clamp(ceil(needed × 1,4 / Tiles), 15, 50)** — eine
+  30er-Liste kauft 2 × 21 statt 3 × 50, eine 250er 13 × 27 statt 13 × 50;
+  stehen weniger frische Tiles bereit als geplant, wird pro Tile tiefer
+  gekauft (Hürth mit einem Tile: 42). Hintergrund: am Testtag lag der
+  Spillover bei 125 % der Lieferung (1.113 gekauft, 345 geliefert, 431
+  Ueberschuss), und die Wette „der Nutzer kommt mit derselben Suche wieder"
+  gilt fuer die meisten Nutzertypen nicht (gleiche Stadt/andere Branche,
+  gleiche Branche/andere Stadt, Einmal-Nutzer). Preis: dichte Tiles
+  erreichen ihr Limit oefter und werden erst bei Bedarf nachgekauft —
+  trifft nur Vertiefer derselben Branche im selben Gebiet, in Grossstaedten
+  praktisch nie (Retry kommt erst, wenn alle Tiles einmal besucht sind).
+  **Erschoepfung mit proportionalem Puffer** (10 % des Limits, min 2,
+  max 20): `result_count < limit − Puffer` ⇒ erschoepft, sonst Retry —
+  `dropDuplicates` schlaegt Grenz-Treffer dem Nachbar-Tile zu (live 48/50).
+  **Retry progressiv statt pauschal 200:** naechstes Limit = tiefstes
+  bisheriges Limit der Retry-Tiles + Bedarfsanteil, Deckel 200 (Google
+  liefert ~120 pro Suche; ein Tile mit Limit ≥ 200 gilt als erschoepft).
+  Ein Request hat EIN Limit ⇒ eine Welle ist entweder komplett fresh oder
+  komplett retry; Retry-Tiles kommen erst dran, wenn keine frischen mehr
+  offen sind (erst Breite, dann Tiefe). Filter-Laeufe: Limit 500 (Scans
+  gratis, Tile sicher erschoepft). CITY-Fallback-Tiles bekommen das alte
+  Stadt-Budget (×1,4, Cap 400). Round-Robin ueber Chips, ein State-Chip
   intern Round-Robin ueber seine Staedte; dasselbe Tile unter zwei Chips
-  zaehlt einmal. **Ein Request hat EIN Limit ⇒ eine Welle ist entweder
-  komplett „fresh" (50) oder komplett „retry" (200)** — Retry-Tiles kommen
-  erst dran, wenn keine frischen mehr offen sind. Filter-Laeufe: Limit 500
-  (Scans gratis, Tile sicher erschoepft). CITY-Fallback-Tiles heben das
-  Wellen-Limit auf das alte Stadt-Budget (×1,4 der Wunschgroesse).
+  zaehlt einmal. `params.coverage` traegt jetzt auch `visited_before`
+  (besucht = closed + retry); die Copy zaehlt „areas searched so far".
+- **Kern und Rand** (`TileCandidate.core`, seit 2026-09-13): Kern = der
+  Ort der PLZ ist die angefragte Stadt, Rand = Nachbargemeinden in der
+  Places-Box (Huerth, Frechen, Leverkusen in der Koeln-Box). Die Welle
+  nimmt Rand-Tiles erst nach dem Kern (Namens-Stufe in orderPostalRows);
+  **Spillover kommt nur aus Kern-Tiles**, Rand-Spillover erst, wenn kein
+  Kern-Tile mehr unbesucht ist (`tiles.spilloverEligibleTiles`). Grund:
+  eine Koeln-Baeckerei-Liste begann live mit 13 Huerther Baeckereien aus
+  einer frueheren Huerth-Suche. Namens-Match-Tiles (Freitext, State-
+  Fan-out) und CITY-Fallback sind immer Kern.
+- **Liefer-Sortierung mit Suchgebiet** (`pipeline.sortByAreaMatch`, drei
+  Stufen): Adresse traegt eine Kern-PLZ des Jobs
+  (`params.candidate_postal_codes`, alle Kern-Tiles der Chips, nicht nur
+  die Welle) → Stadtname in der Adresse → Rest. Grund: im Missouri-Test
+  lag „Skyline Dental, Springfield NJ" auf Platz 3 des Springfield-MO-Tiles
+  — der Stadtname trennt Namens-Dubletten nicht, die PLZ schon; ein
+  Huerther Treffer einer Koeln-Query rutscht damit ebenfalls nach hinten.
 - **Spillover:** **ALLER Ueberschuss** der Welle geht in den Spillover
   (nicht nur der abgehakter Tiles — auch bei Retry-Tiles vermeidet das
   Doppelzahlung; der Dedupe faengt beim Retry alles). Folge-Lauf: Spillover
@@ -1029,6 +1060,27 @@ Abweichungen zur Skizze oben sind fett):**
   liegen, tote (Nummer inzwischen im Account) werden aufgeraeumt. Reicht der
   Spillover fuer die Wunschgroesse → **Spillover-only-Job** ohne
   Outscraper-Request, direkt in der Generate-Route verarbeitet.
+- **Nachschlag-Wellen** (Schritt 2, Jan 2026-09-13; `lib/lists/waves.ts`
+  pur, `staging.ts`, `wave-planner.ts`, `jobs.ts`; Migration **0057**
+  `lead_gen_staged_leads`): Liefert eine Welle weniger als die
+  Max-Groesse, plant der Job sofort die naechste mit dem Restbedarf
+  (derselbe Planer wie Welle 1, Coverage = Ledger + noch ungeschriebene
+  Bilanzen der fertigen Wellen), hoechstens **3 Wellen**, Stopp auch nach
+  einer **Nullrunde** (duenne Branchen liefern fuer jede PLZ dieselben
+  Betriebe — Tattoo-Studios Bonn: Welle 2+3 = 37 Rohzeilen, 0 neue).
+  Leads fertiger Wellen warten im Zwischenlager, Welle N+1 dedupliziert
+  dagegen. **Nichts ist vor dem Abschluss irreversibel:** Liste, Credits,
+  Coverage, Spillover-Verbrauch und Lager-Cleanup passieren erst am Ende
+  (`finalizeJob`); faellt Welle 2 oder 3 aus (Outscraper-Fehler, Timeout,
+  Start unmoeglich) wird mit dem Stand davor abgeschlossen (`abandonJob`,
+  Sentry-Warning). `params.wave / max_waves / waves_done[]` (Bilanz pro
+  Welle inkl. Coverage-Rows + verbrauchter Spillover-IDs),
+  `params.webhook_url` (Nachschlag startet ausserhalb eines Requests).
+  Reaper: pending zaehlt ab dem letzten Update (= Wellenstart), nicht ab
+  Job-Erstellung. Copy: BuildingView/Kachel „Round 2 of up to 3 — 18
+  leads so far, searching more areas.", „usually a few minutes" statt
+  „1 to 3". Live: Tattoo-Studio Bonn max 30 → 3 Wellen, 18 Leads, 68 s,
+  eine Liste, Lager leer, 4 Coverage-Rows.
 - **Zusammenfuehrung ist pur** (`lib/lists/delivery.ts`, getestet):
   `assembleDelivery` (Spillover zuerst → Welle → Cap → Ueberschuss,
   Dedupe-Kette Bestand → Spillover → Welle) und `buildTileOutcome`
