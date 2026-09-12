@@ -1081,6 +1081,43 @@ Abweichungen zur Skizze oben sind fett):**
   leads so far, searching more areas.", „usually a few minutes" statt
   „1 to 3". Live: Tattoo-Studio Bonn max 30 → 3 Wellen, 18 Leads, 68 s,
   eine Liste, Lager leer, 4 Coverage-Rows.
+- **Enricher erst bei Lieferung** (Schritt 3, Jan 2026-09-13;
+  `lib/lists/enrichment.ts` pur, `outscraper.startEmailsSearch` /
+  `getEmailResults`, `jobs.ts concludeWaves → startEnrichment →
+  completeEnrichment`): Die Maps-Wellen laufen OHNE `leads_n_contacts`.
+  Nach der letzten Welle liegt der Job in Phase `enrich`: alle Leads im
+  Zwischenlager, Ueberschuss schon im Spillover (bezahltes Inventar),
+  ein Emails-and-Contacts-Request ($3/1k Domains) NUR fuer die
+  gelieferten Websites ohne E-Mail (`enrichmentTargets`: dedupliziert,
+  Spillover-Leads von vor Schritt 3 haben ihre Mail schon). Antwort →
+  `applyEmailEnrichment` mit denselben Regeln wie bisher
+  (`collectEmailCandidates` / `choosePrefillEmail`; Quellen-Vokabular
+  identisch, Sonde 2026-09-13). Fehler oder Timeout der E-Mail-Suche
+  kosten nur das Prefill, nie die Liste (`abandonJob` → Abschluss aus dem
+  Lager). Filter „ohne Website": keine Phase. `params.phase`,
+  `params.enrich {domains, request_id, filled}`; Admin rechnet Domains
+  in den Spend ein. Vorher zahlte jede Welle den Enricher auch fuer
+  Dubletten und Spillover — rund die Haelfte der Outscraper-Kosten. Live:
+  Zahnarzt Bergisch Gladbach max 15 → Welle 11 s, E-Mails 11 s, 15 Leads,
+  12 E-Mails gefuellt, Domains = 15 statt vorher ~40 gefetchte.
+- **Testlauf Robustheit/Zeit/Kosten 2026-09-13** (lokal gegen Prod, 9
+  Laeufe + 2 Sabotagen + 1 Fake-Job, ~145 Credits): Nachschlag+Anreicherung
+  (3 Wellen, 28 Leads, 47 s) ✓ · Spillover-only+Anreicherung (3 s, 5/5
+  Mails) ✓ · E-Mail-Suche haengt (tote Request-ID, 31 min) → Liste ohne
+  Mails ✓ · Welle 2 faellt aus → Liste aus Welle 1, Coverage nur Welle 1 ✓
+  · parallele Polls → eine Liste, eine Credit-Zeile ✓ · toter
+  processing-Job in Phase enrich → Reaper baut Liste aus dem Lager ✓ ·
+  Nonsense → keine 2. Welle, no_results ✓ · Filter „ohne Website" → 3 Tiles
+  à 500, keine Phase enrich, 0 Websites ✓ · Re-Poll idempotent ✓. **Zeit:**
+  Wellen 15–53 s, E-Mail-Suche 2–8 s, Gesamt 3–47 s. **Kosten
+  (Erst-Suchen):** 1,55 gekaufte Betriebe und 0,91 Domains pro Lead
+  (Testtag: 3,2 + Enricher auf alles) → rund −58 % pro Lead; Spillover
+  16 % der Lieferung (vorher 125 %). **Befund:** Wiederholung in einer
+  KLEINSTADT (Zahnarzt Leverkusen, 6 Tiles) kauft stark ueberlappend —
+  Lauf 2: 91 Betriebe fuer 23 neue, weil Google fuer jede PLZ einer
+  kleinen Stadt weitgehend dieselben Betriebe liefert (die 75 %
+  Tile-Praezision der Koeln-Sonde gilt dort nicht). Idee (nicht gebaut):
+  Staedte mit wenigen Tiles als EINE Stadt-Query behandeln.
 - **Zusammenfuehrung ist pur** (`lib/lists/delivery.ts`, getestet):
   `assembleDelivery` (Spillover zuerst → Welle → Cap → Ueberschuss,
   Dedupe-Kette Bestand → Spillover → Welle) und `buildTileOutcome`
