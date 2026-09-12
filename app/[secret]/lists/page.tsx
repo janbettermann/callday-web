@@ -265,8 +265,13 @@ export default async function ListsAdminPage({ params, searchParams }: PageProps
                         <span style={{ color: "var(--ink-faint)" }}>
                           {" "}
                           ({job.params.tiles.length} Tiles
+                          {job.params.tile_limit ? ` à ${job.params.tile_limit}` : ""}
+                          {(job.params.waves_done?.length ?? 0) > 1 ||
+                          (job.params.wave ?? 1) > 1
+                            ? `, ${Math.max(job.params.waves_done?.length ?? 0, job.params.wave ?? 1)} Wellen`
+                            : ""}
                           {job.params.coverage
-                            ? `, ${job.params.coverage.covered_before}/${job.params.coverage.total} abgehakt`
+                            ? `, ${job.params.coverage.visited_before ?? job.params.coverage.covered_before}/${job.params.coverage.total} besucht`
                             : ""}
                           )
                         </span>

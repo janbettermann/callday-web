@@ -5,10 +5,11 @@
  * wird DB-seitig vom partial unique index erzwungen — der 23505-Fall
  * wird hier in ein sauberes 409 uebersetzt.
  *
- * Seit dem PLZ-Tiling (Spec §14b.1) wird hier die WELLE geplant: Chips →
- * Staedte → PLZ-Tiles (geo-data.ts), Coverage-Abgleich, Spillover-Stand,
- * Tile-Auswahl (tiles.planWave). Der Plan wird in params.tiles fixiert —
- * die Verarbeitung (lib/lists/jobs.ts) re-derivt nichts.
+ * Seit dem PLZ-Tiling (Spec §14b.1) wird hier die ERSTE Welle geplant
+ * (lib/lists/wave-planner.ts: Chips → PLZ-Tiles, Coverage-Abgleich,
+ * Spillover, Tile-Auswahl nach Bedarf). Der Plan wird in params fixiert
+ * — die Verarbeitung (lib/lists/jobs.ts) re-derivt nichts und faehrt bei
+ * Bedarf Nachschlag-Wellen mit demselben Planer.
  *
  * Der Outscraper-Webhook zeigt auf /api/lists/webhook mit Job-ID +
  * per-Job-Secret in der URL; die Ergebnisse selbst holt die Verarbeitung
@@ -16,43 +17,36 @@
  */
 
 import { NextRequest } from "next/server";
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import * as Sentry from "@sentry/nextjs";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
-import { fetchCoverage, fetchSpillover } from "@/lib/lists/coverage";
 import {
   clampRequestedSize,
   ensureSignupGrant,
   getCreditBalance,
 } from "@/lib/lists/credits";
 import { findCountry } from "@/lib/lists/countries";
-import {
-  expandLocations,
-  MAX_LOCATIONS,
-  type LocationInput,
-} from "@/lib/lists/fanout";
-import { resolveCityTiles } from "@/lib/lists/geo-data";
+import { MAX_LOCATIONS, type LocationInput } from "@/lib/lists/fanout";
 import { getRegion } from "@/lib/lists/geo-regions";
-import { interleave } from "@/lib/lists/interleave";
 import {
   JOB_COLUMNS,
   processJobIfFinished,
   type LeadGenJob,
+  type LeadGenJobParams,
 } from "@/lib/lists/jobs";
 import { OutscraperError, startGoogleMapsSearch } from "@/lib/lists/outscraper";
 import {
   WEBSITE_FILTER_MODES,
   type WebsiteFilterMode,
 } from "@/lib/lists/pipeline";
+import { categoryCanon } from "@/lib/lists/tiles";
 import {
-  categoryCanon,
-  planWave,
-  selectSpillover,
-  spilloverEligibleTiles,
-  type ChipCandidates,
-  type TileCandidate,
-} from "@/lib/lists/tiles";
+  outscraperOptionsFor,
+  planNextWave,
+  type PlannedWave,
+} from "@/lib/lists/wave-planner";
+import { MAX_WAVES } from "@/lib/lists/waves";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -158,43 +152,25 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "credits_exhausted" }, { status: 403 });
   }
 
-  const targets = expandLocations(cleanLocations, countryConfig.code);
-  if (targets.length === 0) {
-    return Response.json({ error: "invalid_input" }, { status: 400 });
-  }
   const canon = categoryCanon(cleanIndustry);
   const displayLocation = cleanLocations.map((l) => l.name).join(", ");
 
-  // Welle planen (§14b.1 Punkte 1–3): Tiles pro Chip — ein Stadt-Chip
-  // bringt seine PLZ-Tiles, ein State-Chip zieht Round-Robin ueber die
-  // Tiles seiner Top-Staedte (Fairness auch innerhalb des Chips).
-  let chips: ChipCandidates[];
-  let coverage;
-  let spilloverRows;
+  // Erste Welle planen (§14b.1 Punkte 1–3, 6).
+  let planned: PlannedWave | null;
   try {
-    const tileLists = await Promise.all(
-      targets.map((target) =>
-        resolveCityTiles(admin, {
-          industry: cleanIndustry,
-          country: countryConfig.code,
-          target,
-        }),
-      ),
+    planned = await planNextWave(
+      admin,
+      {
+        userId: user.id,
+        industry: cleanIndustry,
+        categoryCanon: canon,
+        country: countryConfig.code,
+        locations: cleanLocations,
+        websiteFilter,
+        maxSize: listSize,
+      },
+      { deliveredSoFar: 0, pendingCoverage: [], consumedSpilloverIds: new Set() },
     );
-    const byLocation = new Map<string, TileCandidate[][]>();
-    targets.forEach((target, index) => {
-      const lists = byLocation.get(target.location) ?? [];
-      lists.push(tileLists[index]);
-      byLocation.set(target.location, lists);
-    });
-    chips = [...byLocation].map(([location, lists]) => ({
-      location,
-      tiles: interleave(lists),
-    }));
-    [coverage, spilloverRows] = await Promise.all([
-      fetchCoverage(admin, user.id, canon),
-      fetchSpillover(admin, user.id, canon),
-    ]);
   } catch (err) {
     console.error("[lists/generate] wave planning failed", err);
     Sentry.captureException(err, {
@@ -202,38 +178,12 @@ export async function POST(request: NextRequest) {
     });
     return Response.json({ error: "job_create_failed" }, { status: 500 });
   }
+  if (!planned) {
+    return Response.json({ error: "invalid_input" }, { status: 400 });
+  }
+  const { plan: wave, spilloverIds, candidatePostalCodes } = planned;
 
-  // Spillover zaehlt ZUERST gegen die Wunschgroesse — nur Rows aus
-  // Kern-Tiles DIESER Suche (Rand-Tiles erst, wenn der Kern durch ist)
-  // und mit passendem Filter (tiles.selectSpillover); die Welle deckt den
-  // Rest. Die Auswahl wird wie die Welle fixiert.
-  const spilloverPick = selectSpillover(
-    spilloverRows,
-    spilloverEligibleTiles(chips, coverage, websiteFilter),
-    websiteFilter,
-    listSize,
-  );
-  // Suchgebiet fuer die Liefer-Sortierung: alle Kern-PLZ der Chips, nicht
-  // nur die der Welle — ein Treffer im Nachbar-Tile derselben Stadt
-  // gehoert dazu, ein Huerther Treffer einer Koeln-Query oder ein
-  // "Springfield NJ" in einer Missouri-Suche nicht.
-  const candidatePostalCodes = [
-    ...new Set(
-      chips.flatMap((chip) =>
-        chip.tiles.flatMap((tile) =>
-          tile.core && tile.postal_code ? [tile.postal_code] : [],
-        ),
-      ),
-    ),
-  ];
-  const wave = planWave({
-    chips,
-    coverage,
-    filter: websiteFilter,
-    needed: listSize - spilloverPick.length,
-  });
-
-  if (wave.open === 0 && spilloverPick.length === 0) {
+  if (wave.open === 0 && spilloverIds.length === 0) {
     // Alles abgehakt (§14b.1 Punkt 7): klare Ansage statt Leer-Liste.
     // Wort "areas"/Staedte, nie "zip codes" — der User soll nichts Neues
     // lernen.
@@ -246,33 +196,44 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Job-ID vorab, damit die Webhook-URL in die Params kann — Nachschlag-
+  // Wellen starten ausserhalb eines Requests und brauchen sie.
+  const jobId = randomUUID();
   const webhookSecret = randomBytes(24).toString("base64url");
+  const webhookUrl = `${request.nextUrl.origin}/api/lists/webhook?job=${jobId}&secret=${webhookSecret}`;
   const query = `${cleanIndustry}, ${displayLocation}`;
+
+  const params: LeadGenJobParams = {
+    industry: cleanIndustry,
+    industry_display: cleanIndustryDisplay,
+    // Anzeige-String (BuildingView, Listen-Name).
+    city: displayLocation,
+    country: countryConfig.code,
+    website: websiteFilter,
+    max_size: listSize,
+    locations: cleanLocations,
+    category_canon: canon,
+    tiles: wave.tiles,
+    tile_limit: wave.limit,
+    spillover_ids: spilloverIds,
+    candidate_postal_codes: candidatePostalCodes,
+    coverage: {
+      covered_before: wave.covered,
+      visited_before: wave.visited,
+      total: wave.total,
+    },
+    wave: 1,
+    max_waves: MAX_WAVES,
+    waves_done: [],
+    webhook_url: webhookUrl,
+  };
 
   const { data: job, error: insertError } = await admin
     .from("lead_gen_jobs")
     .insert({
+      id: jobId,
       user_id: user.id,
-      params: {
-        industry: cleanIndustry,
-        industry_display: cleanIndustryDisplay,
-        // Anzeige-String (BuildingView, Listen-Name).
-        city: displayLocation,
-        country: countryConfig.code,
-        website: websiteFilter,
-        max_size: listSize,
-        locations: cleanLocations,
-        category_canon: canon,
-        tiles: wave.tiles,
-        tile_limit: wave.limit,
-        spillover_ids: spilloverPick.map((row) => row.id),
-        candidate_postal_codes: candidatePostalCodes,
-        coverage: {
-          covered_before: wave.covered,
-          visited_before: wave.visited,
-          total: wave.total,
-        },
-      },
+      params,
       query,
       webhook_secret: webhookSecret,
       is_free: true,
@@ -303,23 +264,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ jobId: job.id });
   }
 
-  const webhookUrl = `${request.nextUrl.origin}/api/lists/webhook?job=${job.id}&secret=${webhookSecret}`;
-
-  // Seit 2026-08-05 laeuft JEDER Markt mit language=en + Server-Filtern
-  // (Jan-Entscheidung; Spec §6b/§14b): Server-Quick-Filter gibt es nur
-  // bei language=en, und die A/B-Tests (Koeln/Wien/Paderborn) haben
-  // belegt, dass en weder Firmen-Menge noch Adressen/Kategorien
-  // verschlechtert — Adressen bleiben lokal ("Wien", nicht "Vienna").
-  // Nur die working_hours-Tages-Schluessel kommen englisch; die
-  // Pipeline uebersetzt sie in die Markt-Sprache. Die Client-Pipeline
-  // laeuft als Garantie-Netz ohnehin immer. Der Kostenhebel: beim
-  // Website-Filter (~5 % Trefferquote) werden nur Treffer geliefert
-  // und berechnet statt des vollen Raw-Scans (Faktor ~20 bei
-  // "without"-Kampagnen-Listen).
-  const serverFilters: string[] = ["with_phone", "operational_only"];
-  if (websiteFilter === "without") serverFilters.push("only_without_website");
-  if (websiteFilter === "with") serverFilters.push("only_with_website");
-
+  const options = outscraperOptionsFor(websiteFilter);
   try {
     const requestId = await startGoogleMapsSearch({
       // EIN Request fuer die ganze Welle, ein Limit pro Tile (§14b.1
@@ -330,13 +275,8 @@ export async function POST(request: NextRequest) {
       region: countryConfig.code,
       language: "en",
       webhookUrl,
-      filters: serverFilters,
-      // E-Mail-Enricher (§13d), abgerechnet pro Domain — aber NICHT bei
-      // "ohne Website": Outscraper liefert mit only_without_website +
-      // leads_n_contacts 0 Records (Sonde 2026-09-11: Filter allein 2/40,
-      // mit Enricher 0/40). Der Enricher haengt an der Domain und wirft
-      // domain-lose Treffer weg; ohne Website gibt es eh keine zu finden.
-      enrichments: websiteFilter === "without" ? [] : ["leads_n_contacts"],
+      filters: options.filters,
+      enrichments: options.enrichments,
     });
     await admin
       .from("lead_gen_jobs")

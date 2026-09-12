@@ -32,6 +32,8 @@ export interface BuildingList {
   listName: string;
   /** Coverage-Hinweis bei Folge-Laeufen (job-view.ts coverageLine). */
   coverageLine: string | null;
+  /** Nachschlag-Hinweis ab Welle 2 (job-view.ts waveLine). */
+  waveLine: string | null;
 }
 
 export function MyLists({
@@ -60,6 +62,7 @@ export function MyLists({
               jobId={building.jobId}
               listName={building.listName}
               coverageLine={building.coverageLine}
+              waveLine={building.waveLine}
             />
           )}
           {lists.map((list) => (

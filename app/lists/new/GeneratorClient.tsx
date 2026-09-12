@@ -18,6 +18,7 @@ import {
   coverageLine,
   failureMessage,
   fetchJobStatus,
+  waveLine,
   type JobView,
   type StatusResponse,
 } from "../job-view";
@@ -545,17 +546,20 @@ function BuildingView({ job }: { job: JobView }) {
   // processing = unsere Pipeline laeuft (Stufe 2) — keine Fake-Timer.
   const activeStep = job.status === "pending" ? 0 : 1;
   // Folge-Lauf derselben Branche (Coverage-Ledger): sagen, dass wir
-  // weitermachen statt von vorn — "areas", nie "zip codes".
+  // weitermachen statt von vorn — "areas", nie "zip codes". Ab der
+  // zweiten Nachschlag-Welle ausserdem, dass noch aufgefuellt wird.
   const coverage = coverageLine(job.params);
+  const wave = waveLine(job.params);
 
   return (
     <div className="lists-inner">
       <header className="lists-workhead">
         <h1 className="lists-worktitle">Building your list…</h1>
         <p className="lists-worksub">
-          {industry} in {city} — this usually takes 1 to 3 minutes.
+          {industry} in {city} — this usually takes a few minutes.
         </p>
         {coverage && <p className="lists-worksub">{coverage}</p>}
+        {wave && <p className="lists-worksub">{wave}</p>}
       </header>
 
       <section className="lists-buildcard">

@@ -17,11 +17,14 @@ export function BuildingJobCard({
   jobId,
   listName,
   coverageLine,
+  waveLine,
 }: {
   jobId: string;
   listName: string | null;
-  /** "Continuing in Köln — 12 of 90 areas covered." bei Folge-Laeufen. */
+  /** "Continuing in Köln — 12 of 60 areas searched so far." bei Folge-Laeufen. */
   coverageLine: string | null;
+  /** "Round 2 of up to 3 — …" ab der zweiten Nachschlag-Welle. */
+  waveLine: string | null;
 }) {
   const router = useRouter();
 
@@ -48,8 +51,9 @@ export function BuildingJobCard({
         <span className="lists-src lists-src-generated">Generated</span>
       </div>
       {coverageLine && <p className="dash-tile-sub">{coverageLine}</p>}
+      {waveLine && <p className="dash-tile-sub">{waveLine}</p>}
       <p className="dash-tile-sub">
-        Usually 1 to 3 minutes — we&apos;ll email you when it&apos;s ready.
+        Usually a few minutes — we&apos;ll email you when it&apos;s ready.
       </p>
       <div
         className="dash-bar"

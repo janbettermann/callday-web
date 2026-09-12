@@ -30,21 +30,47 @@ export interface JobViewParams {
   country?: string;
   website?: WebsiteFilterMode;
   max_size?: number;
-  /** Coverage-Stand VOR der Welle (PLZ-Tiling, Spec §14b.1 Punkt 7). */
-  coverage?: { covered_before: number; total: number };
+  /** Coverage-Stand VOR der Welle (PLZ-Tiling, Spec §14b.1 Punkt 7);
+   *  visited_before fehlt bei Jobs vor 2026-09-13. */
+  coverage?: { covered_before: number; visited_before?: number; total: number };
+  /** Nachschlag-Wellen (Schritt 2): laufende Welle, Deckel, fertige Wellen. */
+  wave?: number;
+  max_waves?: number;
+  waves_done?: Array<{ wave: number; delivered: number }>;
 }
 
 /**
- * "Continuing in Köln — 12 of 90 areas covered." fuer Folge-Laeufe;
- * null beim ersten Lauf einer Branche in dem Gebiet (nichts zu
- * erklaeren). Bewusst "areas", nie "zip codes" — der User soll nichts
- * Neues lernen muessen. Geteilt zwischen BuildingView (/lists/new) und
- * der Building-Kachel auf /lists.
+ * "Round 2 of up to 3 — 12 leads so far, searching more areas." ab der
+ * zweiten Welle; null in der ersten (nichts zu erklaeren). Der Nutzer
+ * soll sehen, dass die Liste noch aufgefuellt wird, nicht dass sie
+ * "haengt". Geteilt zwischen BuildingView und Building-Kachel.
+ */
+export function waveLine(params: JobViewParams): string | null {
+  const wave = params.wave ?? 1;
+  if (wave <= 1) return null;
+  const soFar = (params.waves_done ?? []).reduce(
+    (sum, done) => sum + done.delivered,
+    0,
+  );
+  const maxWaves = params.max_waves ?? wave;
+  return `Round ${wave} of up to ${maxWaves} — ${soFar} leads so far, searching more areas.`;
+}
+
+/**
+ * "Continuing in Köln — 12 of 60 areas searched so far." fuer
+ * Folge-Laeufe; null beim ersten Lauf einer Branche in dem Gebiet (nichts
+ * zu erklaeren). Zaehlt BESUCHTE Gebiete, nicht erschoepfte: seit dem
+ * Bedarfs-Einkauf schliessen dichte Tiles selten beim ersten Besuch, die
+ * Zahl der erschoepften saehe nach Stillstand aus. Bewusst "areas", nie
+ * "zip codes" — der User soll nichts Neues lernen muessen. Geteilt
+ * zwischen BuildingView (/lists/new) und der Building-Kachel auf /lists.
  */
 export function coverageLine(params: JobViewParams): string | null {
   const coverage = params.coverage;
-  if (!coverage || coverage.covered_before < 1 || !params.city) return null;
-  return `Continuing in ${params.city} — ${coverage.covered_before} of ${coverage.total} areas covered.`;
+  if (!coverage || !params.city) return null;
+  const visited = coverage.visited_before ?? coverage.covered_before;
+  if (visited < 1) return null;
+  return `Continuing in ${params.city} — ${visited} of ${coverage.total} areas searched so far.`;
 }
 
 /** Credit-Kontostand (Phase 1: nur Signup-Credits; Abo-Grants mit IAP). */

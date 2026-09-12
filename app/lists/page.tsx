@@ -6,7 +6,7 @@ import { buildListName, fetchJobsForUser } from "@/lib/lists/jobs";
 import { fetchAllLists, fetchProfileIdentity } from "@/lib/dashboard/data";
 import { AppNav } from "../components/AppNav";
 import { AppShell } from "../components/AppShell";
-import { coverageLine } from "./job-view";
+import { coverageLine, waveLine } from "./job-view";
 import { MyLists, type ListCardData } from "./MyLists";
 
 /**
@@ -88,6 +88,7 @@ export default async function ListsPage({
         jobId: runningJob.id,
         listName: buildListName(runningJob.params, runningJob.query),
         coverageLine: coverageLine(runningJob.params),
+        waveLine: waveLine(runningJob.params),
       }
     : null;
 
