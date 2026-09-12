@@ -49,6 +49,7 @@ import {
   categoryCanon,
   planWave,
   selectSpillover,
+  spilloverEligibleTiles,
   type ChipCandidates,
   type TileCandidate,
 } from "@/lib/lists/tiles";
@@ -202,18 +203,29 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "job_create_failed" }, { status: 500 });
   }
 
-  // Spillover zaehlt ZUERST gegen die Wunschgroesse — nur Rows aus Tiles
-  // DIESER Suche und mit passendem Filter (tiles.selectSpillover); die
-  // Welle deckt den Rest. Die Auswahl wird wie die Welle fixiert.
-  const candidateTileIds = new Set(
-    chips.flatMap((chip) => chip.tiles.map((tile) => tile.tile_id)),
-  );
+  // Spillover zaehlt ZUERST gegen die Wunschgroesse — nur Rows aus
+  // Kern-Tiles DIESER Suche (Rand-Tiles erst, wenn der Kern durch ist)
+  // und mit passendem Filter (tiles.selectSpillover); die Welle deckt den
+  // Rest. Die Auswahl wird wie die Welle fixiert.
   const spilloverPick = selectSpillover(
     spilloverRows,
-    candidateTileIds,
+    spilloverEligibleTiles(chips, coverage, websiteFilter),
     websiteFilter,
     listSize,
   );
+  // Suchgebiet fuer die Liefer-Sortierung: alle Kern-PLZ der Chips, nicht
+  // nur die der Welle — ein Treffer im Nachbar-Tile derselben Stadt
+  // gehoert dazu, ein Huerther Treffer einer Koeln-Query oder ein
+  // "Springfield NJ" in einer Missouri-Suche nicht.
+  const candidatePostalCodes = [
+    ...new Set(
+      chips.flatMap((chip) =>
+        chip.tiles.flatMap((tile) =>
+          tile.core && tile.postal_code ? [tile.postal_code] : [],
+        ),
+      ),
+    ),
+  ];
   const wave = planWave({
     chips,
     coverage,
@@ -254,7 +266,12 @@ export async function POST(request: NextRequest) {
         tiles: wave.tiles,
         tile_limit: wave.limit,
         spillover_ids: spilloverPick.map((row) => row.id),
-        coverage: { covered_before: wave.covered, total: wave.total },
+        candidate_postal_codes: candidatePostalCodes,
+        coverage: {
+          covered_before: wave.covered,
+          visited_before: wave.visited,
+          total: wave.total,
+        },
       },
       query,
       webhook_secret: webhookSecret,

@@ -37,7 +37,7 @@ import {
   type CallableLead,
   type WebsiteFilterMode,
 } from "./pipeline";
-import { TILE_LIMIT_FRESH, type TilePlanEntry } from "./tiles";
+import { TILE_LIMIT_MAX, type TilePlanEntry } from "./tiles";
 
 export type LeadGenJobStatus = "pending" | "processing" | "ready" | "failed";
 
@@ -69,8 +69,13 @@ export interface LeadGenJobParams {
   /** Bei Erstellung fixierte Spillover-Auswahl (Rows aus Tiles DIESER
    *  Suche, Filter passend, <= max_size) — wird vor der Welle geliefert. */
   spillover_ids?: string[];
-  /** Stand VOR der Welle fuer "12 of 90 areas covered". */
-  coverage?: { covered_before: number; total: number };
+  /** Alle Kern-PLZ der Chips (Suchgebiet) — Stufe 0 der Liefer-
+   *  Sortierung (pipeline.sortByAreaMatch). */
+  candidate_postal_codes?: string[];
+  /** Stand VOR der Welle fuer "12 of 60 areas searched so far":
+   *  visited = schon einmal besucht (closed + retry), covered = erschoepft.
+   *  Jobs vor 2026-09-13 haben nur covered_before. */
+  coverage?: { covered_before: number; visited_before?: number; total: number };
 }
 
 export interface LeadGenJob {
@@ -156,9 +161,7 @@ export async function fetchLatestJobForUser(
 
 /**
  * Alle Jobs eines Users, neueste zuerst — Datengrundlage der
- * Listen-Uebersicht auf /lists. Beim Free-Cap 1 sind das heute
- * maximal eine Handvoll Rows (Fails + die eine Liste); mit den
- * Abo-Credits (Spec §10) waechst die Liste organisch weiter.
+ * Listen-Uebersicht auf /lists.
  */
 export async function fetchJobsForUser(
   admin: SupabaseClient,
@@ -250,6 +253,7 @@ export async function processJobIfFinished(
     marketLanguage: findCountry(job.params.country)?.language ?? "en",
     plan: job.params.tiles ?? job.params.query_plan,
     city: job.params.city ?? null,
+    candidatePostalCodes: new Set(job.params.candidate_postal_codes ?? []),
   });
   const { leads, overflow } = delivery;
 
@@ -369,7 +373,7 @@ async function recordTileOutcome(
       tiles: job.params.tiles!,
       places: results.places,
       overflow,
-      limitUsed: job.params.tile_limit ?? TILE_LIMIT_FRESH,
+      limitUsed: job.params.tile_limit ?? TILE_LIMIT_MAX,
       websiteFilter: job.params.website ?? "any",
     });
     await upsertCoverage(

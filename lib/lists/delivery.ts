@@ -45,6 +45,9 @@ export interface DeliveryInput {
   plan: QueryPlanEntry[] | undefined;
   /** Anzeige-Stadt als Sort-Fallback ohne Plan. */
   city: string | null;
+  /** Alle Kandidaten-PLZ des Jobs (Suchgebiet) fuer die Liefer-Sortierung;
+   *  leer bei Alt-Jobs und reinem CITY-Fallback. */
+  candidatePostalCodes: Set<string>;
 }
 
 export interface DeliveryResult {
@@ -110,7 +113,12 @@ export function assembleDelivery(input: DeliveryInput): DeliveryResult {
   for (const lead of spillover.leads) known.add(normalizePhoneKey(lead.phone));
   const fresh = filterKnownPhones(filtered, known);
 
-  const ordered = orderForDelivery(fresh, input.plan, input.city);
+  const ordered = orderForDelivery(
+    fresh,
+    input.plan,
+    input.city,
+    input.candidatePostalCodes,
+  );
   const remaining = Math.max(0, input.maxSize - spillover.leads.length);
   return {
     leads: [...spillover.leads, ...ordered.slice(0, remaining)],

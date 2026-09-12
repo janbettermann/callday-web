@@ -23,34 +23,59 @@ import {
 } from "./pipeline";
 
 /**
- * Erwartete Leads pro PLZ-Tile — dimensioniert die Welle
- * (ceil(max_size / EXPECTED)). Kalibriert 2026-09-12 an den ersten
+ * Erwartete Leads pro PLZ-Tile — bestimmt die Tile-Zahl einer Welle
+ * (ceil(needed / EXPECTED)). Kalibriert 2026-09-12 an den ersten
  * Live-Laeufen: sieben Koeln/Huerth-Tiles lieferten 13–50 Plaetze,
  * im Schnitt 29; nach Callable-Filter + Bestands-Dedupe bleibt weniger.
- * Mit dem Startwert 12 holte eine 250er-Liste ~600 Records fuer 250
- * Leads (vorher 350) — 20 bringt das Verhaeltnis auf ~1,5 zurueck, der
- * Rest landet ohnehin im Spillover. Land-PLZ liefern weniger; dort
- * faengt der Folge-Lauf nach.
+ * Land-PLZ liefern weniger; dort faengt der Folge-Lauf nach.
  */
 export const EXPECTED_LEADS_PER_TILE = 20;
-export const MIN_WAVE_TILES = 3;
+/**
+ * Dasselbe fuer Filter-Laeufe: der Website-Filter laesst nur einen
+ * Bruchteil durch (live 3–10 Treffer pro Innenstadt-PLZ bei "ohne
+ * Website"), Scans kosten nichts — also mehr Tiles pro Welle.
+ */
+export const EXPECTED_FILTERED_LEADS_PER_TILE = 5;
 export const MAX_WAVE_TILES = 25;
 
 /**
- * Limit pro Tile beim ersten Besuch. Bezahlt wird nur Geliefertes — ein
- * hohes Limit kostet bei kleinen PLZ nichts und macht ein Tile fast
- * immer erschoepft ("abgehakt" = "fertig", §6b Punkt 4).
+ * KAUFEN NACH BEDARF (Jan-Entscheidung 2026-09-13, ersetzt "50 pro Tile"):
+ * Limit pro Tile = needed × WAVE_MARGIN / Tiles, geklammert auf
+ * [TILE_LIMIT_MIN, TILE_LIMIT_MAX]. Die Marge deckt Callable-Filter und
+ * Bestands-Dedupe (Erstnutzer verlieren 5–15 %).
+ *
+ * Hintergrund: Limit 50 kaufte bei dichten Tiles die vollen 50, egal ob
+ * 10 oder 30 Leads gebraucht wurden — Spillover 125 % der Lieferung am
+ * Testtag 2026-09-12. Die Wette dahinter ("der Nutzer kommt mit derselben
+ * Suche wieder und holt den Vorrat ab") gilt fuer die meisten Nutzertypen
+ * nicht: gleiche Stadt/andere Branche, gleiche Branche/andere Stadt,
+ * Einmal-Nutzer. Preis des Bedarfs-Einkaufs: dichte Tiles erreichen ihr
+ * Limit oefter, gelten als "moeglicherweise mehr" und werden erst bei
+ * Bedarf nachgekauft (progressiver Retry, siehe waveLimit) — trifft nur
+ * Nutzer, die dieselbe Branche im selben Gebiet vertiefen.
  */
-export const TILE_LIMIT_FRESH = 50;
-/** Limit fuer den zweiten Besuch eines "moeglicherweise nicht erschoepften" Tiles. */
-export const TILE_LIMIT_RETRY = 200;
+export const WAVE_MARGIN = 1.4;
+/** Boden: winzige Anfragen sollen nicht in Ein-Treffer-Queries zerfallen. */
+export const TILE_LIMIT_MIN = 15;
+/** Deckel pro Tile beim ersten Besuch. */
+export const TILE_LIMIT_MAX = 50;
+/**
+ * Deckel fuer Nachkaeufe. Google liefert pro Suche ~120 Listings — ein
+ * Tile, das mit 200 lief, ist damit sicher am Ende.
+ */
+export const TILE_LIMIT_RETRY_MAX = 200;
+
 /**
  * Unschaerfe-Puffer der Erschoepfung: `dropDuplicates` schlaegt Treffer
  * an Gebietsgrenzen dem Nachbar-Tile zu — ein dichtes Tile kam live mit
  * 48 von 50 zurueck, obwohl es sicher mehr hat. Alles innerhalb des
  * Puffers unter dem Limit gilt deshalb noch als "moeglicherweise mehr".
+ * Proportional zum Limit (10 %, min 2, max 20) — ein fixer Puffer von 5
+ * waere bei Limit 15 ein Drittel.
  */
-export const EXHAUSTION_SLACK = 5;
+export function exhaustionSlack(limit: number): number {
+  return Math.max(2, Math.min(20, Math.round(limit * 0.1)));
+}
 
 export interface LatLng {
   lat: number;
@@ -77,6 +102,14 @@ export interface TileCandidate {
   query: string;
   /** Needle der City-first-Sortierung (PLZ-Ort bzw. Stadt). */
   city: string;
+  /** Gesetzt bei PLZ-Tiles — die Kern-PLZ eines Jobs bilden das
+   *  "Suchgebiet" fuer die Liefer-Sortierung (pipeline.sortByAreaMatch). */
+  postal_code?: string;
+  /** Kern = der Ort der PLZ ist die angefragte Stadt. Die Viewport-Box
+   *  einer Grossstadt schneidet Nachbargemeinden an (Huerth, Frechen in
+   *  der Koeln-Box) — die sind Rand: Welle erst nach dem Kern, Spillover
+   *  erst wenn der Kern durch ist (spilloverEligibleTiles). */
+  core: boolean;
 }
 
 /** Alle Kandidaten eines Location-Chips (Fairness-Gruppe). */
@@ -109,10 +142,13 @@ export interface WavePlan {
   tiles: TilePlanEntry[];
   /** Outscraper-`limit` fuer die ganze Welle (EIN Request, EIN Limit). */
   limit: number;
-  /** Alle Kandidaten-Tiles der Chips (fuer "12 of 90 areas covered"). */
+  /** Alle Kandidaten-Tiles der Chips. */
   total: number;
-  /** Davon vor dieser Welle bereits erschoepft. */
+  /** Davon vor dieser Welle erschoepft (closed). */
   covered: number;
+  /** Davon vor dieser Welle schon einmal besucht (closed + retry) —
+   *  Basis der Copy "12 of 60 areas searched so far". */
+  visited: number;
   /** Noch offene Tiles (fresh + retry) — 0 = alles abgehakt. */
   open: number;
 }
@@ -202,29 +238,38 @@ export function orderPostalRows(
 }
 
 /**
- * Erschoepfungs-Semantik (Spec §14b.1 Punkt 5) pro Tile und Filter.
- * Zaehlen Rows mit dem angefragten Filter ODER 'any' (ein "alle
- * Betriebe"-Lauf deckt jeden Filter ab; ein Filter-Lauf deckt nur sich
- * selbst — Begruendung in Migration 0056).
- * - result_count < limit_used − EXHAUSTION_SLACK ⇒ erschoepft (closed)
+ * Rows, die fuer den angefragten Filter zaehlen: derselbe Filter ODER
+ * 'any' (ein "alle Betriebe"-Lauf deckt jeden Filter ab; ein Filter-Lauf
+ * deckt nur sich selbst — Begruendung in Migration 0056).
+ */
+function relevantRows(
+  rows: CoverageRowLike[],
+  filter: WebsiteFilterMode,
+): CoverageRowLike[] {
+  return rows.filter(
+    (row) => row.website_filter === filter || row.website_filter === "any",
+  );
+}
+
+/**
+ * Erschoepfungs-Semantik (Spec §14b.1 Punkt 5) pro Tile und Filter:
+ * - result_count < limit_used − Puffer ⇒ erschoepft (closed)
  * - result_count im Puffer oder = limit_used ⇒ "moeglicherweise mehr"
- *   (retry mit hoeherem Limit); ein Tile, das schon mit dem Retry-Limit
- *   lief, gilt als erschoepft (Google deckelt eine Einzelsuche weit
- *   darunter).
+ *   (retry: naechste Schicht nachkaufen); ein Tile, das schon mit dem
+ *   Retry-Deckel lief, gilt als erschoepft (Google deckelt eine
+ *   Einzelsuche weit darunter).
  * - keine Row ⇒ fresh
  */
 export function classifyTile(
   rows: CoverageRowLike[],
   filter: WebsiteFilterMode,
 ): TileState {
-  const relevant = rows.filter(
-    (row) => row.website_filter === filter || row.website_filter === "any",
-  );
+  const relevant = relevantRows(rows, filter);
   if (
     relevant.some(
       (row) =>
-        row.result_count < row.limit_used - EXHAUSTION_SLACK ||
-        row.limit_used >= TILE_LIMIT_RETRY,
+        row.result_count < row.limit_used - exhaustionSlack(row.limit_used) ||
+        row.limit_used >= TILE_LIMIT_RETRY_MAX,
     )
   ) {
     return "closed";
@@ -232,30 +277,12 @@ export function classifyTile(
   return relevant.length > 0 ? "retry" : "fresh";
 }
 
-/**
- * Outscraper-Limit der Welle. Ein Request hat EIN Limit, deshalb ist eine
- * Welle entweder komplett "fresh" (50) oder komplett "retry" (200) —
- * nie gemischt. Mit Website-Filter zaehlt das Limit GESCANNTE Plaetze
- * und Scans kosten nichts (§6b): immer das API-Maximum, damit jedes
- * Filter-Tile sicher erschoepft ist. CITY-Fallback-Tiles (keine Postal-
- * Daten, eine Query = ganze Stadt) brauchen das alte Stadt-Budget
- * (×1,4 der Wunschgroesse, verteilt) — die Welle nimmt das Maximum.
- */
-function waveLimit(
-  tiles: TilePlanEntry[],
-  mode: "fresh" | "retry",
+/** Tiefstes bisheriges Limit eines Tiles — Basis der naechsten Schicht. */
+function deepestLimit(
+  rows: CoverageRowLike[],
   filter: WebsiteFilterMode,
-  needed: number,
 ): number {
-  if (filter !== "any") return OUTSCRAPER_MAX_SCAN_LIMIT;
-  if (mode === "retry") return TILE_LIMIT_RETRY;
-  const cityTiles = tiles.filter((t) => isCityTile(t.tile_id)).length;
-  if (cityTiles === 0) return TILE_LIMIT_FRESH;
-  const cityLimit = Math.min(
-    OUTSCRAPER_FETCH_LIMIT,
-    Math.max(15, Math.ceil((needed * 1.4) / cityTiles)),
-  );
-  return Math.max(TILE_LIMIT_FRESH, cityLimit);
+  return Math.max(0, ...relevantRows(rows, filter).map((row) => row.limit_used));
 }
 
 /**
@@ -285,12 +312,106 @@ export function selectSpillover<
 }
 
 /**
- * Eine Welle pro Job (Spec §14b.1 Punkt 3): die ersten
- * clamp(ceil(needed / EXPECTED), 3, 25) offenen Tiles, Round-Robin ueber
- * die Chips gezogen (Fairness wie orderForDelivery). Fresh-Tiles vor
- * Retry-Tiles (siehe waveLimit). `needed` = max_size minus verfuegbarem
- * Spillover — deckt der Spillover die Liste, faehrt keine Welle.
- * Dasselbe Tile unter zwei Chips (Stadt + ihr State) zaehlt einmal.
+ * Tiles, aus denen DIESE Suche Spillover ziehen darf: die Kern-Tiles
+ * immer; Rand-Tiles (Nachbargemeinden in der Box) erst, wenn kein
+ * Kern-Tile mehr unbesucht ist — sonst landen 13 Huerther Baeckereien
+ * aus einer frueheren Huerth-Suche ganz oben in der Koeln-Liste (live
+ * 2026-09-12). Gleiche Reihenfolge wie die Welle: erst Kern, dann Rand.
+ */
+export function spilloverEligibleTiles(
+  chips: ChipCandidates[],
+  coverage: CoverageRowLike[],
+  filter: WebsiteFilterMode,
+): Set<string> {
+  const byTile = new Map<string, CoverageRowLike[]>();
+  for (const row of coverage) {
+    const rows = byTile.get(row.tile_id) ?? [];
+    rows.push(row);
+    byTile.set(row.tile_id, rows);
+  }
+  const all = chips.flatMap((chip) => chip.tiles);
+  const coreOpen = all.some(
+    (tile) =>
+      tile.core && classifyTile(byTile.get(tile.tile_id) ?? [], filter) === "fresh",
+  );
+  return new Set(
+    all.filter((tile) => tile.core || !coreOpen).map((tile) => tile.tile_id),
+  );
+}
+
+/** Tile-Zahl einer Welle aus dem Bedarf — keine Untergrenze mehr. */
+export function tilesForNeed(
+  needed: number,
+  filter: WebsiteFilterMode,
+): number {
+  const expected =
+    filter === "any"
+      ? EXPECTED_LEADS_PER_TILE
+      : EXPECTED_FILTERED_LEADS_PER_TILE;
+  return Math.max(1, Math.min(MAX_WAVE_TILES, Math.ceil(needed / expected)));
+}
+
+/** Bedarfsanteil pro Tile: needed × Marge / Tiles, geklammert. */
+function shareLimit(needed: number, tileCount: number): number {
+  return Math.max(
+    TILE_LIMIT_MIN,
+    Math.min(
+      TILE_LIMIT_MAX,
+      Math.ceil((needed * WAVE_MARGIN) / Math.max(1, tileCount)),
+    ),
+  );
+}
+
+/**
+ * Outscraper-Limit der Welle. Ein Request hat EIN Limit, deshalb ist
+ * eine Welle entweder komplett "fresh" oder komplett "retry" — nie
+ * gemischt.
+ * - fresh: der Bedarfsanteil pro Tile (shareLimit).
+ * - retry (progressiv): tiefstes bisheriges Limit der Retry-Tiles plus
+ *   Bedarfsanteil, gedeckelt — die naechste Schicht, nicht "alles".
+ *   Bekannte Betriebe kommen dabei nochmal mit (Outscraper kennt kein
+ *   Ausschliessen, skipPlaces ist wegen Ranking-Jitter unbrauchbar) und
+ *   werden vom Bestands-Dedupe geworfen; das ist der Preis des
+ *   Bedarfs-Einkaufs, er faellt nur bei Vertiefern an.
+ * - Website-Filter: das Limit zaehlt GESCANNTE Plaetze und Scans kosten
+ *   nichts (§6b) — immer das API-Maximum, jedes Filter-Tile ist danach
+ *   sicher erschoepft.
+ * - CITY-Fallback-Tiles (keine Postal-Daten, eine Query = ganze Stadt)
+ *   brauchen das alte Stadt-Budget (×1,4 der Wunschgroesse, Cap 400);
+ *   die Welle nimmt das Maximum.
+ */
+function waveLimit(
+  tiles: TilePlanEntry[],
+  mode: "fresh" | "retry",
+  filter: WebsiteFilterMode,
+  needed: number,
+  retryBase: number,
+): number {
+  if (filter !== "any") return OUTSCRAPER_MAX_SCAN_LIMIT;
+  const cityTiles = tiles.filter((t) => isCityTile(t.tile_id)).length;
+  const share = shareLimit(needed, tiles.length);
+  const cityBudget =
+    cityTiles > 0
+      ? Math.min(
+          OUTSCRAPER_FETCH_LIMIT,
+          Math.max(TILE_LIMIT_MIN, Math.ceil((needed * WAVE_MARGIN) / cityTiles)),
+        )
+      : 0;
+  const layer = Math.max(share, cityBudget);
+  if (mode === "fresh") return layer;
+  const cap = cityTiles > 0 ? OUTSCRAPER_FETCH_LIMIT : TILE_LIMIT_RETRY_MAX;
+  return Math.min(cap, retryBase + layer);
+}
+
+/**
+ * Eine Welle pro Job (Spec §14b.1 Punkt 3): tilesForNeed(needed) offene
+ * Tiles, Round-Robin ueber die Chips gezogen (Fairness wie
+ * orderForDelivery), Limit nach Bedarf (waveLimit). Fresh-Tiles vor
+ * Retry-Tiles: solange irgendein Tile im Suchgebiet unbesucht ist,
+ * besteht die Welle nur aus frischen — erst in die Breite, dann in die
+ * Tiefe. `needed` = max_size minus verfuegbarem Spillover — deckt der
+ * Spillover die Liste, faehrt keine Welle. Dasselbe Tile unter zwei
+ * Chips (Stadt + ihr State) zaehlt einmal.
  */
 export function planWave(input: {
   chips: ChipCandidates[];
@@ -308,8 +429,10 @@ export function planWave(input: {
   const seen = new Set<string>();
   const fresh: TilePlanEntry[][] = [];
   const retry: TilePlanEntry[][] = [];
+  const retryBaseByTile = new Map<string, number>();
   let total = 0;
   let covered = 0;
+  let freshCount = 0;
   for (const chip of input.chips) {
     const chipFresh: TilePlanEntry[] = [];
     const chipRetry: TilePlanEntry[] = [];
@@ -317,44 +440,51 @@ export function planWave(input: {
       if (seen.has(tile.tile_id)) continue;
       seen.add(tile.tile_id);
       total += 1;
-      const state = classifyTile(byTile.get(tile.tile_id) ?? [], input.filter);
+      const rows = byTile.get(tile.tile_id) ?? [];
+      const state = classifyTile(rows, input.filter);
       const entry: TilePlanEntry = {
         tile_id: tile.tile_id,
         query: tile.query,
         city: tile.city,
         location: chip.location,
       };
-      if (state === "closed") covered += 1;
-      else if (state === "fresh") chipFresh.push(entry);
-      else chipRetry.push(entry);
+      if (state === "closed") {
+        covered += 1;
+      } else if (state === "fresh") {
+        freshCount += 1;
+        chipFresh.push(entry);
+      } else {
+        retryBaseByTile.set(tile.tile_id, deepestLimit(rows, input.filter));
+        chipRetry.push(entry);
+      }
     }
     fresh.push(chipFresh);
     retry.push(chipRetry);
   }
 
   const open = total - covered;
+  const visited = total - freshCount;
   if (input.needed <= 0 || open === 0) {
-    return { tiles: [], limit: 0, total, covered, open };
+    return { tiles: [], limit: 0, total, covered, visited, open };
   }
 
-  const size = Math.max(
-    MIN_WAVE_TILES,
-    Math.min(
-      MAX_WAVE_TILES,
-      Math.ceil(input.needed / EXPECTED_LEADS_PER_TILE),
-    ),
-  );
+  const size = tilesForNeed(input.needed, input.filter);
   const freshAll = interleave(fresh);
   const mode = freshAll.length > 0 ? "fresh" : "retry";
   const tiles = (mode === "fresh" ? freshAll : interleave(retry)).slice(
     0,
     size,
   );
+  const retryBase =
+    mode === "retry"
+      ? Math.max(0, ...tiles.map((t) => retryBaseByTile.get(t.tile_id) ?? 0))
+      : 0;
   return {
     tiles,
-    limit: waveLimit(tiles, mode, input.filter, input.needed),
+    limit: waveLimit(tiles, mode, input.filter, input.needed, retryBase),
     total,
     covered,
+    visited,
     open,
   };
 }

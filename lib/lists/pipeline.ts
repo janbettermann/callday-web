@@ -312,29 +312,50 @@ export function matchesWebsiteFilter(
   return true;
 }
 
+/** 4- bis 5-stellige Zahlengruppen einer Adresse (DE/US 5, AT/CH 4). */
+const POSTAL_CODE_PATTERN = /\b\d{4,5}\b/g;
+
+export function extractPostalCodes(address: string | null): string[] {
+  return address ? (address.match(POSTAL_CODE_PATTERN) ?? []) : [];
+}
+
 /**
- * Stabile Sortierung: Leads, deren Adresse die angefragte Stadt nennt,
- * zuerst. Google mischt bei Text-Suchen ueberregional prominente
- * Treffer ein (live gesehen: Berliner Praxen ganz vorn in einer
- * Koeln-Suche) — die ersten Karten im Stack und die Preview sollen
- * sicher die angefragte Stadt sein. Umland-Treffer bleiben erhalten,
- * rutschen ans Ende. Vor dem Groessen-Cap anwenden, damit City-Treffer
- * beim Kappen garantiert ueberleben.
+ * Stabile Sortierung nach Gebiets-Treffer in drei Stufen:
+ *   0  die Adresse traegt eine PLZ aus dem Suchgebiet (alle Kandidaten-
+ *      PLZ des Jobs) — sprach- und namensunabhaengig; faengt Namens-
+ *      Dubletten, die der Stadtname nicht trennt (live 2026-09-12:
+ *      "Springfield NJ" auf Platz 3 einer Springfield-MO-Suche)
+ *   1  die Adresse nennt die angefragte Stadt
+ *   2  Rest (Umland, Fremdstadt-Treffer) ans Ende
+ * Google mischt bei Text-Suchen ueberregional prominente Treffer ein
+ * (Berliner Praxen in einer Koeln-Suche) — die ersten Karten im Stack
+ * sollen sicher das angefragte Gebiet sein. Vor dem Groessen-Cap
+ * anwenden, damit Gebiets-Treffer beim Kappen garantiert ueberleben.
+ * Ohne PLZ-Menge (Alt-Jobs, CITY-Fallback) ist das der City-first-Sort.
  */
-export function sortByCityMatch(
+export function sortByAreaMatch(
   leads: CallableLead[],
   city: string | null,
+  postalCodes?: Set<string>,
 ): CallableLead[] {
-  if (!city) return leads;
-  const needle = city.toLowerCase();
-  const cityHits: CallableLead[] = [];
-  const rest: CallableLead[] = [];
-  for (const lead of leads) {
-    (lead.location?.toLowerCase().includes(needle) ? cityHits : rest).push(
-      lead,
-    );
-  }
-  return [...cityHits, ...rest];
+  const needle = city?.toLowerCase() ?? "";
+  const hasPostal = postalCodes !== undefined && postalCodes.size > 0;
+  if (!needle && !hasPostal) return leads;
+
+  const tierOf = (lead: CallableLead): number => {
+    if (
+      hasPostal &&
+      extractPostalCodes(lead.location).some((code) => postalCodes.has(code))
+    ) {
+      return 0;
+    }
+    if (needle && lead.location?.toLowerCase().includes(needle)) return 1;
+    return 2;
+  };
+  return leads
+    .map((lead, index) => ({ lead, tier: tierOf(lead), index }))
+    .sort((a, b) => a.tier - b.tier || a.index - b.index)
+    .map((entry) => entry.lead);
 }
 
 /** Telefon-Schluessel wie im Dedupe: nur Ziffern. */
@@ -372,9 +393,15 @@ export function orderForDelivery(
   leads: CallableLead[],
   plan: QueryPlanEntry[] | undefined,
   fallbackCity: string | null,
+  /** Kandidaten-PLZ des Jobs (Suchgebiet) — Stufe 0 von sortByAreaMatch. */
+  postalCodes?: Set<string>,
 ): CallableLead[] {
   if (!plan || plan.length <= 1) {
-    return sortByCityMatch(leads, plan?.[0]?.city ?? fallbackCity);
+    return sortByAreaMatch(
+      leads,
+      plan?.[0]?.city ?? fallbackCity,
+      postalCodes,
+    );
   }
 
   const byQuery = new Map<string, CallableLead[]>(
@@ -393,7 +420,11 @@ export function orderForDelivery(
 
   const groupsByLocation = new Map<string, CallableLead[][]>();
   for (const entry of plan) {
-    const sorted = sortByCityMatch(byQuery.get(entry.query) ?? [], entry.city);
+    const sorted = sortByAreaMatch(
+      byQuery.get(entry.query) ?? [],
+      entry.city,
+      postalCodes,
+    );
     const groups = groupsByLocation.get(entry.location) ?? [];
     groups.push(sorted);
     groupsByLocation.set(entry.location, groups);

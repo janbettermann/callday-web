@@ -5,15 +5,18 @@ import {
   categoryCanon,
   cityTileId,
   classifyTile,
+  exhaustionSlack,
   haversineKm,
   MAX_WAVE_TILES,
-  MIN_WAVE_TILES,
   orderPostalRows,
   planWave,
   postalTileId,
   selectSpillover,
-  TILE_LIMIT_FRESH,
-  TILE_LIMIT_RETRY,
+  spilloverEligibleTiles,
+  TILE_LIMIT_MAX,
+  TILE_LIMIT_MIN,
+  TILE_LIMIT_RETRY_MAX,
+  tilesForNeed,
   type ChipCandidates,
   type CoverageRowLike,
 } from "./tiles";
@@ -42,6 +45,42 @@ describe("selectSpillover", () => {
     expect(
       selectSpillover(rows, new Set(["DE-50354"]), "any", 10).map((r) => r.id),
     ).toEqual(["3"]);
+  });
+});
+
+describe("spilloverEligibleTiles (Kern vor Rand)", () => {
+  const chips = [
+    {
+      location: "Köln",
+      tiles: [
+        { tile_id: "DE-50667", query: "q", city: "Köln", core: true },
+        { tile_id: "DE-50668", query: "q", city: "Köln", core: true },
+        { tile_id: "DE-50354", query: "q", city: "Hürth", core: false },
+      ],
+    },
+  ];
+  const closed = (id: string): CoverageRowLike => ({
+    tile_id: id,
+    website_filter: "any",
+    result_count: 3,
+    limit_used: 50,
+  });
+
+  it("Rand-Tiles liefern keinen Spillover, solange ein Kern-Tile unbesucht ist", () => {
+    expect([...spilloverEligibleTiles(chips, [], "any")]).toEqual([
+      "DE-50667",
+      "DE-50668",
+    ]);
+    expect([...spilloverEligibleTiles(chips, [closed("DE-50667")], "any")]).toEqual([
+      "DE-50667",
+      "DE-50668",
+    ]);
+  });
+
+  it("ist der Kern durch, kommt der Rand dazu", () => {
+    expect(
+      [...spilloverEligibleTiles(chips, [closed("DE-50667"), closed("DE-50668")], "any")],
+    ).toEqual(["DE-50667", "DE-50668", "DE-50354"]);
   });
 });
 
@@ -111,8 +150,16 @@ describe("classifyTile (Erschoepfungs-Semantik)", () => {
     tile_id: "DE-50667",
     website_filter: "any",
     result_count: 12,
-    limit_used: TILE_LIMIT_FRESH,
+    limit_used: TILE_LIMIT_MAX,
     ...partial,
+  });
+
+  it("Puffer ist proportional zum Limit: 10 %, min 2, max 20", () => {
+    expect(exhaustionSlack(15)).toBe(2);
+    expect(exhaustionSlack(21)).toBe(2);
+    expect(exhaustionSlack(30)).toBe(3);
+    expect(exhaustionSlack(50)).toBe(5);
+    expect(exhaustionSlack(200)).toBe(20);
   });
 
   it("keine Row = fresh, klar unter Limit = closed, Limit oder knapp darunter = retry", () => {
@@ -124,12 +171,15 @@ describe("classifyTile (Erschoepfungs-Semantik)", () => {
     expect(classifyTile([row({ result_count: 48 })], "any")).toBe("retry");
     expect(classifyTile([row({ result_count: 45 })], "any")).toBe("retry");
     expect(classifyTile([row({ result_count: 44 })], "any")).toBe("closed");
+    // Bei Limit 15 ist der Puffer 2.
+    expect(classifyTile([row({ result_count: 13, limit_used: 15 })], "any")).toBe("retry");
+    expect(classifyTile([row({ result_count: 12, limit_used: 15 })], "any")).toBe("closed");
   });
 
-  it("ein Retry-Lauf schliesst das Tile auch bei vollem Limit", () => {
+  it("ein Lauf mit dem Retry-Deckel schliesst das Tile auch bei vollem Limit", () => {
     expect(
       classifyTile(
-        [row({ result_count: TILE_LIMIT_RETRY, limit_used: TILE_LIMIT_RETRY })],
+        [row({ result_count: TILE_LIMIT_RETRY_MAX, limit_used: TILE_LIMIT_RETRY_MAX })],
         "any",
       ),
     ).toBe("closed");
@@ -158,6 +208,7 @@ describe("planWave", () => {
     tile_id: id,
     query: `Dentist, ${id.slice(3)}, ${city}`,
     city,
+    core: true,
   });
   const koeln: ChipCandidates = {
     location: "Köln",
@@ -169,154 +220,151 @@ describe("planWave", () => {
     location: "Bonn",
     tiles: ["DE-53111", "DE-53113", "DE-53115"].map((id) => tile(id, "Bonn")),
   };
+  const many: ChipCandidates = {
+    location: "Berlin",
+    tiles: Array.from({ length: 60 }, (_, i) =>
+      tile(`DE-1${String(i).padStart(4, "0")}`, "Berlin"),
+    ),
+  };
+  const plan = (chips: ChipCandidates[], needed: number, coverage: CoverageRowLike[] = [], filter: "any" | "without" = "any") =>
+    planWave({ chips, coverage, filter, needed });
 
-  it("dimensioniert die Welle nach needed, geklammert auf 3..25", () => {
-    const many: ChipCandidates = {
-      location: "Berlin",
-      tiles: Array.from({ length: 60 }, (_, i) =>
-        tile(`DE-1${String(i).padStart(4, "0")}`, "Berlin"),
-      ),
-    };
-    expect(
-      planWave({ chips: [many], coverage: [], filter: "any", needed: 250 })
-        .tiles,
-    ).toHaveLength(13); // ceil(250 / 20)
-    expect(
-      planWave({ chips: [many], coverage: [], filter: "any", needed: 5 })
-        .tiles,
-    ).toHaveLength(MIN_WAVE_TILES);
-    expect(
-      planWave({ chips: [many], coverage: [], filter: "any", needed: 500 })
-        .tiles,
-    ).toHaveLength(MAX_WAVE_TILES);
+  it("Tile-Zahl und Limit folgen dem Bedarf — keine Untergrenze, Marge 1,4", () => {
+    expect(tilesForNeed(250, "any")).toBe(13);
+    expect(tilesForNeed(30, "any")).toBe(2);
+    expect(tilesForNeed(10, "any")).toBe(1);
+    expect(tilesForNeed(500, "any")).toBe(MAX_WAVE_TILES);
+
+    const big = plan([many], 250);
+    expect(big.tiles).toHaveLength(13);
+    expect(big.limit).toBe(27); // ceil(250 × 1,4 / 13)
+
+    const mid = plan([many], 30);
+    expect(mid.tiles).toHaveLength(2);
+    expect(mid.limit).toBe(21); // ceil(42 / 2)
+
+    const tiny = plan([many], 10);
+    expect(tiny.tiles).toHaveLength(1);
+    expect(tiny.limit).toBe(TILE_LIMIT_MIN); // 14 → Boden 15
+
+    expect(plan([many], 25).tiles).toHaveLength(2);
+    expect(plan([many], 500).tiles).toHaveLength(MAX_WAVE_TILES);
+    expect(plan([many], 500).limit).toBe(28);
+  });
+
+  it("weniger frische Tiles als geplant → tiefer pro Tile, gedeckelt bei 50", () => {
+    const koelnDeep = plan([koeln], 250); // 13 geplant, 5 da
+    expect(koelnDeep.tiles).toHaveLength(5);
+    expect(koelnDeep.limit).toBe(TILE_LIMIT_MAX); // ceil(350 / 5) = 70 → 50
+
+    const single: ChipCandidates = { location: "Hürth", tiles: [tile("DE-50354", "Hürth")] };
+    const huerth = plan([single], 30);
+    expect(huerth.tiles).toHaveLength(1);
+    expect(huerth.limit).toBe(42);
   });
 
   it("zieht Round-Robin ueber die Chips und traegt die Chip-Location", () => {
-    const plan = planWave({
-      chips: [koeln, bonn],
-      coverage: [],
-      filter: "any",
-      needed: 80, // ceil(80 / 20) = 4 Tiles
-    });
-    expect(plan.tiles.map((t) => t.location)).toEqual([
+    const result = plan([koeln, bonn], 80); // ceil(80 / 20) = 4 Tiles
+    expect(result.tiles.map((t) => t.location)).toEqual([
       "Köln",
       "Bonn",
       "Köln",
       "Bonn",
     ]);
-    expect(plan.tiles[0]).toEqual({
+    expect(result.tiles[0]).toEqual({
       tile_id: "DE-50667",
       query: "Dentist, 50667, Köln",
       city: "Köln",
       location: "Köln",
     });
-    expect(plan.limit).toBe(TILE_LIMIT_FRESH);
-    expect(plan).toMatchObject({ total: 8, covered: 0, open: 8 });
+    expect(result.limit).toBe(28); // ceil(112 / 4)
+    expect(result).toMatchObject({ total: 8, covered: 0, visited: 0, open: 8 });
   });
 
-  it("ueberspringt erschoepfte Tiles und zaehlt sie als covered", () => {
+  it("ueberspringt erschoepfte Tiles und zaehlt sie als covered + visited", () => {
     const coverage: CoverageRowLike[] = [
       { tile_id: "DE-50667", website_filter: "any", result_count: 9, limit_used: 50 },
       { tile_id: "DE-50668", website_filter: "any", result_count: 0, limit_used: 50 },
     ];
-    const plan = planWave({ chips: [koeln], coverage, filter: "any", needed: 30 });
-    expect(plan.tiles.map((t) => t.tile_id)).toEqual([
-      "DE-50670",
-      "DE-50672",
-      "DE-50674",
-    ]);
-    expect(plan).toMatchObject({ total: 5, covered: 2, open: 3 });
+    const result = plan([koeln], 30, coverage);
+    expect(result.tiles.map((t) => t.tile_id)).toEqual(["DE-50670", "DE-50672"]);
+    expect(result).toMatchObject({ total: 5, covered: 2, visited: 2, open: 3 });
   });
 
-  it("Retry-Tiles kommen erst dran, wenn keine frischen mehr da sind — dann mit hohem Limit", () => {
-    const full = (id: string): CoverageRowLike => ({
+  it("Retry-Tiles kommen erst dran, wenn keine frischen mehr da sind — progressiv nachgekauft", () => {
+    const full = (id: string, limit = 50): CoverageRowLike => ({
       tile_id: id,
       website_filter: "any",
-      result_count: 50,
-      limit_used: 50,
+      result_count: limit,
+      limit_used: limit,
     });
-    const mixed = planWave({
-      chips: [koeln],
-      coverage: [full("DE-50667"), full("DE-50668")],
-      filter: "any",
-      needed: 100,
-    });
+    const mixed = plan([koeln], 100, [full("DE-50667"), full("DE-50668")]);
     expect(mixed.tiles.map((t) => t.tile_id)).toEqual([
       "DE-50670",
       "DE-50672",
       "DE-50674",
     ]);
-    expect(mixed.limit).toBe(TILE_LIMIT_FRESH);
+    expect(mixed.limit).toBe(47); // frisch: ceil(140 / 3)
+    expect(mixed).toMatchObject({ visited: 2, covered: 0, open: 5 });
 
-    const retryOnly = planWave({
-      chips: [koeln],
-      coverage: koeln.tiles.map((t) => full(t.tile_id)),
-      filter: "any",
-      needed: 100,
-    });
+    const retryOnly = plan([koeln], 100, koeln.tiles.map((t) => full(t.tile_id)));
     expect(retryOnly.tiles).toHaveLength(5);
-    expect(retryOnly.limit).toBe(TILE_LIMIT_RETRY);
-    expect(retryOnly.open).toBe(5);
+    expect(retryOnly.limit).toBe(78); // 50 + ceil(140 / 5) — naechste Schicht, nicht 200
+    expect(retryOnly).toMatchObject({ visited: 5, open: 5 });
+
+    // Tiefstes bisheriges Limit der Welle ist die Basis; Deckel 200.
+    const layered = plan(
+      [{ location: "Köln", tiles: koeln.tiles.slice(0, 2) }],
+      30,
+      [full("DE-50667", 25), full("DE-50668", 46)],
+    );
+    expect(layered.limit).toBe(67); // 46 + ceil(42 / 2)
+    const capped = plan(
+      [{ location: "Köln", tiles: koeln.tiles.slice(0, 1) }],
+      30,
+      [full("DE-50667", 190)],
+    );
+    expect(capped.limit).toBe(TILE_LIMIT_RETRY_MAX);
   });
 
   it("alles abgehakt oder Spillover reicht → keine Welle", () => {
-    const done = planWave({
-      chips: [koeln],
-      coverage: koeln.tiles.map((t) => ({
+    const done = plan(
+      [koeln],
+      100,
+      koeln.tiles.map((t) => ({
         tile_id: t.tile_id,
         website_filter: "any" as const,
         result_count: 1,
         limit_used: 50,
       })),
-      filter: "any",
-      needed: 100,
-    });
+    );
     expect(done.tiles).toHaveLength(0);
-    expect(done.open).toBe(0);
-    expect(done.covered).toBe(5);
+    expect(done).toMatchObject({ open: 0, covered: 5, visited: 5 });
 
-    const spilloverSuffices = planWave({
-      chips: [koeln],
-      coverage: [],
-      filter: "any",
-      needed: 0,
-    });
+    const spilloverSuffices = plan([koeln], 0);
     expect(spilloverSuffices.tiles).toHaveLength(0);
-    expect(spilloverSuffices.open).toBe(5);
+    expect(spilloverSuffices).toMatchObject({ open: 5, visited: 0 });
   });
 
-  it("Website-Filter: Scan-Maximum als Limit (Scans sind gratis, Tile sicher erschoepft)", () => {
-    const plan = planWave({
-      chips: [koeln],
-      coverage: [],
-      filter: "without",
-      needed: 30,
-    });
-    expect(plan.limit).toBe(OUTSCRAPER_MAX_SCAN_LIMIT);
+  it("Website-Filter: mehr Tiles pro Welle, Scan-Maximum als Limit", () => {
+    expect(tilesForNeed(30, "without")).toBe(6);
+    expect(tilesForNeed(250, "without")).toBe(MAX_WAVE_TILES);
+    const filtered = plan([koeln], 30, [], "without");
+    expect(filtered.tiles).toHaveLength(5); // 6 geplant, 5 da
+    expect(filtered.limit).toBe(OUTSCRAPER_MAX_SCAN_LIMIT);
   });
 
-  it("CITY-Fallback-Tiles heben das Wellen-Limit auf das alte Stadt-Budget", () => {
+  it("CITY-Fallback-Tiles bekommen das alte Stadt-Budget (×1,4, Cap 400)", () => {
     const fallback: ChipCandidates = {
       location: "Kleinstadt",
-      tiles: [{ tile_id: "CITY-DE-kleinstadt", query: "Dentist, Kleinstadt", city: "Kleinstadt" }],
+      tiles: [{ tile_id: "CITY-DE-kleinstadt", query: "Dentist, Kleinstadt", city: "Kleinstadt", core: true }],
     };
-    expect(
-      planWave({ chips: [fallback], coverage: [], filter: "any", needed: 250 })
-        .limit,
-    ).toBe(350);
-    expect(
-      planWave({ chips: [fallback], coverage: [], filter: "any", needed: 10 })
-        .limit,
-    ).toBe(TILE_LIMIT_FRESH);
+    expect(plan([fallback], 250).limit).toBe(350);
+    expect(plan([fallback], 10).limit).toBe(TILE_LIMIT_MIN);
   });
 
   it("dasselbe Tile unter zwei Chips zaehlt nur einmal", () => {
-    const twice = planWave({
-      chips: [koeln, { location: "NRW", tiles: koeln.tiles.slice(0, 2) }],
-      coverage: [],
-      filter: "any",
-      needed: 100,
-    });
+    const twice = plan([koeln, { location: "NRW", tiles: koeln.tiles.slice(0, 2) }], 100);
     expect(twice.total).toBe(5);
     expect(new Set(twice.tiles.map((t) => t.tile_id)).size).toBe(
       twice.tiles.length,

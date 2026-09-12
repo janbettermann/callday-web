@@ -7,9 +7,10 @@ import {
   dedupeByPhone,
   filterByWebsite,
   filterKnownPhones,
+  extractPostalCodes,
   matchesWebsiteFilter,
   orderForDelivery,
-  sortByCityMatch,
+  sortByAreaMatch,
   toCallableLeads,
   type CallableLead,
 } from "./pipeline";
@@ -277,6 +278,18 @@ describe("orderForDelivery (Multi-Location-Interleave)", () => {
     expect(ordered[0].company_name).toBe("Stadt");
   });
 
+  it("reicht die Kandidaten-PLZ in jede Query-Gruppe durch", () => {
+    const leads = [
+      mk("Fremdstadt", plan[0].query, "Hauptstr. 1, 10115 Berlin, Köln-Filiale"),
+      mk("Nachbar-PLZ", plan[0].query, "Ring 2, 50668 Köln"),
+    ];
+    const ordered = orderForDelivery(leads, plan, null, new Set(["50668"])).map(
+      (l) => l.company_name,
+    );
+    // Beide nennen "Köln" — nur die echte Koeln-PLZ gewinnt Stufe 0.
+    expect(ordered).toEqual(["Nachbar-PLZ", "Fremdstadt"]);
+  });
+
   it("haengt Zeilen ohne Plan-Zuordnung hinten an statt sie zu verlieren", () => {
     const leads = [
       mk("Fremd", "Dentist, Unbekannt", "Woanders"),
@@ -366,9 +379,35 @@ describe("dedupeByPhone", () => {
   });
 });
 
-describe("sortByCityMatch", () => {
+describe("sortByAreaMatch", () => {
+  it("PLZ aus dem Suchgebiet schlaegt den Stadtnamen — Springfield NJ rutscht hinter Springfield MO", () => {
+    const sorted = sortByAreaMatch(
+      [
+        lead({ company_name: "NJ", location: "223 Mountain Ave, Springfield, NJ 07081" }),
+        lead({ company_name: "MO 2", location: "1 Main St, Springfield, MO 65807" }),
+        lead({ company_name: "Fremd", location: "5 Elm St, Joplin, MO 64801" }),
+        lead({ company_name: "MO 1", location: "9 Oak St, Springfield, MO 65802-1234" }),
+      ],
+      "Springfield",
+      new Set(["65802", "65807", "65898"]),
+    );
+    expect(sorted.map((l) => l.company_name)).toEqual([
+      "MO 2",
+      "MO 1",
+      "NJ",
+      "Fremd",
+    ]);
+  });
+
+  it("extractPostalCodes findet 4–5-stellige Gruppen, keine Hausnummern-Bruchstuecke", () => {
+    expect(extractPostalCodes("Wolfsstraße 6-14, 50667 Köln")).toEqual(["50667"]);
+    expect(extractPostalCodes("Stephansplatz 1, 1010 Wien")).toEqual(["1010"]);
+    expect(extractPostalCodes("317 Delaware St, Kansas City, MO 64105")).toEqual(["64105"]);
+    expect(extractPostalCodes(null)).toEqual([]);
+  });
+
   it("zieht Stadt-Treffer stabil nach vorn (case-insensitiv)", () => {
-    const sorted = sortByCityMatch(
+    const sorted = sortByAreaMatch(
       [
         lead({ company_name: "Berlin", location: "Hauptstr. 1, Berlin" }),
         lead({ company_name: "Koeln 1", location: "Ring 1, 50667 Köln" }),
@@ -387,9 +426,10 @@ describe("sortByCityMatch", () => {
     ]);
   });
 
-  it("laesst die Reihenfolge ohne Stadt unveraendert", () => {
+  it("laesst die Reihenfolge ohne Stadt und ohne PLZ-Menge unveraendert", () => {
     const input = [lead({ company_name: "A" }), lead({ company_name: "B" })];
-    expect(sortByCityMatch(input, null)).toEqual(input);
+    expect(sortByAreaMatch(input, null)).toEqual(input);
+    expect(sortByAreaMatch(input, null, new Set())).toEqual(input);
   });
 });
 

@@ -54,6 +54,7 @@ const base = {
   marketLanguage: "de",
   plan: TILES,
   city: "Köln",
+  candidatePostalCodes: new Set<string>(),
 };
 
 describe("assembleDelivery", () => {
@@ -135,6 +136,22 @@ describe("assembleDelivery", () => {
       ],
     });
     expect(result.leads.map((l) => l.company_name)).toEqual(["Ohne"]);
+  });
+
+  it("Suchgebiet-PLZ sortieren Fremdstadt-Treffer vor dem Cap ans Ende", () => {
+    const result = assembleDelivery({
+      ...base,
+      maxSize: 2,
+      candidatePostalCodes: new Set(["50667", "50676"]),
+      spillover: [],
+      places: [
+        place("Berlin", "+49 11", TILES[0].query, { address: "Kölner Str. 1, 10115 Berlin" }),
+        place("Koeln A", "+49 12", TILES[0].query, { address: "Dom 1, 50667 Köln" }),
+        place("Koeln B", "+49 13", TILES[1].query, { address: "Ring 1, 50676 Köln" }),
+      ],
+    });
+    expect(result.leads.map((l) => l.company_name)).toEqual(["Koeln A", "Koeln B"]);
+    expect(result.overflow.map((l) => l.company_name)).toEqual(["Berlin"]);
   });
 
   it("Alt-Job mit query_plan: city-first wie bisher, kein Spillover", () => {

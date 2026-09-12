@@ -192,7 +192,9 @@ function toPostalTiles(
   industry: string,
   country: string,
   rows: PostalRowLike[],
+  cityName: string,
 ): TileCandidate[] {
+  const key = normalizePlaceName(cityName);
   return rows.map((row) => ({
     tile_id: postalTileId(country, row.postal_code),
     // Format der Tiling-Sonde D/E (§6b) und Outscrapers Micro-Queries:
@@ -200,6 +202,12 @@ function toPostalTiles(
     // in der Viewport-Box ist "Hürth" die richtige Stadt).
     query: `${industry}, ${row.postal_code}, ${row.place_name}`,
     city: row.place_name,
+    postal_code: row.postal_code,
+    // Kern = Ortsname der PLZ ist die angefragte Stadt (dieselbe Regel
+    // wie die Namens-Stufe in orderPostalRows).
+    core:
+      row.search_names?.includes(key) === true ||
+      normalizePlaceName(row.place_name) === key,
   }));
 }
 
@@ -225,6 +233,7 @@ export async function resolveCityTiles(
           industry,
           country,
           orderPostalRows(rows, geometry.location, target.city),
+          target.city,
         );
       }
     }
@@ -238,10 +247,12 @@ export async function resolveCityTiles(
     );
   }
   if (rows.length > 0) {
+    // Namens-Match: jede Row traegt den Chip-Namen → alles Kern.
     return toPostalTiles(
       industry,
       country,
       orderPostalRows(rows, centroidOf(rows), target.city),
+      target.city,
     );
   }
 
@@ -250,6 +261,7 @@ export async function resolveCityTiles(
       tile_id: cityTileId(country, target.city),
       query: cityQuery(industry, target),
       city: target.city,
+      core: true,
     },
   ];
 }
