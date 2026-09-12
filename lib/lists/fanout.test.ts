@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildQueryPlan,
-  computePerQueryLimit,
-  MAX_LOCATIONS,
-} from "./fanout";
-import { GEO_REGIONS, getRegion, searchRegions } from "./geo-regions";
+import { cityQuery, expandLocations, MAX_LOCATIONS } from "./fanout";
+import { GEO_REGIONS, searchRegions } from "./geo-regions";
 import { findCountry } from "./countries";
 
 describe("GEO_REGIONS (Asset-Integritaet)", () => {
@@ -45,36 +41,38 @@ describe("searchRegions", () => {
   });
 });
 
-describe("buildQueryPlan", () => {
-  it("Stadt-Chips bleiben im alten Query-Format, Regionen faechern mit State-Namen auf", () => {
-    const plan = buildQueryPlan(
-      "Dentist",
-      [{ name: "Köln" }, { name: "Bayern", region_id: "DE-BY" }],
+describe("expandLocations", () => {
+  it("Stadt-Chips bleiben eine Stadt (mit place_id), Regionen faechern in Top-Staedte auf", () => {
+    const targets = expandLocations(
+      [
+        { name: "Köln", place_id: "ChIJ5S-raZElv0cR8HcqSvxgJwQ" },
+        { name: "Bayern", region_id: "DE-BY" },
+      ],
       "DE",
     );
-    expect(plan[0]).toEqual({
-      query: "Dentist, Köln",
+    expect(targets[0]).toMatchObject({
       city: "Köln",
       location: "Köln",
+      region: null,
+      place_id: "ChIJ5S-raZElv0cR8HcqSvxgJwQ",
     });
-    const bavaria = plan.filter((e) => e.location === "Bayern");
-    expect(bavaria[0].query).toBe("Dentist, München, Bayern");
+    const bavaria = targets.filter((t) => t.location === "Bayern");
     expect(bavaria).toHaveLength(12); // 1 Region → volle Tiefe
+    expect(bavaria[0]).toMatchObject({ city: "München", place_id: null });
+    expect(bavaria[0].region?.id).toBe("DE-BY");
   });
 
   it("skaliert die Staedte-Tiefe mit der Region-Anzahl", () => {
-    const twoRegions = buildQueryPlan(
-      "Dentist",
+    const twoRegions = expandLocations(
       [
         { name: "Bayern", region_id: "DE-BY" },
         { name: "Hessen", region_id: "DE-HE" },
       ],
       "DE",
     );
-    expect(twoRegions.filter((e) => e.location === "Bayern")).toHaveLength(8);
+    expect(twoRegions.filter((t) => t.location === "Bayern")).toHaveLength(8);
 
-    const fiveRegions = buildQueryPlan(
-      "Dentist",
+    const fiveRegions = expandLocations(
       ["DE-BY", "DE-HE", "DE-NW", "DE-BW", "DE-NI"].map((id) => ({
         name: id,
         region_id: id,
@@ -85,8 +83,7 @@ describe("buildQueryPlan", () => {
   });
 
   it("ignoriert Regionen des falschen Landes und kappt bei MAX_LOCATIONS", () => {
-    const plan = buildQueryPlan(
-      "Dentist",
+    const targets = expandLocations(
       [
         { name: "Texas", region_id: "US-TX" },
         ...Array.from({ length: 7 }, (_, i) => ({ name: `Stadt ${i}` })),
@@ -94,21 +91,18 @@ describe("buildQueryPlan", () => {
       "DE",
     );
     // US-TX faellt raus (Land DE), von 7 Staedten bleiben 4 (Cap 5 gesamt).
-    expect(plan.every((e) => e.location.startsWith("Stadt"))).toBe(true);
-    expect(plan).toHaveLength(MAX_LOCATIONS - 1);
+    expect(targets.every((t) => t.location.startsWith("Stadt"))).toBe(true);
+    expect(targets).toHaveLength(MAX_LOCATIONS - 1);
   });
 });
 
-describe("computePerQueryLimit", () => {
-  it("ohne Website-Filter: eng an der Wunschgroesse, Floor 15, Cap 400", () => {
-    expect(computePerQueryLimit(250, 1, false)).toBe(350);
-    expect(computePerQueryLimit(250, 25, false)).toBe(15);
-    expect(computePerQueryLimit(500, 1, false)).toBe(400);
-  });
-
-  it("mit Website-Filter: grosszuegig scannen (Scans sind quasi gratis)", () => {
-    expect(computePerQueryLimit(250, 25, true)).toBe(200);
-    expect(computePerQueryLimit(250, 1, true)).toBe(500);
-    expect(computePerQueryLimit(20, 25, true)).toBe(60);
+describe("cityQuery (CITY-Fallback-Format)", () => {
+  it("Stadt-Chip im alten Format, Region-Stadt mit State-Namen", () => {
+    const [koeln, muenchen] = expandLocations(
+      [{ name: "Köln" }, { name: "Bayern", region_id: "DE-BY" }],
+      "DE",
+    );
+    expect(cityQuery("Dentist", koeln)).toBe("Dentist, Köln");
+    expect(cityQuery("Dentist", muenchen)).toBe("Dentist, München, Bayern");
   });
 });

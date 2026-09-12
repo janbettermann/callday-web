@@ -1,13 +1,18 @@
 /**
  * POST /api/lists/generate — startet einen Lead-Generator-Job.
  *
- * Auth: eingeloggter User (SSR-Cookie-Session). Free-Cap (1 Gratis-Liste
- * pro Konto) wird DB-seitig vom partial unique index erzwungen — der
- * 23505-Fall wird hier in ein sauberes 409 uebersetzt.
+ * Auth: eingeloggter User (SSR-Cookie-Session). Ein-aktiver-Job-Regel
+ * wird DB-seitig vom partial unique index erzwungen — der 23505-Fall
+ * wird hier in ein sauberes 409 uebersetzt.
+ *
+ * Seit dem PLZ-Tiling (Spec §14b.1) wird hier die WELLE geplant: Chips →
+ * Staedte → PLZ-Tiles (geo-data.ts), Coverage-Abgleich, Spillover-Stand,
+ * Tile-Auswahl (tiles.planWave). Der Plan wird in params.tiles fixiert —
+ * die Verarbeitung (lib/lists/jobs.ts) re-derivt nichts.
  *
  * Der Outscraper-Webhook zeigt auf /api/lists/webhook mit Job-ID +
  * per-Job-Secret in der URL; die Ergebnisse selbst holt die Verarbeitung
- * authenticated bei Outscraper (siehe lib/lists/jobs.ts).
+ * authenticated bei Outscraper.
  */
 
 import { NextRequest } from "next/server";
@@ -15,6 +20,7 @@ import { randomBytes } from "crypto";
 import * as Sentry from "@sentry/nextjs";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
+import { fetchCoverage, fetchSpillover } from "@/lib/lists/coverage";
 import {
   clampRequestedSize,
   ensureSignupGrant,
@@ -22,22 +28,37 @@ import {
 } from "@/lib/lists/credits";
 import { findCountry } from "@/lib/lists/countries";
 import {
-  buildQueryPlan,
-  computePerQueryLimit,
+  expandLocations,
   MAX_LOCATIONS,
   type LocationInput,
 } from "@/lib/lists/fanout";
+import { resolveCityTiles } from "@/lib/lists/geo-data";
 import { getRegion } from "@/lib/lists/geo-regions";
+import { interleave } from "@/lib/lists/interleave";
+import {
+  JOB_COLUMNS,
+  processJobIfFinished,
+  type LeadGenJob,
+} from "@/lib/lists/jobs";
 import { OutscraperError, startGoogleMapsSearch } from "@/lib/lists/outscraper";
 import {
   WEBSITE_FILTER_MODES,
   type WebsiteFilterMode,
 } from "@/lib/lists/pipeline";
+import {
+  categoryCanon,
+  planWave,
+  selectSpillover,
+  type ChipCandidates,
+  type TileCandidate,
+} from "@/lib/lists/tiles";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const FIELD_MAX_LENGTH = 60;
+/** Google-Place-IDs: URL-sichere Zeichen, live ~27 Zeichen. */
+const PLACE_ID_PATTERN = /^[A-Za-z0-9_-]{5,300}$/;
 
 /**
  * Freitext-Feld saeubern: Kommas/Zeilenumbrueche raus (die Query wird
@@ -84,9 +105,10 @@ export async function POST(request: NextRequest) {
   const cleanIndustryDisplay = cleanField(industryDisplay) ?? cleanIndustry;
 
   // Locations-Chips validieren (Multi-Location, §14b Punkt 5): Stadt-
-  // Chips als Freitext (cleanField), State-Chips gegen das Geo-Asset
-  // (region_id muss existieren UND zum Land passen). Fallback: das
-  // alte Ein-Stadt-`city`-Feld (Deploy-Fenster mit altem Client).
+  // Chips als Freitext (cleanField) plus optionale Places-ID (Schluessel
+  // der Viewport-Aufloesung), State-Chips gegen das Geo-Asset (region_id
+  // muss existieren UND zum Land passen). Fallback: das alte Ein-Stadt-
+  // `city`-Feld (Deploy-Fenster mit altem Client).
   const rawLocations = Array.isArray(locations)
     ? locations
     : typeof city === "string"
@@ -106,7 +128,11 @@ export async function POST(request: NextRequest) {
       if (!name) {
         return Response.json({ error: "invalid_input" }, { status: 400 });
       }
-      cleanLocations.push({ name });
+      const placeId =
+        typeof raw.placeId === "string" && PLACE_ID_PATTERN.test(raw.placeId)
+          ? raw.placeId
+          : undefined;
+      cleanLocations.push(placeId ? { name, place_id: placeId } : { name });
     }
   }
   if (cleanLocations.length === 0) {
@@ -131,20 +157,84 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "credits_exhausted" }, { status: 403 });
   }
 
-  const webhookSecret = randomBytes(24).toString("base64url");
-
-  // Query-Plan bei Job-Erstellung fixieren — die Verarbeitung liest
-  // ihn aus params statt ihn zu re-deriven (§14b.1); params.city bleibt
-  // als Anzeige-String (BuildingView, Listen-Name).
-  const queryPlan = buildQueryPlan(
-    cleanIndustry,
-    cleanLocations,
-    countryConfig.code,
-  );
-  if (queryPlan.length === 0) {
+  const targets = expandLocations(cleanLocations, countryConfig.code);
+  if (targets.length === 0) {
     return Response.json({ error: "invalid_input" }, { status: 400 });
   }
+  const canon = categoryCanon(cleanIndustry);
   const displayLocation = cleanLocations.map((l) => l.name).join(", ");
+
+  // Welle planen (§14b.1 Punkte 1–3): Tiles pro Chip — ein Stadt-Chip
+  // bringt seine PLZ-Tiles, ein State-Chip zieht Round-Robin ueber die
+  // Tiles seiner Top-Staedte (Fairness auch innerhalb des Chips).
+  let chips: ChipCandidates[];
+  let coverage;
+  let spilloverRows;
+  try {
+    const tileLists = await Promise.all(
+      targets.map((target) =>
+        resolveCityTiles(admin, {
+          industry: cleanIndustry,
+          country: countryConfig.code,
+          target,
+        }),
+      ),
+    );
+    const byLocation = new Map<string, TileCandidate[][]>();
+    targets.forEach((target, index) => {
+      const lists = byLocation.get(target.location) ?? [];
+      lists.push(tileLists[index]);
+      byLocation.set(target.location, lists);
+    });
+    chips = [...byLocation].map(([location, lists]) => ({
+      location,
+      tiles: interleave(lists),
+    }));
+    [coverage, spilloverRows] = await Promise.all([
+      fetchCoverage(admin, user.id, canon),
+      fetchSpillover(admin, user.id, canon),
+    ]);
+  } catch (err) {
+    console.error("[lists/generate] wave planning failed", err);
+    Sentry.captureException(err, {
+      tags: { feature: "lists-generator", area: "tiling" },
+    });
+    return Response.json({ error: "job_create_failed" }, { status: 500 });
+  }
+
+  // Spillover zaehlt ZUERST gegen die Wunschgroesse — nur Rows aus Tiles
+  // DIESER Suche und mit passendem Filter (tiles.selectSpillover); die
+  // Welle deckt den Rest. Die Auswahl wird wie die Welle fixiert.
+  const candidateTileIds = new Set(
+    chips.flatMap((chip) => chip.tiles.map((tile) => tile.tile_id)),
+  );
+  const spilloverPick = selectSpillover(
+    spilloverRows,
+    candidateTileIds,
+    websiteFilter,
+    listSize,
+  );
+  const wave = planWave({
+    chips,
+    coverage,
+    filter: websiteFilter,
+    needed: listSize - spilloverPick.length,
+  });
+
+  if (wave.open === 0 && spilloverPick.length === 0) {
+    // Alles abgehakt (§14b.1 Punkt 7): klare Ansage statt Leer-Liste.
+    // Wort "areas"/Staedte, nie "zip codes" — der User soll nichts Neues
+    // lernen.
+    return Response.json(
+      {
+        error: "area_covered",
+        message: `You've already covered all of ${displayLocation} for ${cleanIndustryDisplay}. Try a nearby city or another industry.`,
+      },
+      { status: 422 },
+    );
+  }
+
+  const webhookSecret = randomBytes(24).toString("base64url");
   const query = `${cleanIndustry}, ${displayLocation}`;
 
   const { data: job, error: insertError } = await admin
@@ -154,18 +244,23 @@ export async function POST(request: NextRequest) {
       params: {
         industry: cleanIndustry,
         industry_display: cleanIndustryDisplay,
+        // Anzeige-String (BuildingView, Listen-Name).
         city: displayLocation,
         country: countryConfig.code,
         website: websiteFilter,
         max_size: listSize,
         locations: cleanLocations,
-        query_plan: queryPlan,
+        category_canon: canon,
+        tiles: wave.tiles,
+        tile_limit: wave.limit,
+        spillover_ids: spilloverPick.map((row) => row.id),
+        coverage: { covered_before: wave.covered, total: wave.total },
       },
       query,
       webhook_secret: webhookSecret,
       is_free: true,
     })
-    .select("id")
+    .select(JOB_COLUMNS)
     .single();
 
   if (insertError || !job) {
@@ -176,6 +271,19 @@ export async function POST(request: NextRequest) {
     }
     console.error("[lists/generate] job insert failed", insertError);
     return Response.json({ error: "job_create_failed" }, { status: 500 });
+  }
+
+  if (wave.tiles.length === 0) {
+    // Spillover-only: der Spillover deckt die Wunschgroesse — kein
+    // Outscraper-Request, die Liste entsteht sofort aus bezahlten Leads.
+    // Faellt das hier durch, heilt der Status-Poll (pending + leere
+    // tiles = derselbe Pfad).
+    try {
+      await processJobIfFinished(admin, job as LeadGenJob);
+    } catch (err) {
+      console.error("[lists/generate] spillover-only processing failed", err);
+    }
+    return Response.json({ jobId: job.id });
   }
 
   const webhookUrl = `${request.nextUrl.origin}/api/lists/webhook?job=${job.id}&secret=${webhookSecret}`;
@@ -195,18 +303,13 @@ export async function POST(request: NextRequest) {
   if (websiteFilter === "without") serverFilters.push("only_without_website");
   if (websiteFilter === "with") serverFilters.push("only_with_website");
 
-  // Scan-Budget PRO Query aus Wunschgroesse + Plan-Groesse + Filter
-  // (Formel + Begruendung: lib/lists/fanout.ts).
-  const perQueryLimit = computePerQueryLimit(
-    listSize,
-    queryPlan.length,
-    websiteFilter !== "any",
-  );
-
   try {
     const requestId = await startGoogleMapsSearch({
-      query: queryPlan.map((entry) => entry.query),
-      limit: perQueryLimit,
+      // EIN Request fuer die ganze Welle, ein Limit pro Tile (§14b.1
+      // Punkt 3; kein totalLimit — sonst waere "nicht erreicht" von
+      // "0 Treffer" nicht unterscheidbar, §6b).
+      query: wave.tiles.map((tile) => tile.query),
+      limit: wave.limit,
       region: countryConfig.code,
       language: "en",
       webhookUrl,
@@ -233,7 +336,7 @@ export async function POST(request: NextRequest) {
           err instanceof OutscraperError ? String(err.status) : "unknown",
       },
     });
-    // failed gibt den Free-Slot wieder frei (partial index exkludiert failed).
+    // failed gibt den Job-Slot wieder frei (partial index exkludiert failed).
     await admin
       .from("lead_gen_jobs")
       .update({

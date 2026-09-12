@@ -7,26 +7,37 @@
  * Status-Poll des Clients (Self-Heal fuer verlorene Webhooks + lokale
  * Dev-Umgebung, die kein oeffentliches Webhook-Ziel hat). Der Claim
  * pending→processing stellt sicher, dass nur einer verarbeitet.
+ *
+ * Seit dem PLZ-Tiling (Spec §14b.1) traegt ein Job seine Welle in
+ * params.tiles; die Verarbeitung liefert zuerst den Spillover der
+ * Branche (bezahlte, noch ungelieferte Leads frueherer Laeufe), dann die
+ * Welle, und hakt die Tiles bei EMPFANG der Ergebnisse im Coverage-
+ * Ledger ab. Alt-Jobs (params.query_plan) laufen unveraendert durch.
  */
 
 import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { ListReady } from "@/emails/list-ready";
+import {
+  deleteSpillover,
+  fetchSpilloverByIds,
+  insertSpillover,
+  upsertCoverage,
+} from "./coverage";
 import { chargeJobDelivery, resolveStoredMaxSize } from "./credits";
 import { findCountry } from "./countries";
+import { assembleDelivery, buildTileOutcome } from "./delivery";
 import type { LocationInput, QueryPlanEntry } from "./fanout";
-import { getRequestResults } from "./outscraper";
+import { getRequestResults, type OutscraperResults } from "./outscraper";
 import {
   buildCustomFieldDefs,
-  filterByWebsite,
-  filterKnownPhones,
   insertGeneratedList,
   normalizePhoneKey,
-  orderForDelivery,
-  toCallableLeads,
+  type CallableLead,
   type WebsiteFilterMode,
 } from "./pipeline";
+import { TILE_LIMIT_FRESH, type TilePlanEntry } from "./tiles";
 
 export type LeadGenJobStatus = "pending" | "processing" | "ready" | "failed";
 
@@ -45,9 +56,21 @@ export interface LeadGenJobParams {
   max_size?: number;
   /** Location-Chips der Anfrage (Multi-Location, §14b Punkt 5). */
   locations?: LocationInput[];
-  /** Bei Erstellung fixierter Fan-out-Plan — Basis von Interleave +
-   *  City-Zuordnung in der Verarbeitung. Alte Jobs: undefined. */
+  /** Fan-out-Plan der Jobs VOR dem Tiling (Alt-Jobs) — Basis von
+   *  Interleave + City-Zuordnung. Tile-Jobs: undefined. */
   query_plan?: QueryPlanEntry[];
+  /** Coverage-Schluessel der Branche (tiles.categoryCanon). Tile-Jobs. */
+  category_canon?: string;
+  /** Bei Erstellung fixierte Welle (§14b.1). Leer = Spillover-only-Job
+   *  ohne Outscraper-Request; undefined = Alt-Job. */
+  tiles?: TilePlanEntry[];
+  /** Outscraper-`limit` der Welle — wird als limit_used abgehakt. */
+  tile_limit?: number;
+  /** Bei Erstellung fixierte Spillover-Auswahl (Rows aus Tiles DIESER
+   *  Suche, Filter passend, <= max_size) — wird vor der Welle geliefert. */
+  spillover_ids?: string[];
+  /** Stand VOR der Welle fuer "12 of 90 areas covered". */
+  coverage?: { covered_before: number; total: number };
 }
 
 export interface LeadGenJob {
@@ -150,6 +173,11 @@ export async function fetchJobsForUser(
   return (data ?? []) as LeadGenJob[];
 }
 
+/** Tile-Jobs tragen ein tiles-Array; leer = Spillover-only. */
+function isTileJob(job: LeadGenJob): boolean {
+  return Array.isArray(job.params.tiles) && Boolean(job.params.category_canon);
+}
+
 /**
  * Verarbeitet einen pending Job, sofern Outscraper fertig ist.
  * Idempotent + race-sicher: der Uebergang pending→processing ist der
@@ -160,23 +188,35 @@ export async function processJobIfFinished(
   job: LeadGenJob,
 ): Promise<LeadGenJob> {
   if (isStale(job)) return failJob(admin, job.id, "timeout");
-  if (job.status !== "pending" || !job.outscraper_request_id) return job;
+  if (job.status !== "pending") return job;
 
-  let results: Awaited<ReturnType<typeof getRequestResults>>;
-  try {
-    results = await getRequestResults(job.outscraper_request_id);
-  } catch (err) {
-    // Transient (Netz / Outscraper 5xx) — Job bleibt pending, der
-    // naechste Webhook-Retry oder Status-Poll versucht es erneut.
-    console.error("[lists] outscraper results fetch failed", err);
+  let results: OutscraperResults;
+  if (job.outscraper_request_id) {
+    try {
+      results = await getRequestResults(job.outscraper_request_id);
+    } catch (err) {
+      // Transient (Netz / Outscraper 5xx) — Job bleibt pending, der
+      // naechste Webhook-Retry oder Status-Poll versucht es erneut.
+      console.error("[lists] outscraper results fetch failed", err);
+      return job;
+    }
+    if (results.status === "pending") return job;
+  } else if (isTileJob(job) && job.params.tiles!.length === 0) {
+    // Spillover-only (§14b.1 Punkt 6): der Spillover der Branche deckt
+    // die Wunschgroesse — kein Outscraper-Request, die bezahlten Leads
+    // liegen schon da.
+    results = { status: "success", places: [] };
+  } else {
     return job;
   }
-  if (results.status === "pending") return job;
 
   // VOR dem Claim laden: wirft der Fetch (transient), bleibt der Job
   // pending und der naechste Poll heilt — nach dem Claim gaebe es einen
   // unheilbaren processing-Haenger.
   const knownPhones = await fetchExistingPhoneKeys(admin, job.user_id);
+  const spilloverRows = isTileJob(job)
+    ? await fetchSpilloverByIds(admin, job.params.spillover_ids ?? [])
+    : [];
 
   const { data: claimed, error: claimError } = await admin
     .from("lead_gen_jobs")
@@ -192,29 +232,46 @@ export async function processJobIfFinished(
     return failJob(admin, job.id, "outscraper_failed");
   }
 
-  // Markt-Sprache nur noch fuer die Tages-Namen der Oeffnungszeiten —
-  // die Outscraper-Query selbst laeuft seit 2026-08-05 immer mit
-  // language=en (Server-Filter, Spec §6b/§14b).
-  const marketLanguage = findCountry(job.params.country)?.language ?? "en";
-  const callable = toCallableLeads(
-    results.places,
+  // Spillover ZUERST (0 Outscraper-Kosten, zaehlt nur gegen Credits) —
+  // die bei Erstellung fixierte Auswahl (Tiles dieser Suche), nochmal
+  // durch Filter + Bestands-Dedupe; dann die Welle (Round-Robin, city-
+  // first), Cap auf max_size, Ueberschuss zurueck. Alles pur in
+  // delivery.ts — hier nur Job-Params reinreichen. Markt-Sprache nur
+  // noch fuer die Tages-Namen der Oeffnungszeiten (Query laeuft seit
+  // 2026-08-05 immer mit language=en, Spec §6b/§14b).
+  const delivery = assembleDelivery({
+    places: results.places,
+    spillover: spilloverRows,
+    knownPhoneKeys: knownPhones,
+    maxSize: resolveStoredMaxSize(job.params.max_size),
+    websiteFilter: job.params.website ?? "any",
     // Fallback-Branche ist nutzer-sichtbar (Lead-Feld) → Anzeige-Text.
-    job.params.industry_display ?? job.params.industry ?? null,
-    marketLanguage,
-  );
-  const filtered = filterByWebsite(callable, job.params.website ?? "any");
+    fallbackIndustry: job.params.industry_display ?? job.params.industry ?? null,
+    marketLanguage: findCountry(job.params.country)?.language ?? "en",
+    plan: job.params.tiles ?? job.params.query_plan,
+    city: job.params.city ?? null,
+  });
+  const { leads, overflow } = delivery;
 
-  // Bestands-Dedupe: was der Account schon in irgendeiner Liste hat,
-  // kommt nicht nochmal rein (und kostet keine Credits) — Vorstufe des
-  // Coverage-Ledgers, bleibt danach als Garantie-Netz (§14b.1).
-  const fresh = filterKnownPhones(filtered, knownPhones);
+  if (isTileJob(job) && job.params.tiles!.length > 0 && results.places.length === 0) {
+    Sentry.captureMessage("lead-gen wave returned no places", {
+      level: "warning",
+      tags: { feature: "lists-generator" },
+      extra: { jobId: job.id, tiles: job.params.tiles!.length },
+    });
+  }
 
-  const leads = orderForDelivery(
-    fresh,
-    job.params.query_plan,
-    job.params.city ?? null,
-  ).slice(0, resolveStoredMaxSize(job.params.max_size));
   if (leads.length === 0) {
+    // Coverage trotzdem abhaken: jede Query der Welle wurde ausgefuehrt
+    // (kein totalLimit), 0 Treffer sind ein echter Befund — sonst wuerde
+    // jeder Folge-Lauf dieselben leeren Tiles neu scannen.
+    await recordTileOutcome(
+      admin,
+      job,
+      results,
+      [],
+      delivery.consumedSpilloverIds,
+    );
     // raw_count auch hier: im Admin unterscheidet das "Outscraper hat
     // nichts geliefert" (0) von "Pipeline hat alles gefiltert" (>0).
     return failJob(admin, job.id, "no_results", {
@@ -269,8 +326,68 @@ export async function processJobIfFinished(
     Sentry.captureException(err, { tags: { area: "lead-credits" } });
   }
 
+  // Coverage + Spillover ebenfalls NACH der Liste: schlaegt der Insert
+  // fehl, bleiben die Tiles offen (Folge-Lauf sucht erneut, Dedupe
+  // filtert) — Coverage luegt nie in Richtung "abgedeckt ohne Lieferung".
+  await recordTileOutcome(
+    admin,
+    readyJob,
+    results,
+    overflow,
+    delivery.consumedSpilloverIds,
+  );
+
   await sendReadyEmail(admin, readyJob, listName);
   return readyJob;
+}
+
+/**
+ * Abhaken bei EMPFANG (§14b.1 Punkt 4): Coverage-Upsert fuer jedes Tile
+ * der Welle (result_count = gelieferte Plaetze seiner Query, 0 ist ein
+ * Befund), Ueberschuss in den Spillover, verbrauchten Spillover
+ * loeschen. Die Bilanz selbst rechnet delivery.buildTileOutcome (pur);
+ * hier nur die Ledger-Schluessel dazu + I/O. Fehler brechen den
+ * fertigen Job nicht — sie alarmieren (Sentry error): offene Tiles
+ * kosten beim naechsten Lauf Cents, eine verlorene Liste waere teurer.
+ */
+async function recordTileOutcome(
+  admin: SupabaseClient,
+  job: LeadGenJob,
+  results: OutscraperResults,
+  overflow: CallableLead[],
+  consumedSpilloverIds: string[],
+): Promise<void> {
+  if (!isTileJob(job)) return;
+  const ledgerKey = {
+    user_id: job.user_id,
+    category_canon: job.params.category_canon!,
+    job_id: job.id,
+  };
+
+  try {
+    const outcome = buildTileOutcome({
+      tiles: job.params.tiles!,
+      places: results.places,
+      overflow,
+      limitUsed: job.params.tile_limit ?? TILE_LIMIT_FRESH,
+      websiteFilter: job.params.website ?? "any",
+    });
+    await upsertCoverage(
+      admin,
+      outcome.coverage.map((row) => ({ ...ledgerKey, ...row })),
+    );
+    await insertSpillover(
+      admin,
+      outcome.spillover.map((row) => ({ ...ledgerKey, ...row })),
+    );
+    await deleteSpillover(admin, consumedSpilloverIds);
+  } catch (err) {
+    console.error("[lists] coverage/spillover update failed", err);
+    Sentry.captureException(err, {
+      tags: { feature: "lists-generator", area: "coverage" },
+      extra: { jobId: job.id },
+    });
+  }
 }
 
 const PHONE_FETCH_PAGE = 1000;
