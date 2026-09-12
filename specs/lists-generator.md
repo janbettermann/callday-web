@@ -300,6 +300,44 @@ Drei Läufe `dentist, Köln, DE` limit 50 (en / de / de-Kontrolle):
   Server-Filter zählt `limit` gescannte Plätze, geliefert/bezahlt werden
   nur Treffer — wie gehabt, §13b.)
 
+### Tiling-Sonde 2026-09-12 — PLZ und `coordinates` tilen beide sauber
+
+Offizielle Doku (docs.outscraper.com/endpoints/google-maps-search), verifiziert:
+- `coordinates` = `"lat,lng"`, „defines the coordinates of the location where
+  you want your query to be applied" — ein **Bias**, kein Radius, kein Zoom,
+  kein `@lat,lng,zoom`-Suffix.
+- **Kein Ausschluss** bekannter `place_id`s — Coverage führen wir selbst.
+- `totalLimit` (Gesamtlimit über alle Queries eines Requests) existiert —
+  **fürs Tiling NICHT nutzen:** nicht erreichte Queries sind von „0 Treffer"
+  nicht unterscheidbar, das Abhaken würde lügen.
+- Max 500 Places pro Query. Zip-Code-Tiling ist Outscrapers eigene
+  Empfehlung für dichte Gebiete (Query-Format wie §6b oben).
+
+Fünf synchrone Queries „Dentist", Köln, je `limit 20`, Filter
+`with_phone` + `operational_only`:
+
+| Lauf | Anker | median | max | in Ziel-PLZ |
+|---|---|---|---|---|
+| A Stadt „Dentist, Köln" | Dom | 1,1 km | **470 km** (Berliner Treffer) | – |
+| B `coordinates` Dom | Dom | 1,4 km | 4,6 km | – |
+| C `coordinates` Porz (9 km SO) | Porz | 2,0 km | 8,6 km | – |
+| D „Dentist, 50667, Köln" | Altstadt | 0,6 km | 2,9 km | 15/20 |
+| E „Dentist, 51103, Köln" | Kalk | 0,8 km | 5,1 km | 15/20 |
+
+Overlaps: **B∩C = 0**, **D∩E = 1**, A∩B 12, A∩D 13. Folgerungen:
+1. **PLZ-Queries tilen sauber** — 75 % der Treffer in der Ziel-PLZ,
+   Nachbar-PLZ überlappen kaum. Dichte-adaptiv (Innenstadt-PLZ klein,
+   Land-PLZ groß). → v1-Tile.
+2. **`coordinates` öffnet ein lokales Fenster** (k-nearest-artig, ~5 km bei
+   limit 20, wächst mit dem Limit) — ein Geo-Raster ohne Postal-Daten ist
+   machbar, aber starre Zellen sind nicht dichte-adaptiv. → Fallback für
+   Länder ohne Postal-Dump (§14b.1 Punkt 8).
+3. **Tiling verbessert die Qualität**: Fremdstadt-Ausreißer (Berlin) kommen
+   nur in der Stadt-Query vor — PLZ-Queries liefern sie nicht.
+4. Da nur Geliefertes bezahlt wird, kostet ein **hohes Limit pro PLZ**
+   (50) nichts extra und macht ein Tile fast immer erschöpft —
+   „abgehakt" wird dadurch „fertig" (§14b.1 Punkt 5).
+
 ## 7. Datenmapping (Outscraper → Callday `leads`)
 
 Reuse der **bestehenden Import→`lead_list`→`leads`-Pipeline** (Outscraper ist nur
@@ -800,67 +838,133 @@ bestätigt. Faktenbasis für alles Location-bezogene: §6b.
      `city`-Feld fürs Deploy-Fenster); Regionen server-validiert
      (Existenz + Land). `params.city` = Anzeige-Join für
      BuildingView/Listen-Name.
-   - **Coverage-Ledger** (Design-Baustein, Umsetzung mit diesem Paket oder
-     direkt danach): pro Account (Branche, Gebiet, Zeitpunkt, geliefert)
-     abhaken; Gebiet GENERISCH typisieren (`city | zip`) — v1 läuft auf
-     Stadt-Granularität, PLZ-Tiefenausbau ist späteres Upgrade im selben
-     Schema (Detail-Design im Unterabschnitt unten). Wiederholungs-Suchen:
-     eigener Ausschluss-Filter gegen vorhandene Leads des Accounts
-     (Telefon/place_id) IMMER als Garantie-Netz; `skipPlaces` nur als
-     Kosten-Optimierung. Outscraper-seitiges Cross-Task-Filtern existiert
-     nicht (§6b).
-   - **Geo-Daten-Asset** (Jan-Frage 2026-08-05, Entscheidung: Hybrid):
-     Quelle = GeoNames-Dumps (CC-BY, Attribution nötig; `cities1000` +
-     Postal-Code-Dumps: DE ~8.200 PLZ, US ~41k ZIP, AU komplett, CA nur
-     FSA-3-Zeichen-Gebiete frei — reicht als Tile-Granularität). KEINE
-     Runtime-API (Latenz/Rate-Limits/Drift der Ledger-Schlüssel), sondern
-     Import-Script → eigene Tabellen (`geo_areas`, `geo_tiles` mit
-     Einwohnerzahl für Sortierung), Refresh ~jährlich per Script-Rerun,
-     nur additiv (Tile-IDs sind Ledger-Referenzen, nie umbenennen).
-     Nebeneffekt: „Top-Städte pro State" für v1-Fan-out fällt gratis aus
-     `geo_tiles` (Sort nach Einwohnern) — keine Hand-Kuratierung.
+   - **Coverage-Ledger** (Design-Baustein, **Umsetzung als eigenes Paket,
+     Jan-Entscheidung 2026-09-12 — Detail-Design §14b.1**): pro Account
+     (Branche, Tile, Zeitpunkt, geliefert) abhaken. **v1 läuft direkt auf
+     PLZ-Granularität** (Sonde §6b: Stadt-Tiles wären für Großstädte zu
+     grob — Köln wäre nach einem 30er-Lauf „abgehakt", obwohl 90 %
+     ungesehen). Tile-ID = natürlicher Schlüssel (`DE-50667`), kein
+     Surrogat aus einer Import-Tabelle. Wiederholungs-Suchen: eigener
+     Ausschluss-Filter gegen vorhandene Leads des Accounts (Telefon/
+     place_id) IMMER als Garantie-Netz; `skipPlaces` bleibt ungenutzt
+     (Jitter, §6b). Outscraper-seitiges Cross-Task-Filtern existiert nicht.
+   - **Geo-Daten-Asset** (Stand 2026-09-12, vereinfacht gegenüber 08-05):
+     Quelle = GeoNames **Postal-Code-Dump** (CC-BY, Attribution im Imprint;
+     DE ~8.200 PLZ, AT, CH, US ~41k ZIP, weitere Länder je nach Dump).
+     `cities1000` wird für v1 NICHT gebraucht. KEINE Runtime-API, sondern
+     Import-Script → Tabelle `geo_postal_codes (country, postal_code,
+     place_name, admin1, lat, lng)`, PK (country, postal_code). Liefert
+     nur die **Zentroide** — die PLZ selbst ist der Tile-Schlüssel, ein
+     Refresh kann keine Coverage-Referenzen verschieben. Refresh ~jährlich,
+     additiv. **Stadt → PLZ-Menge über Koordinaten, nicht über Namen**
+     (§14b.1 Punkt 1) — sprachunabhängig, Exonyme („Cologne"/„Köln")
+     sind kein Thema. Die Hand-Kuration in `geo-regions.ts` bleibt für
+     den State-Fan-out vorerst bestehen; Ablösung durch Postal-Daten
+     (Top-PLZ pro State nach Dichte) ist v2.
 
-### 14b.1 Ablauf-Design Fan-out + Coverage (erarbeitet 2026-08-05, Beispiel „Dentist, Bayern")
+### 14b.1 Ablauf-Design PLZ-Tiling + Coverage (Stand 2026-09-12 — ersetzt den Entwurf vom 05.08.)
 
-1. **Chip → Tiles:** State-Chip (`DE-BY`) expandiert via `geo_tiles` zu
-   geordneten Tiles (Einwohnerdichte absteigend; v1 Stadt-Tiles, später
-   PLZ-Tiles ~2.050 für BY). Tile = atomare Query-Einheit.
-2. **Coverage-Lookup:** `lead_gen_coverage (user_id, category_canon,
-   tile_id, result_count, queried_at, job_id; PK user+cat+tile)` filtert
-   schon abgesuchte Tiles raus. `category_canon` = normalisierte
-   Kategorie (Alias-Klick → englische Kanonik; Freitext lowercase/trim)
-   — „Zahnarzt" und „Dentist" treffen DIESELBE Coverage.
-3. **Wellen:** pro Welle ~25 offene Tiles als EIN Outscraper-Request
-   (Multi-Query, `dropDuplicates`, kleines per-Query-Limit), Request-ID
-   je Welle in `lead_gen_job_tiles (job_id, tile_id, wave,
-   outscraper_request_id, status)`. Webhook-Handler verarbeitet UND
-   stößt die nächste Welle an (Event-Kette, kein Langläufer — passt zu
-   Vercel); bestehender Status-Poll heilt verlorene Webhooks pro Welle.
-   Stop: Ziel erreicht / Tiles leer / Welle liefert ~nichts /
-   Sicherheits-Cap (Wellen+Kosten).
-4. **Abhaken bei EMPFANG, nie beim Senden** (Kern-Invariante):
-   Coverage-Upsert erst wenn Ergebnisse da (Zeilen→Tile-Zuordnung über
-   die `query`-Spalte der Response, live verifiziert). `result_count: 0`
-   wird AUCH abgehakt (bezahlte Erkenntnis „hier ist nichts").
-   Crash zwischen Senden+Empfang ⇒ Tile bleibt offen ⇒ Folge-Lauf sucht
-   erneut — Fehlerfall kostet Cents, Coverage lügt NIE.
-5. **Cap + Spillover:** Round-Robin über Städte beim Füllen bis
-   max_list_size/Credits. Überschüssige valide Leads aus ABGEHAKTEN
-   Tiles gehen in `lead_gen_spillover (user, category_canon, tile_id,
-   lead_data jsonb)` — sonst wären sie für den User für immer verloren
-   (Tile wird ja übersprungen). Folge-Lauf gleicher Kategorie leert
-   Spillover ZUERST (0 Outscraper-Kosten, zählt nur gegen Credits).
-6. **Wiederholungslauf:** Spillover → dann Wellen ab erstem offenen
-   Tile. UI kann ehrlich fortschreiben („last list covered Munich &
-   Nuremberg — continuing with Augsburg"). Alles abgehakt ⇒ klare
-   Ansage statt Leer-Liste; Coverage-TTL/Refresh (z. B. 12 Mon. via
-   `queried_at`) = spätere Produktentscheidung, Schema kann es ab Tag 1.
+**Status:** Jan-entschieden 2026-09-12 nach Sanity-Check (Doku + Sonde,
+§6b „Tiling-Sonde"). Umsetzung geplant als eigenes Paket (~3 Tage).
+**Änderungen gegenüber 08-05:** PLZ statt Stadt als v1-Tile · Tile-ID =
+natürlicher Schlüssel · Stadt→PLZ über Koordinaten · hohes Limit pro Tile
+· Welle nach `max_size` dimensioniert · **kein Wellen-Chaining in v1** ·
+Koordinaten-Raster als Fallback. Für den User ändert sich am Formular
+NICHTS — Stadt-Chip bleibt Stadt-Chip, das Tiling läuft im Hintergrund.
 
-Stabilitäts-Prinzipien: Tile-IDs nur aus dem versionierten Geo-Snapshot
-(nie aus Live-APIs → kein Ledger-Drift); Idempotenz auf jeder Stufe
-(Upserts, Request-IDs, Poll-Heilung); konservatives Abhaken; „ein Job
-gleichzeitig pro Account" (Jan-Regel) eliminiert Coverage-Races; v1
-Stadt-Tiles und PLZ-Ausbau teilen Schema + Pipeline.
+**Schema (alles additiv, Migrationen im App-Repo):**
+- `geo_postal_codes (country, postal_code, place_name, admin1, lat, lng)`
+  PK (country, postal_code) — GeoNames-Import, nur Zentroide (§14b Punkt 5).
+- `lead_gen_coverage (user_id, category_canon, tile_id, result_count,
+  limit_used, queried_at, job_id)` PK (user_id, category_canon, tile_id).
+  `tile_id` = `DE-50667` (PLZ) bzw. `GH-u1hcv` (Geohash-Fallback, Punkt 8).
+- `lead_gen_spillover (id, user_id, category_canon, tile_id, lead_data
+  jsonb, created_at)` — Index (user_id, category_canon).
+- `lead_gen_jobs.params.tiles: [{tile_id, query}]` ersetzt `query_plan`
+  für Stadt-Chips (Plan wird bei Job-Erstellung fixiert, wie heute).
+- (Optional, spart Places-Calls) `geo_place_cache (place_id, lat, lng,
+  viewport jsonb, fetched_at)`.
+
+1. **Stadt-Chip → PLZ-Tiles.** Chip mit Places-`place_id` → Place Details
+   (Essentials: `location` + `viewport`; einmalig, gecacht) → alle
+   `geo_postal_codes` desselben Landes, deren Zentroid in der Viewport-Box
+   liegt → **sortiert nach Distanz zum Stadtzentrum** (deterministisch,
+   Zentrum zuerst = dichter). Freitext-Chip ohne place_id → GeoNames
+   `place_name`-Match (diakritik-/ß-tolerant, wie `category-aliases`);
+   kein Treffer → heutige Stadt-Query als Tile `CITY-<norm-name>` (kein
+   Feature-Verlust, nur kein Tiling). State-Chips laufen v1 weiter über
+   den bestehenden Top-Städte-Fan-out, jede Stadt dann wie hier.
+2. **Coverage-Lookup.** `category_canon` = englische Kanonik bzw.
+   Freitext lowercase/trim — „Zahnarzt" und „Dentist" treffen DIESELBE
+   Coverage. Abgehakte Tiles (Punkt 5: erschöpft) werden übersprungen,
+   „möglicherweise nicht erschöpfte" mit höherem Limit erneut gestellt.
+3. **Eine Welle pro Job.** Welle = die ersten `ceil(max_size /
+   EXPECTED_PER_TILE)` offenen Tiles (Konstante, Start 12, nach den
+   ersten Live-Läufen kalibrieren), min 3, max 25 — als EIN
+   Outscraper-Request, `dropDuplicates=true`, Query-Format
+   `Dentist, 50667, Köln` (Sonde D/E), **kein `totalLimit`** (§6b).
+   `limit` pro Tile = 50 (Punkt 5). Reicht die Welle nicht, ist die Liste
+   kleiner — „Max list size" deckt das (Jan 2026-09-11: keine
+   Zusatz-Copy nötig); der Folge-Lauf macht beim nächsten offenen Tile
+   weiter. Mehrere Stadt-Chips: Tiles im Round-Robin über Chips ziehen
+   (Fairness wie heute `orderForDelivery`).
+4. **Abhaken bei EMPFANG, nie beim Senden** (Kern-Invariante, unverändert):
+   Coverage-Upsert erst, wenn Ergebnisse da sind; Zeile→Tile über die
+   `query`-Spalte der Response (live verifiziert). Jede Query der Welle
+   wurde ausgeführt (kein `totalLimit`), daher ist `result_count: 0` ein
+   echter Befund und wird abgehakt. Crash zwischen Senden und Empfang ⇒
+   Tile bleibt offen ⇒ Folge-Lauf sucht erneut. Fehlerfall kostet Cents,
+   Coverage lügt NIE.
+5. **Erschöpfungs-Semantik** (neu — schließt die Lücke des 08-05-Entwurfs):
+   `limit_used` wird mitgespeichert. `result_count < limit_used` ⇒ Tile
+   **erschöpft** (Normalfall bei limit 50: kaum eine PLZ hat mehr
+   Betriebe einer Branche). `result_count == limit_used` ⇒ „möglicherweise
+   mehr" ⇒ beim nächsten Lauf dieses Tile mit `limit 200` erneut stellen,
+   Bestands-Dedupe filtert die Bekannten, `limit_used` wird
+   hochgeschrieben. Bezahlt wird nur Geliefertes — das hohe Limit kostet
+   bei kleinen PLZ nichts (§6b Punkt 4). Kein `skipPlaces` (Jitter).
+6. **Cap + Spillover.** Aus den gelieferten, gefilterten, dedupten Leads
+   werden `max_size` geliefert (city-first, Round-Robin über Chips).
+   Überschuss aus **abgehakten** Tiles → `lead_gen_spillover` (Tile wird
+   ja künftig übersprungen; sonst wären die Leads verloren, obwohl
+   bezahlt). Folge-Lauf gleicher `category_canon` leert Spillover
+   **zuerst** (0 Outscraper-Kosten, zählt nur gegen Credits), dann erst
+   neue Welle. Spillover-Leads laufen beim Ausliefern nochmal durch den
+   Bestands-Dedupe (der User könnte sie inzwischen importiert haben).
+7. **Folge-Lauf + UX.** BuildingView/Listen-Kachel: „Continuing in Köln —
+   12 of 90 areas covered." (Wort „areas", nie „zip codes" — der User
+   soll nichts Neues lernen.) Alles abgehakt ⇒ vor dem Start klare
+   Ansage statt Leer-Liste: „You've covered all of Köln for Dentists.
+   Try a nearby city or another industry." Coverage-TTL (z. B. 12 Monate
+   über `queried_at`) = spätere Produktentscheidung, Schema kann es ab
+   Tag 1. Ein kleiner Coverage-Indikator am Chip ist UX-Zucker, nicht v1.
+8. **Fallback ohne Postal-Daten** (Länder ohne Dump): Koordinaten-Raster —
+   Viewport-Box in Zellen (Geohash-Präzision 5, ~4,9 km) teilen, Zentroid
+   als `coordinates` (§6b: B∩C = 0, lokales Fenster bewiesen), Tile-ID
+   `GH-<geohash>`, Limit 30 (Fenster wächst mit dem Limit — nicht zu hoch).
+   Gleiches Schema, gleiche Pipeline. **v2**, nur wenn ein solcher Markt
+   nachgefragt wird.
+9. **Stabilitäts-Prinzipien** (unverändert + ergänzt): Tile-IDs sind
+   natürliche Schlüssel (PLZ, Geohash) — kein Ledger-Drift durch
+   Daten-Refresh; Idempotenz auf jeder Stufe (Upserts, Request-IDs,
+   Poll-Heilung, Reaper aus 09-11); konservatives Abhaken; „ein Job
+   gleichzeitig pro Account" eliminiert Coverage-Races; Bestands-Dedupe
+   bleibt als Garantie-Netz unter allem.
+10. **Bewusst NICHT v1:** Wellen-Chaining (Webhook stößt nächste Welle an
+    — komplexester Teil des alten Entwurfs, kann später ohne
+    Schema-Änderung dazu); Quadtree-Splitting; Coverage-TTL-Logik;
+    Ablösung von `geo-regions.ts` durch Postal-Daten; Coverage-Anzeige
+    im Formular.
+11. **Reihenfolge beim Bau:** (a) GeoNames-Import + `geo_postal_codes` +
+    Stadt→PLZ-Auswahl inkl. Place-Details-Cache, mit Unit-Tests auf
+    Köln/Frankfurt/Berlin-Viewports (~1 Tag) → (b) Coverage-Tabelle +
+    Lookup + Abhaken bei Empfang + Erschöpfungs-Semantik (~0,5) → (c)
+    Fan-out auf Tiles + Welle + Query-Format, `params.tiles` (~0,5) →
+    (d) Spillover + Folge-Lauf + Copy (~0,5) → (e) Live-Verifikation mit
+    dem Test-User: Erstlauf Köln, Wiederholung (Spillover zuerst, dann
+    nächste PLZ), Erschöpfungs-Fall, Freitext-Stadt ohne place_id
+    (~0,5). Sentry-Warning bei Welle ohne Treffer, Error bei
+    Coverage-Upsert-Fehler.
 
 ## 15. Verweise
 
