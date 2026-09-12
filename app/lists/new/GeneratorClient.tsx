@@ -15,6 +15,7 @@ import { IndustryAutocomplete } from "../IndustryAutocomplete";
 import { InfoPopover } from "../InfoPopover";
 import { LocationsField, type LocationChip } from "../LocationsField";
 import {
+  coverageLine,
   failureMessage,
   fetchJobStatus,
   type JobView,
@@ -227,6 +228,8 @@ export function GeneratorClient() {
             locations: locations.map((chip) => ({
               name: chip.name,
               regionId: chip.regionId,
+              // Places-ID → Stadt-zu-PLZ-Aufloesung am Server (Tiling).
+              placeId: chip.placeId,
             })),
             country,
             website: websiteFilter,
@@ -245,6 +248,16 @@ export function GeneratorClient() {
           // 0-Credits-Sperre mit.
           setStatusData(await fetchJobStatus());
           setFormError("You've used all your free lead credits.");
+          return;
+        }
+        if (response.status === 422) {
+          // Alles abgedeckt (Coverage-Ledger): der Server formuliert die
+          // Ansage ("You've already covered all of Köln for Dentist …").
+          const body = (await response.json()) as { message?: string };
+          setFormError(
+            body.message ??
+              "You've already covered that area for this industry. Try a nearby city or another industry.",
+          );
           return;
         }
         if (!response.ok) {
@@ -531,6 +544,9 @@ function BuildingView({ job }: { job: JobView }) {
   // Ehrliche Stufen-Zuordnung: pending = Outscraper scannt (Stufe 1),
   // processing = unsere Pipeline laeuft (Stufe 2) — keine Fake-Timer.
   const activeStep = job.status === "pending" ? 0 : 1;
+  // Folge-Lauf derselben Branche (Coverage-Ledger): sagen, dass wir
+  // weitermachen statt von vorn — "areas", nie "zip codes".
+  const coverage = coverageLine(job.params);
 
   return (
     <div className="lists-inner">
@@ -539,6 +555,7 @@ function BuildingView({ job }: { job: JobView }) {
         <p className="lists-worksub">
           {industry} in {city} — this usually takes 1 to 3 minutes.
         </p>
+        {coverage && <p className="lists-worksub">{coverage}</p>}
       </header>
 
       <section className="lists-buildcard">

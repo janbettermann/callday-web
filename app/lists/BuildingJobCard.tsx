@@ -16,9 +16,12 @@ const POLL_INTERVAL_MS = 5000;
 export function BuildingJobCard({
   jobId,
   listName,
+  coverageLine,
 }: {
   jobId: string;
   listName: string | null;
+  /** "Continuing in Köln — 12 of 90 areas covered." bei Folge-Laeufen. */
+  coverageLine: string | null;
 }) {
   const router = useRouter();
 
@@ -44,6 +47,7 @@ export function BuildingJobCard({
         <span className="dash-tile-name">{listName ?? "Your list"}</span>
         <span className="lists-src lists-src-generated">Generated</span>
       </div>
+      {coverageLine && <p className="dash-tile-sub">{coverageLine}</p>}
       <p className="dash-tile-sub">
         Usually 1 to 3 minutes — we&apos;ll email you when it&apos;s ready.
       </p>

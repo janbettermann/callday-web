@@ -30,6 +30,8 @@ export interface ListCardData extends DashboardList {
 export interface BuildingList {
   jobId: string;
   listName: string;
+  /** Coverage-Hinweis bei Folge-Laeufen (job-view.ts coverageLine). */
+  coverageLine: string | null;
 }
 
 export function MyLists({
@@ -57,6 +59,7 @@ export function MyLists({
             <BuildingJobCard
               jobId={building.jobId}
               listName={building.listName}
+              coverageLine={building.coverageLine}
             />
           )}
           {lists.map((list) => (

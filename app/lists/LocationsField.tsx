@@ -27,6 +27,9 @@ export interface LocationChip {
   name: string;
   /** Gesetzt bei Region-Chips (GEO_REGIONS-ID). */
   regionId?: string;
+  /** Google-Place-ID bei Staedten aus dem Places-Vorschlag — der Server
+   *  loest darueber Stadt → PLZ-Tiles auf (Spec §14b.1). Freitext: keine. */
+  placeId?: string;
   /** true = aus Vorschlag uebernommen (kanonischer Name). */
   canonical: boolean;
 }
@@ -60,6 +63,9 @@ export function LocationsField({
 
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // Place-IDs der aktuellen Staedte-Vorschlaege, per Option-Value — die
+  // geteilte SuggestOption kennt nur value/label/sublabel.
+  const placeIdByValueRef = useRef(new Map<string, string>());
   const atCap = chips.length >= MAX_LOCATIONS;
 
   useEffect(() => {
@@ -92,13 +98,18 @@ export function LocationsField({
         );
         if (!response.ok) return;
         const data = (await response.json()) as {
-          suggestions: Array<{ city: string; region: string }>;
+          suggestions: Array<{
+            city: string;
+            region: string;
+            placeId: string | null;
+          }>;
         };
-        const cityOptions = data.suggestions.map((s) => ({
-          value: `${CITY_PREFIX}${s.city}`,
-          label: s.city,
-          sublabel: s.region,
-        }));
+        placeIdByValueRef.current = new Map();
+        const cityOptions = data.suggestions.map((s) => {
+          const value = `${CITY_PREFIX}${s.city}`;
+          if (s.placeId) placeIdByValueRef.current.set(value, s.placeId);
+          return { value, label: s.city, sublabel: s.region };
+        });
         const merged = [...regionOptions, ...cityOptions];
         setOptions(merged);
         setOpen(merged.length > 0);
@@ -130,7 +141,11 @@ export function LocationsField({
         canonical: true,
       });
     } else {
-      addChip({ name: option.label, canonical: true });
+      addChip({
+        name: option.label,
+        placeId: placeIdByValueRef.current.get(option.value),
+        canonical: true,
+      });
     }
   }
 

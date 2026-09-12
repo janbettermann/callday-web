@@ -261,6 +261,16 @@ export default async function ListsAdminPage({ params, searchParams }: PageProps
                     </td>
                     <td style={{ padding: "11px 14px", color: "var(--ink)" }}>
                       {job.query}
+                      {job.params.tiles && (
+                        <span style={{ color: "var(--ink-faint)" }}>
+                          {" "}
+                          ({job.params.tiles.length} Tiles
+                          {job.params.coverage
+                            ? `, ${job.params.coverage.covered_before}/${job.params.coverage.total} abgehakt`
+                            : ""}
+                          )
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: "11px 14px", color: "var(--ink-dim)" }}>
                       {websiteFilterLabel(job)}

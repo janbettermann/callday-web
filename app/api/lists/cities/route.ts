@@ -21,6 +21,7 @@ const MAX_SUGGESTIONS = 5;
 interface PlacesAutocompleteResponse {
   suggestions?: Array<{
     placePrediction?: {
+      placeId?: string;
       structuredFormat?: {
         mainText?: { text?: string };
         secondaryText?: { text?: string };
@@ -75,10 +76,13 @@ export async function GET(request: NextRequest) {
     }
 
     const payload = (await response.json()) as PlacesAutocompleteResponse;
+    // placeId reist mit bis zum Chip → Generate-Request: Schluessel der
+    // Viewport-Aufloesung Stadt → PLZ-Tiles (Spec §14b.1 Punkt 1).
     const suggestions = (payload.suggestions ?? [])
       .map((s) => ({
         city: s.placePrediction?.structuredFormat?.mainText?.text ?? "",
         region: s.placePrediction?.structuredFormat?.secondaryText?.text ?? "",
+        placeId: s.placePrediction?.placeId ?? null,
       }))
       .filter((s) => s.city)
       .slice(0, MAX_SUGGESTIONS);
