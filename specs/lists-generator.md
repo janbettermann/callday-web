@@ -966,6 +966,94 @@ NICHTS — Stadt-Chip bleibt Stadt-Chip, das Tiling läuft im Hintergrund.
     (~0,5). Sentry-Warning bei Welle ohne Treffer, Error bei
     Coverage-Upsert-Fehler.
 
+**UMSETZUNG 2026-09-12 (Schritte a–d gebaut, Stand vor Live-Verifikation e;
+Abweichungen zur Skizze oben sind fett):**
+
+- **Schema:** Migration **0056** (App-Repo, deployed): `geo_postal_codes`
+  (zusaetzlich `search_names text[]` + GIN-Index fuer den Namens-Match,
+  `admin1` fuer den State-Match), `geo_place_cache`, `lead_gen_coverage`,
+  `lead_gen_spillover`. **Abweichung: `website_filter` gehoert zum
+  Coverage-Key** (PK user/canon/tile/filter) — ein „ohne Website"-Lauf
+  deckt ein Tile NICHT fuer „alle Betriebe" ab (er hat ~5 % gesehen);
+  umgekehrt deckt ein `any`-Lauf jeden Filter ab. Der Lookup
+  (`tiles.classifyTile`) wertet Rows mit Filter = angefragt ODER `any`.
+- **Daten:** `scripts/import-postal-codes.ts` (tsx, dependency-freier
+  Mini-ZIP-Reader, Upsert in 500er-Chunks, Re-Run = Refresh) +
+  `lib/lists/geonames.ts` (pur, getestet): eine Row pro PLZ (Zentroid =
+  Mittelwert aller Zeilen, Name = erste Zeile vor dem Komma —
+  „Wien, Innere Stadt" → „Wien", Suchschluessel = alle Ortsnamen).
+  **DE-Grossempfaenger-PLZ** (Firmen-/Behoerden-Adressen — im Dump exakt die
+  8.247 Zeilen ohne Accuracy-Wert) werden verworfen → 8.172 echte PLZ;
+  US/CH-Zeilen ohne Accuracy sind echte Orte und bleiben. Importiert:
+  DE, AT, CH, US (GeoNames CC-BY — Attribution im Imprint nachziehen).
+- **Stadt → Tiles** (`lib/lists/geo-data.ts resolveCityTiles`): Chip mit
+  `place_id` → Place Details (Essentials-SKU, `geo_place_cache`) → alle PLZ
+  des Landes in der Viewport-Box. **Reihenfolge: Namens-Treffer zuerst,
+  dann Distanz** — die Box einer Grossstadt schneidet Nachbargemeinden an
+  (Huerth liegt in der Koeln-Box, naeher am Dom als Porz); wer „Köln" sagt,
+  bekommt erst Koeln, die Nachbarn erst danach. Ohne place_id (Freitext,
+  State-Fan-out-Staedte): `search_names`-Match ueber `normalizePlaceName`
+  (Klammern, Apostrophe, „St."↔„Saint" — Abgleich Geo-Asset ↔ GeoNames),
+  bei Region-Staedten zusaetzlich `admin1` ∈ {Region-Name, Aliase}
+  (GeoNames mischt „Bayern"/„Bavaria"). Kein Treffer → `CITY-<CC>-<name>`
+  mit der alten Stadt-Query (Tile-ID **mit Land**, damit Paris/FR und
+  Paris/US-TX nicht kollidieren). Bekannte Fallback-Faelle (geprueft,
+  bewusst kein Prefix-Match): Offenbach am Main, Bernau bei Berlin,
+  Lutherstadt Wittenberg, Tulln, Saalfelden, Oberwart, Hoover, Brooklyn
+  Park, O'Fallon, Lakewood/CO, Parma/OH, Moore/OK.
+- **Query-Format** `Dentist, 50354, Hürth` — Ort der PLZ, nicht der
+  Chip-Name (fuer Nachbar-PLZ in der Box ist das die richtige Stadt).
+- **Welle** (`lib/lists/tiles.ts planWave`): `needed = max_size −
+  verfuegbarer Spillover` (nur Rows, die den Filter erfuellen); Groesse
+  clamp(ceil(needed / **20**), 3, 25) — kalibriert nach den ersten
+  Live-Laeufen (sieben Koeln/Huerth-Tiles: 13–50 Plaetze, Schnitt 29; mit
+  dem Startwert 12 holte eine 250er-Liste ~600 Records fuer 250 Leads,
+  vorher 350). **Erschoepfung mit Puffer:** `result_count < limit − 5` ⇒
+  abgehakt, alles darueber ⇒ Retry — `dropDuplicates` schlaegt Grenz-
+  Treffer dem Nachbar-Tile zu (live 48/50 fuer eine Innenstadt-PLZ).
+  Round-Robin ueber Chips, ein State-Chip
+  intern Round-Robin ueber seine Staedte; dasselbe Tile unter zwei Chips
+  zaehlt einmal. **Ein Request hat EIN Limit ⇒ eine Welle ist entweder
+  komplett „fresh" (50) oder komplett „retry" (200)** — Retry-Tiles kommen
+  erst dran, wenn keine frischen mehr offen sind. Filter-Laeufe: Limit 500
+  (Scans gratis, Tile sicher erschoepft). CITY-Fallback-Tiles heben das
+  Wellen-Limit auf das alte Stadt-Budget (×1,4 der Wunschgroesse).
+- **Spillover:** **ALLER Ueberschuss** der Welle geht in den Spillover
+  (nicht nur der abgehakter Tiles — auch bei Retry-Tiles vermeidet das
+  Doppelzahlung; der Dedupe faengt beim Retry alles). Folge-Lauf: Spillover
+  zuerst — **aber nur Rows aus Tiles der AKTUELLEN Suche** (Praezisierung
+  zu „gleiche category_canon": wer „Hürth" sagt, bekommt keine
+  liegengebliebenen Koeln-Leads, obwohl beides „dentist" ist;
+  `tiles.selectSpillover`, Auswahl in `params.spillover_ids` fixiert) —
+  nochmal durch Filter + Bestands-Dedupe; Rows mit anderem Filter bleiben
+  liegen, tote (Nummer inzwischen im Account) werden aufgeraeumt. Reicht der
+  Spillover fuer die Wunschgroesse → **Spillover-only-Job** ohne
+  Outscraper-Request, direkt in der Generate-Route verarbeitet.
+- **Zusammenfuehrung ist pur** (`lib/lists/delivery.ts`, getestet):
+  `assembleDelivery` (Spillover zuerst → Welle → Cap → Ueberschuss,
+  Dedupe-Kette Bestand → Spillover → Welle) und `buildTileOutcome`
+  (Coverage-Rows + Spillover-Zuordnung). jobs.ts macht nur noch I/O.
+- **Abhaken bei Empfang** (jobs.ts `recordTileOutcome`): NACH Listen-Insert
+  + Ready (ein Insert-Fehler laesst die Tiles offen); im `no_results`-Fall
+  trotzdem (0 Treffer = Befund, sonst scannt jeder Folge-Lauf dieselben
+  leeren Tiles). `result_count` = Plaetze pro Query NACH der place_id-
+  Gruppierung (`countPlacesByQuery` — Enrichment-Zeilen zaehlen nicht).
+  Fehler → Sentry error (area `coverage`), Job bleibt ready. Welle ohne
+  Treffer → Sentry warning.
+- **UX:** Generate antwortet **422 `area_covered`** mit Server-Copy
+  („You've already covered all of Köln for Zahnarzt. Try a nearby city or
+  another industry."); BuildingView + Building-Kachel zeigen bei
+  Folge-Laeufen „Continuing in Köln — 12 of 90 areas covered."
+  (`params.coverage`, `job-view.ts coverageLine`); Admin-Tabelle zeigt
+  Tiles + abgehakt pro Job.
+- **Client:** Places-Autocomplete liefert `placeId`, der Chip traegt sie,
+  der Generate-Request schickt `locations[].placeId`; Server validiert
+  das Format. Freitext-Chips bleiben ohne.
+- **Kompatibilitaet:** Alt-Jobs (`params.query_plan`) laufen unveraendert
+  durch (`orderForDelivery` nimmt beide Plan-Formen); `buildQueryPlan` /
+  `computePerQueryLimit` sind durch `expandLocations` + `planWave` ersetzt.
+  `params.tiles` leer = Spillover-only, undefined = Alt-Job.
+
 ## 15. Verweise
 
 - Pricing/Paywall-Kette: Memory `project_pricing_strategy`, App-Repo
