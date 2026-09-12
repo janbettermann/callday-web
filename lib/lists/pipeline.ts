@@ -15,6 +15,7 @@ import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { choosePrefillEmail, collectEmailCandidates } from "./emails";
 import type { QueryPlanEntry } from "./fanout";
+import { interleave } from "./interleave";
 import type { OutscraperPlace } from "./outscraper";
 
 export interface CallableLead {
@@ -208,6 +209,34 @@ function groupByPlace(places: OutscraperPlace[]): OutscraperPlace[][] {
 }
 
 /**
+ * Gelieferte PLAETZE pro Herkunfts-Query (nach der place_id-Gruppierung —
+ * die Enrichment-Zeilen-Explosion darf nicht mitzaehlen). Grundlage der
+ * Erschoepfungs-Semantik des Coverage-Ledgers (tiles.classifyTile):
+ * result_count muss dasselbe zaehlen wie Outscrapers `limit`.
+ */
+export function countPlacesByQuery(
+  places: OutscraperPlace[],
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const rows of groupByPlace(places)) {
+    const query = rows[0].query ?? "";
+    counts.set(query, (counts.get(query) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/** Erste Nennung einer Telefonnummer gewinnt (Schluessel wie im Dedupe). */
+export function dedupeByPhone(leads: CallableLead[]): CallableLead[] {
+  const seen = new Set<string>();
+  return leads.filter((lead) => {
+    const key = normalizePhoneKey(lead.phone);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
  * Gruppierung + Filter + Dedupe + Mapping. Dedupe-Schluessel ueber
  * Gruppen hinweg ist die normalisierte Telefonnummer — dieselbe Firma
  * taucht bei Google Maps gern in mehreren Kategorien auf.
@@ -269,9 +298,18 @@ export function filterByWebsite(
   leads: CallableLead[],
   mode: WebsiteFilterMode,
 ): CallableLead[] {
-  if (mode === "without") return leads.filter((lead) => !lead.website);
-  if (mode === "with") return leads.filter((lead) => lead.website);
-  return leads;
+  if (mode === "any") return leads;
+  return leads.filter((lead) => matchesWebsiteFilter(lead, mode));
+}
+
+/** Dieselbe Bedingung pro Lead — fuer Spillover-Rows und Zaehlungen. */
+export function matchesWebsiteFilter(
+  lead: Pick<CallableLead, "website">,
+  mode: WebsiteFilterMode,
+): boolean {
+  if (mode === "without") return !lead.website;
+  if (mode === "with") return Boolean(lead.website);
+  return true;
 }
 
 /**
@@ -323,10 +361,12 @@ export function filterKnownPhones(
 /**
  * Liefer-Reihenfolge fuer Multi-Location (Generator-v3 §14b.1):
  * Zwei-Ebenen-Round-Robin — gleichmaessig ueber die Location-Chips,
- * innerhalb eines State-Chips gleichmaessig ueber dessen Stadt-Queries,
- * jede Query-Gruppe city-first sortiert. Damit frisst eine Grossstadt
- * beim Max-Size-Cap nie die ganze Liste. Ein Plan mit <= 1 Eintrag
- * verhaelt sich exakt wie der alte Ein-Stadt-Sort.
+ * innerhalb eines Chips gleichmaessig ueber dessen Queries (Stadt-
+ * Queries eines State-Chips bzw. seit dem Tiling die PLZ-Tiles), jede
+ * Query-Gruppe city-first sortiert. Damit frisst eine Grossstadt beim
+ * Max-Size-Cap nie die ganze Liste. Ein Plan mit <= 1 Eintrag verhaelt
+ * sich exakt wie der alte Ein-Stadt-Sort. Nimmt den Alt-Plan
+ * (params.query_plan) wie den Tile-Plan (params.tiles) — gleiche Basis.
  */
 export function orderForDelivery(
   leads: CallableLead[],
@@ -359,22 +399,8 @@ export function orderForDelivery(
     groupsByLocation.set(entry.location, groups);
   }
 
-  const roundRobin = (streams: CallableLead[][]): CallableLead[] => {
-    const merged: CallableLead[] = [];
-    for (let i = 0, added = true; added; i++) {
-      added = false;
-      for (const stream of streams) {
-        if (i < stream.length) {
-          merged.push(stream[i]);
-          added = true;
-        }
-      }
-    }
-    return merged;
-  };
-
-  const perLocation = [...groupsByLocation.values()].map(roundRobin);
-  return [...roundRobin(perLocation), ...stray];
+  const perLocation = [...groupsByLocation.values()].map(interleave);
+  return [...interleave(perLocation), ...stray];
 }
 
 const LEADS_INSERT_CHUNK = 500;

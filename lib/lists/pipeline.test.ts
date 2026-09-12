@@ -3,8 +3,11 @@ import type { OutscraperPlace } from "./outscraper";
 import {
   buildCustomFieldDefs,
   buildLeadRows,
+  countPlacesByQuery,
+  dedupeByPhone,
   filterByWebsite,
   filterKnownPhones,
+  matchesWebsiteFilter,
   orderForDelivery,
   sortByCityMatch,
   toCallableLeads,
@@ -319,6 +322,47 @@ describe("filterByWebsite", () => {
 
   it("any laesst alles durch", () => {
     expect(filterByWebsite(mixed, "any")).toHaveLength(2);
+  });
+
+  it("matchesWebsiteFilter ist dieselbe Bedingung pro Lead (Spillover-Rows)", () => {
+    expect(matchesWebsiteFilter(mixed[0], "with")).toBe(true);
+    expect(matchesWebsiteFilter(mixed[0], "without")).toBe(false);
+    expect(matchesWebsiteFilter(mixed[1], "without")).toBe(true);
+    expect(matchesWebsiteFilter(mixed[1], "any")).toBe(true);
+  });
+});
+
+describe("countPlacesByQuery (Coverage result_count)", () => {
+  it("zaehlt Plaetze pro Herkunfts-Query — Enrichment-Zeilen desselben Betriebs nur einmal", () => {
+    const counts = countPlacesByQuery([
+      place({ query: "Dentist, 50667, Köln", place_id: "a", email: "x@a.de" }),
+      place({ query: "Dentist, 50667, Köln", place_id: "a", email: "y@a.de" }),
+      place({ query: "Dentist, 50667, Köln", place_id: "b" }),
+      place({ query: "Dentist, 51103, Köln", name: "Ohne place_id", phone: "+49 3" }),
+    ]);
+    expect(counts.get("Dentist, 50667, Köln")).toBe(2);
+    expect(counts.get("Dentist, 51103, Köln")).toBe(1);
+    expect(counts.get("Dentist, 50668, Köln")).toBeUndefined();
+  });
+});
+
+describe("dedupeByPhone", () => {
+  it("erste Nennung gewinnt, Formatierung egal, leere Nummern fliegen", () => {
+    const deduped = dedupeByPhone([
+      lead({ company_name: "A", phone: "+49 221 111111" }),
+      lead({ company_name: "B", phone: "0049 (221) 11 11 11" }),
+      lead({ company_name: "C", phone: "+49 221 222222" }),
+      lead({ company_name: "D", phone: "   " }),
+    ]);
+    // "0049…" und "+49…" sind verschiedene Ziffernfolgen — nur exakte
+    // Ziffern-Gleichheit dedupliziert (wie der Bestands-Dedupe).
+    expect(deduped.map((l) => l.company_name)).toEqual(["A", "B", "C"]);
+    expect(
+      dedupeByPhone([
+        lead({ company_name: "A", phone: "+49 221 111111" }),
+        lead({ company_name: "A2", phone: "+49 (221) 11 11 11" }),
+      ]).map((l) => l.company_name),
+    ).toEqual(["A"]);
   });
 });
 
