@@ -82,6 +82,19 @@ sauberen Schnitt offen).
     Generierung ist **kein** eigener Karten-Zustand — sie erscheint nur
     noch als Empty-State-Hinweis (wenn sonst keine Liste da ist). Spaeter
     ggf. vierter Zustand: rote `Failed`-Pill + „Retry" statt Balken.
+  - **Erledigt (Jan 2026-09-13, mit dem Wegfall des Zwischenscreens):**
+    `/lists` ist jetzt der einzige Ort, an dem der User den Ausgang seines
+    Laufs sieht — deshalb ist `failed` ein eigener Kachel-Zustand
+    (`MyLists.FailedJobCard`: rote `Failed`-Pill, `failureMessage`, „Try
+    again" → /lists/new), nur fuer den **neuesten** Job; der naechste Lauf
+    ersetzt ihn. Ohne Listen zeigt weiter der Empty-State den Fehler,
+    jetzt mit dem echten Text statt der pauschalen Zeile. Die
+    Building-Kachel (`BuildingJobCard`) traegt **eine** Statuszeile
+    (`job-view.statusLine`: E-Mail-Suche > Welle ≥ 2 > Folge-Lauf >
+    „Scanning Google Maps in Köln…"), haelt sie per Poll **live** (vorher
+    blieben Wellen-/Coverage-Zeile server-gerendert stehen) und den Hinweis
+    „Usually under a minute — we'll email you when it's ready." (Jan: Copy
+    an die Messwerte des Testlaufs angepasst, vorher „a few minutes").
 - **`/lists/new`** — der Generator als eigene Workspace-Seite
   (`GeneratorClient`): Konsolen-Layout (Formular links, Live-Summary
   rechts, die spaeter Credits-Kosten + Enricher-Zeilen traegt),
@@ -98,6 +111,23 @@ sauberen Schnitt offen).
   `/api/lists/download` bleibt bestehen). Die fruehere Ready-Ansicht
   samt LeadPreviewCard (§13b) ist ersatzlos raus, Git-History als
   Re-Impl-Vorlage.
+  - **Kein Zwischenscreen mehr (Jan 2026-09-13):** Ein erfolgreich
+    gestarteter Job (und der 409-Fall) schickt sofort per `router.push`
+    nach /lists, wo die Building-Kachel den Lauf zeigt — der User wartet
+    dort, wo die Liste erscheint. Die `BuildingView` mit vier
+    Pipeline-Stufen ist raus (Git-History als Referenz): das Backend kennt
+    waehrend des Baus nur `pending` (Outscraper arbeitet) und `processing`
+    (Sekunden) und pendelt bei Nachschlag-Wellen und E-Mail-Suche zurueck
+    auf `pending` — Stufe 2 war praktisch nie sichtbar, 3 und 4 nie aktiv,
+    und waehrend der E-Mail-Suche stand „Scan Google Maps" aktiv. Revisit
+    von /lists/new waehrend eines Laufs: Formular gesperrt
+    (`.lists-console.is-locked`, gleiches Muster wie 0 Credits) mit
+    Hinweis „<Listenname> is being built…" + „See your lists"; der Poll
+    laeuft weiter, damit das Formular nach dem Lauf aufgeht (und den
+    Self-Heal treibt, solange niemand /lists offen hat). Die
+    Erklaerung der Schritte (nur mit Telefonnummer, geschlossene raus,
+    dedupliziert) gehoert, falls gewuenscht, ins Formular/Info-Popover —
+    nicht in den Ladezustand.
 - **/account** (`LeadListsSection`, jetzt Server-Component ohne
   Polling) — kompakter Zeiger statt Generator: keine Liste/failed →
   Promo-Card („Get your first lead list — free" → /lists/new, haelt

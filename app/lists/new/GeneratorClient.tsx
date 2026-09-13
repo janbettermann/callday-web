@@ -15,11 +15,8 @@ import { IndustryAutocomplete } from "../IndustryAutocomplete";
 import { InfoPopover } from "../InfoPopover";
 import { LocationsField, type LocationChip } from "../LocationsField";
 import {
-  coverageLine,
   failureMessage,
   fetchJobStatus,
-  waveLine,
-  type JobView,
   type StatusResponse,
 } from "../job-view";
 import { CalldayMark } from "@/app/components/ListCardActions";
@@ -39,18 +36,20 @@ import type { WebsiteFilterMode } from "@/lib/lists/pipeline";
  * Live-Summary, kein How-it-works-Strip mehr (Jan-Design-Entscheidung
  * 2026-07-15: Mobile-first, das Panel saesse dort eh unterm Formular;
  * eleganter loesen wenn Credits/Enricher-Zeilen wirklich kommen).
- * Laeuft ein Job, uebernimmt die Building-Ansicht mit echten
- * Pipeline-Stufen (pending = Scan, processing = Verarbeitung — keine
- * simulierten Fortschritte).
  *
  * /lists/new ist DIE eine Generator-URL (Jan-Entscheidung 2026-07-14) —
  * die fertige Free-Liste hat hier keine eigene Ansicht mehr, sie wohnt
  * auf /lists. Zustaende aus /api/lists/status (geteilte View-Typen in
- * ../job-view): kein Job/failed → Form, pending/processing → Building,
- * ready → Form gesperrt (ausgegraut + Hinweis warum, Free-Cap 1
- * verbraucht). Wird der Job in derselben Session fertig, leiten wir
- * direkt zu /lists weiter — der Payoff ist die Liste, nicht der
- * Generator.
+ * ../job-view): kein Job/failed/ready → Form (failed mit Banner),
+ * pending/processing → Form gesperrt + Hinweis "wird gebaut" mit Link
+ * zur Liste, 0 Credits → Form gesperrt + Hinweis warum.
+ *
+ * Kein Zwischenscreen mehr (Jan 2026-09-13): ein erfolgreich gestarteter
+ * Job schickt sofort nach /lists, wo die Building-Kachel den Lauf zeigt
+ * — der Payoff ist die Liste, und sie erscheint genau dort. Die fruehere
+ * Building-Ansicht mit vier Pipeline-Stufen war nicht ehrlich (Backend
+ * kennt nur pending/processing und pendelt bei Nachschlag-Wellen und
+ * E-Mail-Suche zurueck), Git-History als Referenz.
  */
 
 const POLL_INTERVAL_MS = 5000;
@@ -82,29 +81,6 @@ const WEBSITE_FILTER_OPTIONS: Array<{
   },
 ];
 
-/**
- * Die echten Verarbeitungsschritte des Generators (Pipeline-Reihenfolge
- * aus lib/lists/jobs.ts) — Stufenanzeige im Building-State.
- */
-const PIPELINE_STEPS = [
-  {
-    title: "Scan Google Maps",
-    detail: "Every matching business in and around your city.",
-  },
-  {
-    title: "Keep the callable ones",
-    detail: "Phone number required — closed places get dropped.",
-  },
-  {
-    title: "Dedupe & sort",
-    detail: "One entry per business, exact city matches first.",
-  },
-  {
-    title: "Sync to your account",
-    detail: "The list is waiting in the Callday app.",
-  },
-];
-
 export function GeneratorClient() {
   const router = useRouter();
   const [statusData, setStatusData] = useState<
@@ -121,11 +97,6 @@ export function GeneratorClient() {
   // Solange der User das Feld nicht angefasst hat, folgt es dem
   // Kontostand (min(250, balance)) — danach gewinnt seine Eingabe.
   const maxSizeEditedRef = useRef(false);
-
-  // True sobald diese Session einen Job hat laufen sehen — unterscheidet
-  // "frisch fertig gebaut" (→ Redirect zu /lists) vom Revisit (→ Form
-  // gesperrt).
-  const sawBuildingRef = useRef(false);
 
   // Preset aus Affiliate-/Funnel-Links (?website=without) — reist durch
   // Signup + Login-Redirect bis hierher.
@@ -151,16 +122,11 @@ export function GeneratorClient() {
   const jobRunning =
     job !== null && (job.status === "pending" || job.status === "processing");
 
-  useEffect(() => {
-    if (jobRunning) sawBuildingRef.current = true;
-  }, [jobRunning]);
-
   // Credit-Modell (Phase 1): gesperrt wird erst bei 0 Credits — fertige
   // Listen sperren nichts mehr, es darf nachgelegt werden, bis das
   // Konto leer ist. Das Formular bleibt sichtbar (eine URL, ein Ort),
   // im 0-Zustand ausgegraut mit Hinweis.
   const creditsExhausted = credits !== null && credits.balance < 1;
-  const justBuilt = job?.status === "ready" && sawBuildingRef.current;
 
   // Max-size-Vorbelegung folgt dem Kontostand, solange unangetastet.
   useEffect(() => {
@@ -179,10 +145,10 @@ export function GeneratorClient() {
     }
   }, [country]);
 
-  useEffect(() => {
-    if (justBuilt) router.replace("/lists");
-  }, [justBuilt, router]);
-
+  // Revisit waehrend eines Laufs (User klickt "Generate list", waehrend
+  // auf /lists gebaut wird): weiter pollen, damit das Formular aufgeht,
+  // sobald der Job durch ist — und weil der Poll den Self-Heal treibt,
+  // solange niemand die Building-Kachel auf /lists offen hat.
   useEffect(() => {
     if (!jobRunning || !job) return;
     const timer = setInterval(() => {
@@ -201,7 +167,7 @@ export function GeneratorClient() {
       event.preventDefault();
       // Guard ist Gurt zur Hose: server-seitig erzwingen Kontostand
       // (403) und der Ein-aktiver-Job-Index (409) die Regeln ohnehin.
-      if (submitting || creditsExhausted) return;
+      if (submitting || creditsExhausted || jobRunning) return;
       setFormError(null);
 
       if (!industry.trim() || locations.length === 0) {
@@ -216,6 +182,9 @@ export function GeneratorClient() {
       }
 
       setSubmitting(true);
+      // Bei Navigation nach /lists bleibt submitting true, damit der
+      // Button nicht kurz wieder klickbar wird, bevor die Seite wechselt.
+      let navigating = false;
       try {
         const response = await fetch("/api/lists/generate", {
           method: "POST",
@@ -239,9 +208,10 @@ export function GeneratorClient() {
         });
 
         if (response.status === 409) {
-          // Es laeuft schon eine Generierung (Race/Doppel-Tab) — Status
-          // zeigt die Wahrheit und uebernimmt mit der Building-Ansicht.
-          setStatusData(await fetchJobStatus());
+          // Es laeuft schon eine Generierung (Race/Doppel-Tab) — die
+          // Building-Kachel auf /lists zeigt sie.
+          navigating = true;
+          router.push("/lists");
           return;
         }
         if (response.status === 403) {
@@ -270,17 +240,20 @@ export function GeneratorClient() {
           return;
         }
 
-        const { jobId } = (await response.json()) as { jobId: string };
-        setStatusData(await fetchJobStatus(jobId));
+        // Gestartet — ab hier lebt der Lauf auf /lists (Building-Kachel).
+        navigating = true;
+        router.push("/lists");
       } catch {
         setFormError("Network hiccup — please try again.");
       } finally {
-        setSubmitting(false);
+        if (!navigating) setSubmitting(false);
       }
     },
     [
+      router,
       submitting,
       creditsExhausted,
+      jobRunning,
       industry,
       locations,
       country,
@@ -293,18 +266,8 @@ export function GeneratorClient() {
     return <p className="lists-loading">Loading…</p>;
   }
 
-  if (jobRunning && job) {
-    return <BuildingView job={job} />;
-  }
-  if (justBuilt) {
-    // router.replace("/lists") laeuft bereits — kein Flash des
-    // gesperrten Formulars zwischen Building und Redirect.
-    return (
-      <p className="lists-loading">Your list is ready — taking you there…</p>
-    );
-  }
-
-  const formDisabled = submitting || creditsExhausted;
+  const formLocked = creditsExhausted || jobRunning;
+  const formDisabled = submitting || formLocked;
 
   return (
     <div className="lists-inner-account">
@@ -314,13 +277,38 @@ export function GeneratorClient() {
         </p>
       )}
 
+      {/* Laufender Job (Revisit): das Formular ist wegen der Ein-aktiver-
+          Job-Regel gesperrt — sagen warum, und zur Kachel zeigen. Hat
+          Vorrang vor dem Credits-Hinweis (waehrend eines Laufs sind die
+          Credits noch nicht abgerechnet). */}
+      {jobRunning && job && (
+        <div className="lists-locked-note" role="status">
+          <div>
+            <p className="lists-locked-title">
+              {job.listName ?? "Your list"} is being built…
+            </p>
+            <p className="lists-locked-body">
+              Usually under a minute — we&apos;ll email you when it&apos;s
+              ready. You can start the next list as soon as this one is
+              done.
+            </p>
+          </div>
+          <Link
+            href="/lists"
+            className="account-btn account-btn-primary lists-locked-btn"
+          >
+            See your lists
+          </Link>
+        </div>
+      )}
+
       {/* 0-Credits-Zustand = haeufigster Endpunkt des Generators (jede volle
           250er-Liste landet hier) und der Moment, in dem der Free-User zur
           App soll: CTA = derselbe App-Pfad wie "Open in Callday" auf den
           Listen-Kacheln. Bewusst kein Pricing-/Abo-Satz — die Abo-Credits
           sind Phase 2 (noch nicht gebaut); nichts versprechen, was der Code
           nicht haelt. */}
-      {creditsExhausted && (
+      {creditsExhausted && !jobRunning && (
         <div className="lists-locked-note" role="status">
           <div>
             <p className="lists-locked-title">
@@ -342,16 +330,13 @@ export function GeneratorClient() {
         </div>
       )}
 
-      <div className={"lists-console" + (creditsExhausted ? " is-locked" : "")}>
+      <div className={"lists-console" + (formLocked ? " is-locked" : "")}>
         <form className="beta-form lists-console-form" onSubmit={handleGenerate} noValidate>
           {/* Titel lebt IN der Card (Jan-Wahl 2026-08-06, Variante A ohne
               Trennlinie) — der Generator wirkt als geschlossenes Tool in
-              einer Flaeche. Eigene .lists-card*-Klassen, damit der
-              Building-Screen-Header (.lists-workhead/.lists-worktitle,
-              weiter unten geteilt genutzt) unveraendert bleibt. Der
-              Brand-Moment (pulsierender Sun-Gold-Punkt) + die Copy wandern
-              1:1 mit. "New"-Pille + Feedback-Zeile (Jan 2026-09-11): der
-              GENERATOR ist das neue Feature, nicht die App in Beta —
+              einer Flaeche. Der Brand-Moment (pulsierender Sun-Gold-Punkt)
+              sitzt im Titel. "New"-Pille + Feedback-Zeile (Jan 2026-09-11):
+              der GENERATOR ist das neue Feature, nicht die App in Beta —
               Erwartung senken, Feedback einladen. */}
           <header className="lists-cardhead">
             <div className="lists-worktitle-row">
@@ -534,74 +519,6 @@ export function GeneratorClient() {
           )}
         </form>
       </div>
-    </div>
-  );
-}
-
-function BuildingView({ job }: { job: JobView }) {
-  const industry =
-    job.params.industry_display ?? job.params.industry ?? "your industry";
-  const city = job.params.city ?? "your city";
-  // Ehrliche Stufen-Zuordnung: pending = Outscraper scannt (Stufe 1),
-  // processing = unsere Pipeline laeuft (Stufe 2) — keine Fake-Timer.
-  const activeStep = job.status === "pending" ? 0 : 1;
-  // Folge-Lauf derselben Branche (Coverage-Ledger): sagen, dass wir
-  // weitermachen statt von vorn — "areas", nie "zip codes". Ab der
-  // zweiten Nachschlag-Welle ausserdem, dass noch aufgefuellt wird.
-  const coverage = coverageLine(job.params);
-  const wave = waveLine(job.params);
-
-  return (
-    <div className="lists-inner">
-      <header className="lists-workhead">
-        <h1 className="lists-worktitle">Building your list…</h1>
-        <p className="lists-worksub">
-          {industry} in {city} — this usually takes a few minutes.
-        </p>
-        {coverage && <p className="lists-worksub">{coverage}</p>}
-        {wave && <p className="lists-worksub">{wave}</p>}
-      </header>
-
-      <section className="lists-buildcard">
-        <ol className="lists-pipeline">
-          {PIPELINE_STEPS.map((step, index) => {
-            const state =
-              index < activeStep
-                ? "is-done"
-                : index === activeStep
-                  ? "is-active"
-                  : "";
-            return (
-              <li key={step.title} className={`lists-pipeline-step ${state}`}>
-                <span className="lists-step-marker" aria-hidden="true">
-                  {index < activeStep ? "✓" : index + 1}
-                </span>
-                <div>
-                  <p className="lists-pipeline-striptitle">{step.title}</p>
-                  <p className="lists-pipeline-stripdetail">{step.detail}</p>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-
-        <div
-          className="lists-progress-track"
-          role="progressbar"
-          aria-label="Building your list"
-        >
-          <div className="lists-progress-fill" />
-        </div>
-
-        <p className="account-hint">
-          You can close this page — we&apos;ll email you when it&apos;s
-          ready. Meanwhile: your list is already syncing to the Callday app,{" "}
-          <Link className="lists-meta-link" href={APP_DOWNLOAD_PATH}>
-            grab the app in your account
-          </Link>
-          .
-        </p>
-      </section>
     </div>
   );
 }

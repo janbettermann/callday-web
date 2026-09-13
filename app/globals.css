@@ -3943,29 +3943,6 @@ h2 .accent {
   color: var(--ink-mute);
 }
 
-/* Indeterminate-Progress: laufender Balken auf blauer Track-Spur. */
-.lists-progress-track {
-  height: 6px;
-  background: var(--blue-soft);
-  border-radius: 100px;
-  overflow: hidden;
-  margin-bottom: 28px;
-}
-.lists-progress-fill {
-  height: 100%;
-  width: 35%;
-  border-radius: 100px;
-  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
-  animation: lists-progress-slide 1.6s ease-in-out infinite;
-}
-@keyframes lists-progress-slide {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(300%);
-  }
-}
 .lists-ready-badge {
   display: inline-flex;
   align-items: center;
@@ -4006,9 +3983,6 @@ h2 .accent {
   text-transform: uppercase;
   line-height: 1;
 }
-.lists-workhead {
-  margin-bottom: 28px;
-}
 /* Brand-Moment: pulsierender Sun-Gold-Punkt links vom Titel (Header-
    Variante 1, Jan 2026-08-05) — "live/aktiv"-Signal in der Marken-
    Zweitfarbe. Dot-Groesse skaliert grob mit der clamp()-Titelskala. */
@@ -4017,9 +3991,6 @@ h2 .accent {
   align-items: center;
   gap: 14px;
   margin-bottom: 6px;
-}
-.lists-worktitle-row .lists-worktitle {
-  margin: 0;
 }
 .lists-live-dot {
   position: relative;
@@ -4056,16 +4027,6 @@ h2 .accent {
     animation: none;
   }
 }
-/* h1 — kanonische Account-Titel-Skala (siehe .account-headline). */
-.lists-worktitle {
-  font-family: var(--font-geist-sans), sans-serif;
-  font-size: clamp(28px, 4vw, 40px);
-  font-weight: 600;
-  letter-spacing: -0.5px;
-  line-height: 1.1;
-  color: var(--ink);
-  margin: 0 0 6px;
-}
 .lists-worksub {
   font-size: 15px;
   color: var(--ink-dim);
@@ -4075,9 +4036,8 @@ h2 .accent {
 
 /* In-Card-Header (Jan-Wahl 2026-08-06, Variante A ohne Trennlinie): der
    Titel lebt IN der Generator-Card, damit das Tool als geschlossene Flaeche
-   wirkt. Eigene Klassen statt .lists-workhead/.lists-worktitle, damit der
-   Building-Screen-Header (der die geteilt nutzt) unveraendert bleibt.
-   .lists-worktitle-row + .lists-live-dot + .lists-worksub bleiben geteilt. */
+   wirkt. (.lists-workhead/.lists-worktitle des frueheren Building-Screens
+   sind mit dem Zwischenscreen raus, 2026-09-13.) */
 .lists-cardhead {
   /* +10px auf den 16px .beta-form-Flex-Gap = ~26px Luft zur ersten Zeile,
      ohne Trennlinie. */
@@ -4418,76 +4378,6 @@ h2 .accent {
   pointer-events: auto;
   user-select: auto;
 }
-/* Stufen-Texte der Building-Pipeline (Namen historisch vom frueheren
-   How-it-works-Strip). */
-.lists-pipeline-striptitle {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--ink);
-  margin: 2px 0 3px;
-}
-.lists-pipeline-stripdetail {
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--ink-faint);
-  margin: 0;
-}
-.lists-buildcard {
-  background: #ffffff;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 24px;
-}
-.lists-pipeline {
-  list-style: none;
-  margin: 0 0 24px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-.lists-pipeline-step {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  opacity: 0.45;
-}
-.lists-pipeline-step.is-active,
-.lists-pipeline-step.is-done {
-  opacity: 1;
-}
-.lists-step-marker {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--blue-tint);
-  color: var(--blue-deep);
-  font-size: 12px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.lists-pipeline-step.is-done .lists-step-marker {
-  background: rgba(16, 185, 129, 0.12);
-  color: var(--green-deep);
-}
-.lists-pipeline-step.is-active .lists-step-marker {
-  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
-  color: #ffffff;
-  animation: lists-step-pulse 1.8s ease-in-out infinite;
-}
-@keyframes lists-step-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(74, 122, 247, 0.35);
-  }
-  50% {
-    box-shadow: 0 0 0 7px rgba(74, 122, 247, 0);
-  }
-}
-
 /* Listen-Uebersicht (/lists eingeloggt) — dieselben Kacheln wie das
    Dashboard (.dash-duo-lists: 2-spaltig), nur nicht verlinkt: kein
    Klick-Hover, Quelle-Pill oben rechts, und die Building-Bar braucht
@@ -4523,9 +4413,26 @@ h2 .accent {
   background: rgba(26, 29, 38, 0.06);
   color: var(--ink-dim);
 }
-/* Building-Kachel: unbestimmtes Segment laeuft durch die .dash-bar;
-   braucht den .dash-tile-plain .dash-bar { position:relative }
-   Override oben. */
+/* Failed-Kachel (neuester Job fehlgeschlagen, 2026-09-13): rote Pill,
+   Fehlertext statt Balken, "Try again" im Actions-Footer. */
+.lists-src-failed {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+}
+.lists-card-failmsg {
+  color: var(--ink);
+  line-height: 1.5;
+}
+/* Building-Kachel: EINE ehrliche Statuszeile aus den Job-Params
+   (job-view.statusLine — Welle, E-Mail-Suche, Folge-Lauf) ueber dem
+   Hinweis; das unbestimmte Segment laeuft durch die .dash-bar (braucht
+   den .dash-tile-plain .dash-bar { position:relative } Override oben). */
+.lists-card-status {
+  font-size: 13px;
+  color: var(--ink);
+  letter-spacing: -0.1px;
+  margin: 0 0 4px;
+}
 .lists-card-bar-load {
   position: absolute;
   top: 0;

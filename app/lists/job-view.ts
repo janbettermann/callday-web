@@ -48,7 +48,7 @@ export interface JobViewParams {
  * aufgefuellt bzw. angereichert wird, nicht dass sie "haengt":
  *   - "Round 2 of up to 3 — 12 leads so far, searching more areas."
  *   - "Leads found — looking up email addresses now."
- * Geteilt zwischen BuildingView und Building-Kachel.
+ * Baustein von statusLine (Building-Kachel auf /lists).
  */
 export function waveLine(params: JobViewParams): string | null {
   if (params.phase === "enrich") {
@@ -76,8 +76,7 @@ export function waveLine(params: JobViewParams): string | null {
  * zu erklaeren). Zaehlt BESUCHTE Gebiete, nicht erschoepfte: seit dem
  * Bedarfs-Einkauf schliessen dichte Tiles selten beim ersten Besuch, die
  * Zahl der erschoepften saehe nach Stillstand aus. Bewusst "areas", nie
- * "zip codes" — der User soll nichts Neues lernen muessen. Geteilt
- * zwischen BuildingView (/lists/new) und der Building-Kachel auf /lists.
+ * "zip codes" — der User soll nichts Neues lernen muessen.
  */
 export function coverageLine(params: JobViewParams): string | null {
   const coverage = params.coverage;
@@ -85,6 +84,23 @@ export function coverageLine(params: JobViewParams): string | null {
   const visited = coverage.visited_before ?? coverage.covered_before;
   if (visited < 1) return null;
   return `Continuing in ${params.city} — ${visited} of ${coverage.total} areas searched so far.`;
+}
+
+/**
+ * DIE eine Statuszeile der Building-Kachel (Jan 2026-09-13, Zwischen-
+ * screen auf /lists/new abgeschafft): ehrlich aus den Job-Params, keine
+ * simulierten Stufen. Prioritaet = was gerade wirklich passiert:
+ *   1. E-Mail-Suche laeuft (phase enrich)
+ *   2. Nachschlag-Welle (wave >= 2)
+ *   3. Folge-Lauf derselben Branche (Coverage)
+ *   4. erste Welle: "Scanning Google Maps in Köln…"
+ */
+export function statusLine(params: JobViewParams): string {
+  return (
+    waveLine(params) ??
+    coverageLine(params) ??
+    `Scanning Google Maps in ${params.city ?? "your area"}…`
+  );
 }
 
 /** Credit-Kontostand (Phase 1: nur Signup-Credits; Abo-Grants mit IAP). */
@@ -107,7 +123,8 @@ export async function fetchJobStatus(jobId?: string): Promise<StatusResponse> {
   return (await response.json()) as StatusResponse;
 }
 
-export function failureMessage(job: JobView): string {
+/** Nutzer-Text zu einem failed Job — reicht error + params (auch Server-Rows). */
+export function failureMessage(job: Pick<JobView, "error" | "params">): string {
   if (job.error === "timeout") {
     return "That one took too long and we stopped it — no credits were used. Please try again.";
   }

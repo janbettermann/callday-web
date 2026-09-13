@@ -95,8 +95,8 @@ export async function POST(request: NextRequest) {
   }
   // Anzeige-Sprache-Split (§14b Punkt 3): industry ist der QUERY-Begriff
   // (Kanonik), industry_display der sichtbare Feldtext ("Zahnarzt") —
-  // fuer BuildingView + Listenname. Fehlt er (alte Clients), ist beides
-  // dasselbe.
+  // fuer Building-Kachel + Listenname. Fehlt er (alte Clients), ist
+  // beides dasselbe.
   const cleanIndustryDisplay = cleanField(industryDisplay) ?? cleanIndustry;
 
   // Locations-Chips validieren (Multi-Location, §14b Punkt 5): Stadt-
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
   const params: LeadGenJobParams = {
     industry: cleanIndustry,
     industry_display: cleanIndustryDisplay,
-    // Anzeige-String (BuildingView, Listen-Name).
+    // Anzeige-String (Building-Kachel, Listen-Name).
     city: displayLocation,
     country: countryConfig.code,
     website: websiteFilter,

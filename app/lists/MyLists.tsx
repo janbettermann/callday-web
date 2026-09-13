@@ -15,6 +15,13 @@ import { ListCardActions } from "../components/ListCardActions";
  * = in der App per Datei importiert (Unterscheidung server-seitig in
  * page.tsx ueber die Existenz eines Generator-Jobs).
  *
+ * Job-Kachel (Jan 2026-09-13): seit der Generator ohne Zwischenscreen
+ * direkt hierher schickt, ist /lists der einzige Ort, an dem der User den
+ * Ausgang seines Laufs sieht. Deshalb ist "failed" jetzt ein eigener
+ * Kachel-Zustand (rote Pill + Fehlertext + "Try again", frueher bewusst
+ * vertagt) — nur fuer den NEUESTEN Job, der naechste Lauf ersetzt ihn.
+ * Ohne Listen zeigt weiter der Empty-State den Fehler als Hinweis.
+ *
  * Actions-Footer (geteiltes ListCardActions): "Open in Callday" (brandblau)
  * + "Download list". Der Download zeigt auf /api/lists/download; "Open in
  * Callday" ist interim auf den App-Download-Pfad verdrahtet — die kontext-
@@ -27,25 +34,29 @@ export interface ListCardData extends DashboardList {
   source: ListSource;
 }
 
-export interface BuildingList {
-  jobId: string;
-  listName: string;
-  /** Coverage-Hinweis bei Folge-Laeufen (job-view.ts coverageLine). */
-  coverageLine: string | null;
-  /** Nachschlag-Hinweis ab Welle 2 (job-view.ts waveLine). */
-  waveLine: string | null;
-}
+export type JobCardData =
+  | {
+      kind: "building";
+      jobId: string;
+      listName: string;
+      /** Startwert der Statuszeile (job-view.statusLine), Kachel pollt weiter. */
+      statusLine: string;
+    }
+  | {
+      kind: "failed";
+      listName: string;
+      /** Nutzer-Text (job-view.failureMessage). */
+      message: string;
+    };
 
 export function MyLists({
   lists,
-  building,
-  hadFailure,
+  job,
 }: {
   lists: ListCardData[];
-  building: BuildingList | null;
-  hadFailure: boolean;
+  job: JobCardData | null;
 }) {
-  const isEmpty = lists.length === 0 && !building;
+  const isEmpty = lists.length === 0 && job?.kind !== "building";
 
   return (
     <div className="lists-inner-account">
@@ -54,16 +65,20 @@ export function MyLists({
       </div>
 
       {isEmpty ? (
-        <EmptyState hadFailure={hadFailure} />
+        <EmptyState
+          failureNote={job?.kind === "failed" ? job.message : null}
+        />
       ) : (
         <div className="dash-duo dash-duo-lists">
-          {building && (
+          {job?.kind === "building" && (
             <BuildingJobCard
-              jobId={building.jobId}
-              listName={building.listName}
-              coverageLine={building.coverageLine}
-              waveLine={building.waveLine}
+              jobId={job.jobId}
+              listName={job.listName}
+              initialStatusLine={job.statusLine}
             />
+          )}
+          {job?.kind === "failed" && (
+            <FailedJobCard listName={job.listName} message={job.message} />
           )}
           {lists.map((list) => (
             <ListCard key={list.id} list={list} />
@@ -118,7 +133,35 @@ function ListCard({ list }: { list: ListCardData }) {
   );
 }
 
-function EmptyState({ hadFailure }: { hadFailure: boolean }) {
+/**
+ * Fehlgeschlagener letzter Lauf als Kachel: rote Pill + Fehlertext statt
+ * Balken, "Try again" fuehrt in den Generator. Kein Dismiss noetig — der
+ * naechste Lauf ersetzt die Kachel (neuester Job gewinnt, page.tsx).
+ */
+function FailedJobCard({
+  listName,
+  message,
+}: {
+  listName: string;
+  message: string;
+}) {
+  return (
+    <section className="dash-tile dash-tile-plain" role="alert">
+      <div className="dash-tile-top">
+        <span className="dash-tile-name">{listName}</span>
+        <span className="lists-src lists-src-failed">Failed</span>
+      </div>
+      <p className="dash-tile-sub lists-card-failmsg">{message}</p>
+      <div className="dash-tile-actions">
+        <Link href="/lists/new" className="dash-tile-action dash-tile-action-primary">
+          Try again
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function EmptyState({ failureNote }: { failureNote: string | null }) {
   return (
     <section className="account-card lists-empty">
       <h2 className="account-card-title">Get your first lead list — free</h2>
@@ -127,11 +170,8 @@ function EmptyState({ hadFailure }: { hadFailure: boolean }) {
         call-ready list. Phone numbers only, deduped, synced straight to the
         Callday app.
       </p>
-      {hadFailure && (
-        <p className="account-body lists-empty-failnote">
-          Your last attempt didn&apos;t find enough callable leads — a
-          broader industry or a bigger city usually does the trick.
-        </p>
+      {failureNote && (
+        <p className="account-body lists-empty-failnote">{failureNote}</p>
       )}
       <Link href="/lists/new" className="account-btn account-btn-primary">
         Create your first list

@@ -6,8 +6,8 @@ import { buildListName, fetchJobsForUser } from "@/lib/lists/jobs";
 import { fetchAllLists, fetchProfileIdentity } from "@/lib/dashboard/data";
 import { AppNav } from "../components/AppNav";
 import { AppShell } from "../components/AppShell";
-import { coverageLine, waveLine } from "./job-view";
-import { MyLists, type ListCardData } from "./MyLists";
+import { failureMessage, statusLine } from "./job-view";
+import { MyLists, type JobCardData, type ListCardData } from "./MyLists";
 
 /**
  * callday.io/lists — auth-aware Front-Door der Listen-Welt (Spec:
@@ -79,30 +79,36 @@ export default async function ListsPage({
     source: generatedListIds.has(list.id) ? "generated" : "imported",
   }));
 
-  // Laufender Job (noch keine lead_lists-Row) → Building-Card oben.
+  // Job-Kachel oben: laufender Job (noch keine lead_lists-Row) → Building;
+  // sonst, wenn der NEUESTE Job failed ist → Failed-Kachel (seit der
+  // Generator ohne Zwischenscreen hierher schickt, muss der Fehler hier
+  // sichtbar sein). Aeltere Fehler sind Geschichte — der naechste Lauf
+  // ersetzt die Kachel. jobs ist neueste-zuerst sortiert.
   const runningJob = jobs.find(
     (job) => job.status === "pending" || job.status === "processing",
   );
-  const building = runningJob
-    ? {
-        jobId: runningJob.id,
-        listName: buildListName(runningJob.params, runningJob.query),
-        coverageLine: coverageLine(runningJob.params),
-        waveLine: waveLine(runningJob.params),
-      }
-    : null;
-
-  // Fehlgeschlagener letzter Versuch nur relevant, wenn sonst nichts da ist.
-  const hadFailure =
-    cards.length === 0 && !building
-      ? jobs.some((job) => job.status === "failed")
-      : false;
+  const newestJob = jobs[0] ?? null;
+  let jobCard: JobCardData | null = null;
+  if (runningJob) {
+    jobCard = {
+      kind: "building",
+      jobId: runningJob.id,
+      listName: buildListName(runningJob.params, runningJob.query),
+      statusLine: statusLine(runningJob.params),
+    };
+  } else if (newestJob?.status === "failed") {
+    jobCard = {
+      kind: "failed",
+      listName: buildListName(newestJob.params, newestJob.query),
+      message: failureMessage(newestJob),
+    };
+  }
 
   return (
     <AppShell>
       <AppNav active="lists" initial={identity.initial} />
       <main className="lists-page">
-        <MyLists lists={cards} building={building} hadFailure={hadFailure} />
+        <MyLists lists={cards} job={jobCard} />
       </main>
     </AppShell>
   );
