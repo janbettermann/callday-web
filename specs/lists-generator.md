@@ -748,6 +748,12 @@ Duplicate-Keep, Export-Format-Wahl, API-Request-Drawer, Task-Tags).
 - ~~**Email-Enrichment** (`leads_n_contacts`) optional + teurer — später zuschaltbar~~ —
   **ERSETZT 2026-07-15:** laeuft immer, auch Free-Liste, nie als Auswahl (§13d).
 - **Raw-CSV bei bezahlten Listen** ist Standard; bei der Gratis-Liste auch (§5).
+- **Credits manuell aufladen (offen, Jan 2026-09-13):** Es gibt weder
+  Admin-Aktion noch Skript — das Ledger kennt `reason = 'adjustment'` nur im
+  Schema. Heute per Wegwerfskript gemacht (+500 auf Jans Account, Notiz im
+  Ledger). Wenn das öfter vorkommt (Support-Kulanz, Tester, eigene Tests):
+  kleine Aktion im Admin-Bereich unter `[secret]/lists` — User waehlen,
+  Delta + Notiz, Insert als `adjustment`, Ledger daneben anzeigen.
 
 ## 14b. Generator-v3-Runde — Design-Stand 2026-08-05 (VOR Umsetzung)
 
