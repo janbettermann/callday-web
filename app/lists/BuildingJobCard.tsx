@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchJobStatus, statusLine } from "./job-view";
+import { fetchJobStatus } from "./job-view";
 
 /**
  * Laufender Generator-Job in der Listen-Uebersicht — seit 2026-09-13 der
@@ -45,7 +45,9 @@ export function BuildingJobCard({
             router.refresh();
             return;
           }
-          setLine(statusLine(job.params));
+          // Server liefert die fertige Zeile (statusLine in der Route) —
+          // dieselbe, die auch die App-Kachel bekommt.
+          if (job.statusLine) setLine(job.statusLine);
         })
         .catch(() => {
           // Poll-Fehler still schlucken — naechster Tick probiert's wieder.

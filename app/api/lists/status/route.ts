@@ -1,9 +1,18 @@
 /**
- * GET /api/lists/status[?job=<id>] — Job-Status fuer die /lists-UI.
+ * GET /api/lists/status[?job=<id>] — Job-Status fuer die /lists-UI und
+ * die Building-Kachel der Callday-App.
  *
  * Ohne job-Param: der neueste Job des eingeloggten Users (damit die
  * Seite nach Reload/Rueckkehr ihren Zustand wiederfindet — bei Cap 1
  * ist der letzte Job praktisch DER Zustand der Seite).
+ *
+ * Auth auf zwei Wegen (2026-09-13): SSR-Cookie-Session (Web) oder
+ * `Authorization: Bearer <Supabase-Access-Token>` (App — sie pollt
+ * hier statt lead_gen_jobs direkt zu lesen: keine RLS-Oeffnung der
+ * Tabelle mit webhook_secret, eine Wahrheit fuer Statuszeile und
+ * Fehlertext, und der App-Poll treibt Self-Heal + Reaper genauso wie
+ * der Web-Poll — wichtig, sobald der User den In-App-Browser zumacht
+ * und sonst niemand mehr pollt).
  *
  * Self-Heal: haengt der Job noch auf pending, versucht der Poll die
  * Verarbeitung direkt (processJobIfFinished fragt Outscraper und
@@ -15,6 +24,8 @@
  */
 
 import { NextRequest } from "next/server";
+import type { User } from "@supabase/supabase-js";
+import { failedCardMessage, statusLine } from "@/app/lists/job-view";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
 import {
@@ -39,11 +50,30 @@ export const maxDuration = 60;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function GET(request: NextRequest) {
+/**
+ * Bearer-Token zuerst (App), sonst Cookie-Session (Web). Das JWT wird
+ * ueber den Admin-Client bei GoTrue verifiziert — ein abgelaufenes oder
+ * gefaelschtes Token ist damit einfach "nicht eingeloggt" (401), kein
+ * Fehler.
+ */
+async function authenticate(request: NextRequest): Promise<User | null> {
+  const bearer = request.headers
+    .get("authorization")
+    ?.match(/^Bearer\s+(.+)$/i)?.[1]
+    ?.trim();
+  if (bearer) {
+    const { data, error } = await getServerSupabase().auth.getUser(bearer);
+    return error ? null : data.user;
+  }
   const supabase = await createSupabaseSSR();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  return user;
+}
+
+export async function GET(request: NextRequest) {
+  const user = await authenticate(request);
   if (!user) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -97,6 +127,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const running = job.status === "pending" || job.status === "processing";
   return Response.json({
     job: {
       id: job.id,
@@ -107,6 +138,15 @@ export async function GET(request: NextRequest) {
       listName: buildListName(job.params, job.query),
       params: job.params,
       createdAt: job.created_at,
+      // Fertige Texte fuer beide Clients (Web-Kachel + App-Kachel), damit
+      // die Wellen-/Fehler-Logik nur hier lebt.
+      statusLine: running ? statusLine(job.params) : null,
+      failureMessage: failedCardMessage({
+        status: job.status,
+        error: job.error,
+        params: job.params,
+        createdAt: job.created_at,
+      }),
     },
     credits: await readCredits(),
   });

@@ -20,6 +20,11 @@ export interface JobView {
   listName: string | null;
   params: JobViewParams;
   createdAt: string;
+  /** statusLine(params), nur waehrend pending/processing — sonst null. */
+  statusLine: string | null;
+  /** failedCardMessage(job): Text der Failed-Kachel, nur bei frischem
+   *  Fehlschlag (FAILED_CARD_WINDOW_MS) — sonst null. */
+  failureMessage: string | null;
 }
 
 export interface JobViewParams {
@@ -121,6 +126,26 @@ export async function fetchJobStatus(jobId?: string): Promise<StatusResponse> {
   });
   if (!response.ok) throw new Error(`status ${response.status}`);
   return (await response.json()) as StatusResponse;
+}
+
+/**
+ * Text der Failed-Kachel (/lists-Uebersicht + App-Lists-Tab): nur fuer
+ * FRISCHE Fehlschlaege. Ein failed Job bleibt "der neueste", bis der User
+ * erneut startet — ohne Fenster saesse die rote Kachel wochenlang oben.
+ * 24 h decken "gerade probiert, Seite/App wieder aufgemacht" ab. Der
+ * Banner ueber dem Generator-Formular (/lists/new) ist davon unberuehrt.
+ */
+export const FAILED_CARD_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+export function failedCardMessage(
+  job: Pick<JobView, "status" | "error" | "params" | "createdAt">,
+  now = Date.now(),
+): string | null {
+  if (job.status !== "failed") return null;
+  if (now - new Date(job.createdAt).getTime() > FAILED_CARD_WINDOW_MS) {
+    return null;
+  }
+  return failureMessage(job);
 }
 
 /** Nutzer-Text zu einem failed Job — reicht error + params (auch Server-Rows). */

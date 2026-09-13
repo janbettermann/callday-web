@@ -6,7 +6,7 @@ import { buildListName, fetchJobsForUser } from "@/lib/lists/jobs";
 import { fetchAllLists, fetchProfileIdentity } from "@/lib/dashboard/data";
 import { AppNav } from "../components/AppNav";
 import { AppShell } from "../components/AppShell";
-import { failureMessage, statusLine } from "./job-view";
+import { failedCardMessage, statusLine } from "./job-view";
 import { MyLists, type JobCardData, type ListCardData } from "./MyLists";
 
 /**
@@ -80,14 +80,22 @@ export default async function ListsPage({
   }));
 
   // Job-Kachel oben: laufender Job (noch keine lead_lists-Row) → Building;
-  // sonst, wenn der NEUESTE Job failed ist → Failed-Kachel (seit der
-  // Generator ohne Zwischenscreen hierher schickt, muss der Fehler hier
-  // sichtbar sein). Aeltere Fehler sind Geschichte — der naechste Lauf
-  // ersetzt die Kachel. jobs ist neueste-zuerst sortiert.
+  // sonst, wenn der NEUESTE Job frisch failed ist (24-h-Fenster in
+  // failedCardMessage) → Failed-Kachel (seit der Generator ohne
+  // Zwischenscreen hierher schickt, muss der Fehler hier sichtbar sein).
+  // Der naechste Lauf ersetzt die Kachel. jobs ist neueste-zuerst sortiert.
   const runningJob = jobs.find(
     (job) => job.status === "pending" || job.status === "processing",
   );
   const newestJob = jobs[0] ?? null;
+  const failedMessage = newestJob
+    ? failedCardMessage({
+        status: newestJob.status,
+        error: newestJob.error,
+        params: newestJob.params,
+        createdAt: newestJob.created_at,
+      })
+    : null;
   let jobCard: JobCardData | null = null;
   if (runningJob) {
     jobCard = {
@@ -96,11 +104,11 @@ export default async function ListsPage({
       listName: buildListName(runningJob.params, runningJob.query),
       statusLine: statusLine(runningJob.params),
     };
-  } else if (newestJob?.status === "failed") {
+  } else if (newestJob && failedMessage) {
     jobCard = {
       kind: "failed",
       listName: buildListName(newestJob.params, newestJob.query),
-      message: failureMessage(newestJob),
+      message: failedMessage,
     };
   }
 

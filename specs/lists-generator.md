@@ -95,6 +95,23 @@ sauberen Schnitt offen).
     blieben Wellen-/Coverage-Zeile server-gerendert stehen) und den Hinweis
     „Usually under a minute — we'll email you when it's ready." (Jan: Copy
     an die Messwerte des Testlaufs angepasst, vorher „a few minutes").
+    Failed-Kachel nur im **24-h-Fenster** (`job-view.failedCardMessage`,
+    Nachtrag gleicher Tag): ein failed Job bleibt „der neueste", bis
+    erneut gestartet wird — ohne Fenster saesse die rote Kachel wochenlang
+    oben. Der Banner ueber dem Generator-Formular ist unberuehrt.
+  - **App-Kachel (Jan 2026-09-13, callday-app):** Der Lists-Tab der App
+    zeigt denselben Lauf als Building-/Failed-Kachel (Nutzer schliesst den
+    In-App-Browser und sieht in der App, dass gebaut wird; vorher kam die
+    Liste erst mit dem naechsten Foreground-Pull, ohne jedes Signal). Die
+    App liest NICHT `lead_gen_jobs` (RLS ohne Policies, webhook_secret in
+    der Row), sondern pollt `/api/lists/status` mit
+    `Authorization: Bearer <App-Access-Token>` — die Route akzeptiert
+    Bearer vor Cookie, verifiziert das JWT ueber den Admin-Client und
+    liefert `statusLine` + `failureMessage` fertig aus (Wellen-/Fehler-
+    Logik lebt nur hier; die Web-Kachel nutzt dieselben Felder). Nebeneffekt:
+    der App-Poll treibt Self-Heal + Reaper weiter, auch wenn der User den
+    Browser zugemacht hat und sonst niemand mehr pollt. App-Seite: siehe
+    `callday-app/specs/dealswipe-listen-spec.md` (Generator-Job-Kachel).
 - **`/lists/new`** — der Generator als eigene Workspace-Seite
   (`GeneratorClient`): Konsolen-Layout (Formular links, Live-Summary
   rechts, die spaeter Credits-Kosten + Enricher-Zeilen traegt),

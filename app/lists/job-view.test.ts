@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { failureMessage, statusLine } from "./job-view";
+import {
+  FAILED_CARD_WINDOW_MS,
+  failedCardMessage,
+  failureMessage,
+  statusLine,
+} from "./job-view";
 
 /**
  * Statuszeile der Building-Kachel (seit 2026-09-13 der einzige
@@ -62,6 +67,42 @@ describe("statusLine", () => {
     expect(statusLine({ phase: "enrich", enrich: { domains: 3 } })).toBe(
       "Leads found — looking up email addresses now.",
     );
+  });
+});
+
+describe("failedCardMessage", () => {
+  const now = Date.parse("2026-09-13T12:00:00Z");
+  const fresh = new Date(now - 60_000).toISOString();
+  const stale = new Date(now - FAILED_CARD_WINDOW_MS - 1).toISOString();
+
+  it("frischer Fehlschlag → Kachel-Text", () => {
+    expect(
+      failedCardMessage(
+        { status: "failed", error: "timeout", params: {}, createdAt: fresh },
+        now,
+      ),
+    ).toMatch(/took too long/);
+  });
+
+  it("alter Fehlschlag und andere Stati → null", () => {
+    expect(
+      failedCardMessage(
+        { status: "failed", error: "timeout", params: {}, createdAt: stale },
+        now,
+      ),
+    ).toBeNull();
+    expect(
+      failedCardMessage(
+        { status: "ready", error: null, params: {}, createdAt: fresh },
+        now,
+      ),
+    ).toBeNull();
+    expect(
+      failedCardMessage(
+        { status: "pending", error: null, params: {}, createdAt: fresh },
+        now,
+      ),
+    ).toBeNull();
   });
 });
 
