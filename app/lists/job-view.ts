@@ -132,8 +132,9 @@ export async function fetchJobStatus(jobId?: string): Promise<StatusResponse> {
  * Text der Failed-Kachel (/lists-Uebersicht + App-Lists-Tab): nur fuer
  * FRISCHE Fehlschlaege. Ein failed Job bleibt "der neueste", bis der User
  * erneut startet — ohne Fenster saesse die rote Kachel wochenlang oben.
- * 24 h decken "gerade probiert, Seite/App wieder aufgemacht" ab. Der
- * Banner ueber dem Generator-Formular (/lists/new) ist davon unberuehrt.
+ * 24 h decken "gerade probiert, Seite/App wieder aufgemacht" ab. Gilt
+ * seit 2026-09-13 auch fuer den Banner ueber dem Generator-Formular
+ * (/lists/new) — eine Regel fuer alle drei Stellen.
  */
 export const FAILED_CARD_WINDOW_MS = 24 * 60 * 60 * 1000;
 

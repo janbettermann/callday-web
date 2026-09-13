@@ -98,7 +98,12 @@ sauberen Schnitt offen).
     Failed-Kachel nur im **24-h-Fenster** (`job-view.failedCardMessage`,
     Nachtrag gleicher Tag): ein failed Job bleibt „der neueste", bis
     erneut gestartet wird — ohne Fenster saesse die rote Kachel wochenlang
-    oben. Der Banner ueber dem Generator-Formular ist unberuehrt.
+    oben. Gleiches Fenster seit dem Abend auch fuer den **Fehler-Banner
+    ueber dem Generator-Formular** (/lists/new, liest `failureMessage` aus
+    der Status-Route) — plus Name der Suche davor („Zahnarzt – Köln: We
+    couldn't find …"), damit der Satz nach „Try again" oder Tage spaeter
+    Kontext hat. Vorher stand der nackte Satz, bis der naechste Lauf
+    startete.
   - **App-Kachel (Jan 2026-09-13, callday-app):** Der Lists-Tab der App
     zeigt denselben Lauf als Building-/Failed-Kachel (Nutzer schliesst den
     In-App-Browser und sieht in der App, dass gebaut wird; vorher kam die

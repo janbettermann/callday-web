@@ -14,11 +14,7 @@ import { GeneratorFeedback } from "../GeneratorFeedback";
 import { IndustryAutocomplete } from "../IndustryAutocomplete";
 import { InfoPopover } from "../InfoPopover";
 import { LocationsField, type LocationChip } from "../LocationsField";
-import {
-  failureMessage,
-  fetchJobStatus,
-  type StatusResponse,
-} from "../job-view";
+import { fetchJobStatus, type StatusResponse } from "../job-view";
 import { CalldayMark } from "@/app/components/ListCardActions";
 import {
   APP_DOWNLOAD_PATH,
@@ -271,9 +267,16 @@ export function GeneratorClient() {
 
   return (
     <div className="lists-inner-account">
-      {job?.status === "failed" && (
+      {/* Fehlschlag-Banner: nur fuer FRISCHE Fehlschlaege (24-h-Fenster,
+          failedCardMessage in der Status-Route — dieselbe Regel wie die
+          Failed-Kachel auf /lists), und mit dem Namen der Suche, damit der
+          Satz nach "Try again" oder Tage spaeter noch Kontext hat (Jan
+          2026-09-13). Vorher blieb der nackte Satz stehen, bis der
+          naechste Lauf startete. */}
+      {job?.status === "failed" && job.failureMessage && (
         <p className="beta-submit-error lists-fail-banner" role="alert">
-          {failureMessage(job)}
+          {job.listName && <strong>{job.listName}: </strong>}
+          {job.failureMessage}
         </p>
       )}
 
