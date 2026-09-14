@@ -1,0 +1,1133 @@
+/*
+ * "Werkbank" (Jan-Entscheidung 2026-09-14): das Design der werkzeug-
+ * artigen Bereiche, Admin unter /[secret] und Affiliate-Portal unter
+ * /affiliate.
+ *
+ * Dichtes Werkzeug statt Marketing-Optik: kuehles Grau, Seitenleiste,
+ * Systemschrift, 6px-Ecken, keine Schatten, keine Versal-Labels, keine
+ * weichen Pillen. Status immer als Punkt + Text in neutralen Toenen.
+ * Alles unter .wb gescoped, damit die Marketing-Site unberuehrt bleibt;
+ * .wb-scope traegt nur die Tokens (fuer Portale ausserhalb der Wurzel).
+ */
+
+.wb,
+.wb-scope {
+  --wb-bg: #eef0f3;
+  --wb-panel: #ffffff;
+  --wb-line: #dfe2e6;
+  --wb-line-soft: #e6e8eb;
+  --wb-head: #f7f8fa;
+  --wb-hover: #fafbfc;
+  --wb-ink: #1c1e21;
+  --wb-ink-2: #606770;
+  --wb-ink-3: #8a8f98;
+  --wb-blue: #3564e0;
+  --wb-blue-tint: #e8eefb;
+  --wb-green: #2e8b57;
+  --wb-green-dot: #2e9e5b;
+  --wb-amber: #d99a1e;
+  --wb-gray-dot: #9aa0a6;
+  --wb-red: #b91c1c;
+  --wb-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --wb-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+}
+.wb {
+  min-height: 100vh;
+  background: var(--wb-bg);
+  color: var(--wb-ink);
+  font-family: var(--wb-font);
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+.wb *,
+.wb *::before,
+.wb *::after,
+.wb-scope *,
+.wb-scope *::before,
+.wb-scope *::after {
+  box-sizing: border-box;
+}
+.wb a,
+.wb-scope a {
+  color: inherit;
+  text-decoration: none;
+}
+.wb-link {
+  color: var(--wb-ink);
+  font-weight: 500;
+}
+.wb-link:hover {
+  color: var(--wb-blue);
+  text-decoration: underline;
+}
+.wb code {
+  font-family: var(--wb-mono);
+  font-size: 12px;
+}
+/* globals.css gibt h1/h2 der Marketing-Site ein Letter-Spacing von
+   -2 bis -3px und eigene Schriften; im Admin sollen Ueberschriften wie
+   Fliesstext laufen. */
+.wb h1,
+.wb h2,
+.wb h3,
+.wb h4,
+.wb-scope h1,
+.wb-scope h2,
+.wb-scope h3,
+.wb-scope h4 {
+  font-family: inherit;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.3;
+  margin: 0;
+  max-width: none;
+  color: inherit;
+}
+.wb p,
+.wb-scope p {
+  margin: 0;
+}
+.wb-link-blue {
+  color: var(--wb-blue);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.wb-link-blue:hover {
+  text-decoration: underline;
+}
+.wb-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.wb-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wb-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--wb-ink-2);
+}
+.wb-list strong {
+  color: var(--wb-ink);
+  font-weight: 600;
+}
+.wb-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--wb-ink-2);
+}
+.wb-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.wb-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.wb-kv-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wb-ink-2);
+  margin-bottom: 4px;
+}
+.wb-kv-value {
+  font-size: 14px;
+  color: var(--wb-ink);
+  word-break: break-word;
+}
+.wb-msg-warn {
+  font-size: 13px;
+  color: #8a5f0b;
+}
+.wb-panel-foot {
+  padding: 12px 20px;
+  border-top: 1px solid var(--wb-line-soft);
+  text-align: center;
+  font-size: 13px;
+  color: var(--wb-ink-2);
+}
+
+/* --- Formulare ---------------------------------------------------- */
+.wb-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.wb-field {
+  display: block;
+  min-width: 0;
+}
+.wb-hint {
+  font-size: 12px;
+  color: var(--wb-ink-3);
+  margin-top: 4px;
+}
+.wb-textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 8px 12px;
+  border: 1px solid #cfd3d9;
+  border-radius: 6px;
+  background: var(--wb-panel);
+  font: inherit;
+  font-size: 14px;
+  color: var(--wb-ink);
+  outline: none;
+  resize: vertical;
+}
+.wb-textarea:focus,
+.wb-select:focus {
+  border-color: var(--wb-blue);
+  box-shadow: 0 0 0 3px var(--wb-blue-tint);
+}
+.wb-select {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #cfd3d9;
+  border-radius: 6px;
+  background: var(--wb-panel);
+  font: inherit;
+  font-size: 14px;
+  color: var(--wb-ink);
+  outline: none;
+}
+.wb-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--wb-ink);
+  cursor: pointer;
+}
+.wb-check input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--wb-blue);
+}
+.wb-form-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.wb-msg-error {
+  font-size: 13px;
+  color: var(--wb-red);
+}
+.wb-msg-ok {
+  font-size: 13px;
+  color: var(--wb-green);
+}
+.wb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #cfd3d9;
+  border-radius: 6px;
+  background: var(--wb-panel);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wb-ink);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.wb-btn:hover {
+  background: #f2f4f7;
+}
+.wb-btn:disabled,
+.wb-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.wb-btn-primary.is-small {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+.wb-btn-primary.is-green {
+  background: #1f7a45;
+}
+.wb-btn-primary.is-green:hover {
+  background: #17663a;
+}
+.wb-btn.is-ghost {
+  border-color: transparent;
+  background: none;
+  color: var(--wb-ink-2);
+}
+.wb-btn.is-ghost:hover {
+  background: #f2f4f7;
+  color: var(--wb-ink);
+}
+.wb-btn.is-ok {
+  border-color: #b9dcc6;
+  background: #e6f4ec;
+  color: #1f7a45;
+}
+
+/* --- Modal (Desktop zentriert, Mobile als Bottom-Sheet) ------------ */
+.wb-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(28, 30, 33, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  font-family: var(--wb-font);
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--wb-ink);
+  -webkit-font-smoothing: antialiased;
+}
+.wb-modal {
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: var(--wb-panel);
+  border: 1px solid var(--wb-line);
+  border-radius: 6px;
+}
+.wb-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 12px 12px 20px;
+  border-bottom: 1px solid var(--wb-line-soft);
+}
+.wb-modal-body {
+  padding: 20px;
+}
+@media (max-width: 600px) {
+  .wb-modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .wb-modal {
+    max-width: none;
+    max-height: 92vh;
+    border-radius: 6px 6px 0 0;
+    border-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  /* iOS zoomt bei Feldern unter 16px automatisch hinein. */
+  .wb-input,
+  .wb-select,
+  .wb-textarea {
+    font-size: 16px;
+  }
+}
+/* iOS-Safari gibt datetime-local eine intrinsische Breite, die width:100%
+   ignoriert; appearance:none zwingt das Feld in die Box, der native
+   Picker oeffnet weiterhin beim Tap. */
+.wb-input[type="datetime-local"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.wb-input[type="datetime-local"]::-webkit-date-and-time-value {
+  text-align: left;
+  min-width: 0;
+  margin: 0;
+}
+.wb-icon-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--wb-ink-2);
+  cursor: pointer;
+}
+.wb-icon-btn:hover {
+  background: #f2f4f7;
+  color: var(--wb-ink);
+}
+.wb-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--wb-line-soft);
+}
+
+/* --- Drawer (Slide-Over von rechts) ------------------------------- */
+.wb-drawer-root {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+}
+.wb-drawer-backdrop {
+  flex: 1;
+  border: 0;
+  background: rgba(28, 30, 33, 0.35);
+  cursor: pointer;
+}
+.wb-drawer {
+  width: 100%;
+  max-width: 460px;
+  background: var(--wb-bg);
+  border-left: 1px solid var(--wb-line);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.wb-drawer-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--wb-panel);
+  border-bottom: 1px solid var(--wb-line);
+  padding: 16px 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.wb-drawer-title {
+  font-family: var(--wb-mono);
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+.wb-drawer-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+}
+.wb-drawer-foot {
+  position: sticky;
+  bottom: 0;
+  background: var(--wb-panel);
+  border-top: 1px solid var(--wb-line);
+  padding: 12px 20px;
+}
+.wb-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wb-group-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wb-ink-2);
+}
+.wb-box {
+  background: var(--wb-panel);
+  border: 1px solid var(--wb-line);
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wb-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 8px;
+}
+.wb-mini {
+  background: var(--wb-panel);
+  border: 1px solid var(--wb-line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+.wb-mini-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--wb-ink-2);
+}
+.wb-mini-value {
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.wb-big {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.wb-code-box {
+  background: var(--wb-head);
+  border: 1px solid var(--wb-line-soft);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-family: var(--wb-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: all;
+}
+.wb-row.is-click {
+  cursor: pointer;
+}
+
+/* --- Huelle: Seitenleiste + Hauptbereich ------------------------- */
+.wb-shell {
+  display: flex;
+  min-height: 100vh;
+}
+.wb-sidebar {
+  width: 224px;
+  flex-shrink: 0;
+  background: var(--wb-panel);
+  border-right: 1px solid var(--wb-line);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 12px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.wb-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 18px;
+}
+.wb-brand-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+.wb-brand-tag {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--wb-ink-2);
+  background: var(--wb-bg);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+.wb-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wb-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--wb-ink);
+}
+.wb-nav-item:hover {
+  background: #f2f4f7;
+}
+.wb-nav-item.is-active {
+  background: var(--wb-blue-tint);
+  color: var(--wb-blue);
+  font-weight: 600;
+}
+.wb-nav-item svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.wb-sidebar-foot {
+  margin-top: auto;
+}
+.wb-signout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wb-ink-2);
+  cursor: pointer;
+  text-align: left;
+}
+.wb-signout:hover {
+  background: #f2f4f7;
+  color: var(--wb-ink);
+}
+.wb-signout svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.wb-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.wb-topbar {
+  height: 56px;
+  background: var(--wb-panel);
+  border-bottom: 1px solid var(--wb-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.wb-topbar-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.wb-topbar-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+}
+.wb-topbar-sub {
+  font-size: 13px;
+  color: var(--wb-ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wb-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.wb-stamp {
+  font-size: 12px;
+  color: var(--wb-ink-2);
+  white-space: nowrap;
+}
+.wb-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* --- Panel -------------------------------------------------------- */
+.wb-panel {
+  background: var(--wb-panel);
+  border: 1px solid var(--wb-line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.wb-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--wb-line-soft);
+}
+.wb-panel-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.wb-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+}
+.wb-panel-sub {
+  font-size: 13px;
+  color: var(--wb-ink-2);
+}
+.wb-panel-meta {
+  font-size: 12px;
+  color: var(--wb-ink-2);
+  text-align: right;
+  flex-shrink: 0;
+}
+.wb-panel-body {
+  padding: 20px;
+}
+.wb-panel-body.has-divider {
+  border-bottom: 1px solid var(--wb-line-soft);
+}
+
+/* Freie Abschnitte ohne Panel (z. B. um Bausteine mit eigener Karte). */
+.wb-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wb-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.wb-h {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* --- Tabelle ------------------------------------------------------ */
+.wb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.wb-table th {
+  background: var(--wb-head);
+  height: 36px;
+  padding: 0 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wb-ink-2);
+  text-align: left;
+  white-space: nowrap;
+}
+.wb-table td {
+  padding: 10px 16px;
+  border-top: 1px solid var(--wb-line-soft);
+  vertical-align: middle;
+  color: var(--wb-ink);
+}
+.wb-table th:first-child,
+.wb-table td:first-child {
+  padding-left: 20px;
+}
+.wb-table th:last-child,
+.wb-table td:last-child {
+  padding-right: 20px;
+}
+.wb-table .is-right {
+  text-align: right;
+}
+.wb-table .is-nowrap {
+  white-space: nowrap;
+}
+.wb-table .is-muted {
+  color: var(--wb-ink-2);
+}
+.wb-table .is-faint {
+  color: var(--wb-ink-3);
+}
+.wb-table .is-mono {
+  font-family: var(--wb-mono);
+  font-size: 12px;
+}
+.wb-table .is-top {
+  vertical-align: top;
+}
+.wb-table .is-wrap {
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+.wb-row:hover td {
+  background: var(--wb-hover);
+}
+.wb-num {
+  font-variant-numeric: tabular-nums;
+}
+.wb-num.is-bold {
+  font-weight: 600;
+}
+.wb-sub {
+  font-size: 12px;
+  color: var(--wb-ink-3);
+  margin-top: 1px;
+}
+
+/* --- Segment-Schalter (Zeitraum, Filter) -------------------------- */
+.wb-seg {
+  display: inline-flex;
+  border: 1px solid #cfd3d9;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--wb-panel);
+}
+/* Gilt fuer Links und Buttons gleichermassen. */
+.wb-seg-item {
+  height: 32px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-left: 1px solid var(--wb-line-soft);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wb-ink);
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+}
+.wb-seg-item:first-child {
+  border-left: 0;
+}
+.wb-seg-item:hover {
+  background: #f2f4f7;
+}
+.wb-seg-item:disabled {
+  cursor: default;
+}
+.wb-seg-item.is-active,
+.wb-seg-item.is-active:hover {
+  background: var(--wb-blue);
+  border-left-color: var(--wb-blue);
+  color: #ffffff;
+  font-weight: 600;
+}
+.wb-seg-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+}
+
+/* --- Kennzahlen: Leiste im Panel, Kacheln frei -------------------- */
+.wb-metrics {
+  display: grid;
+}
+.wb-metric {
+  padding: 18px 20px;
+  border-right: 1px solid var(--wb-line-soft);
+  min-width: 0;
+}
+.wb-metric:last-child {
+  border-right: 0;
+}
+.wb-metric.is-snapshot {
+  background: var(--wb-head);
+}
+.wb-metric-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wb-ink-2);
+}
+.wb-metric-value {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.wb-metric-sub {
+  font-size: 12px;
+  color: var(--wb-ink-3);
+  margin-top: 4px;
+}
+.wb-delta {
+  font-size: 13px;
+  font-weight: 600;
+}
+.wb-delta.is-up {
+  color: var(--wb-green);
+}
+.wb-delta.is-down {
+  color: var(--wb-red);
+}
+.wb-delta.is-flat {
+  color: var(--wb-ink-3);
+  font-weight: 500;
+}
+
+.wb-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+.wb-tile {
+  background: var(--wb-panel);
+  border: 1px solid var(--wb-line);
+  border-radius: 6px;
+  padding: 16px 18px;
+  min-width: 0;
+}
+.wb-tile.is-alert {
+  border-color: rgba(185, 28, 28, 0.4);
+}
+.wb-tile.is-alert .wb-metric-value {
+  color: var(--wb-red);
+}
+
+/* --- Status, Badges, Hinweise ------------------------------------- */
+.wb-dot-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+.wb-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--wb-gray-dot);
+  flex-shrink: 0;
+}
+.wb-dot.is-blue {
+  background: var(--wb-blue);
+}
+.wb-dot.is-green {
+  background: var(--wb-green-dot);
+}
+.wb-dot.is-amber {
+  background: var(--wb-amber);
+}
+.wb-dot.is-red {
+  background: var(--wb-red);
+}
+
+.wb-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 2px 8px;
+  background: var(--wb-bg);
+  color: var(--wb-ink-2);
+  white-space: nowrap;
+}
+.wb-badge.is-blue {
+  background: var(--wb-blue-tint);
+  color: var(--wb-blue);
+}
+.wb-badge.is-green {
+  background: #e6f4ec;
+  color: #1f7a45;
+}
+.wb-badge.is-amber {
+  background: #fbf1dc;
+  color: #8a5f0b;
+}
+.wb-badge.is-red {
+  background: #fbe9e9;
+  color: var(--wb-red);
+}
+
+.wb-empty {
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--wb-ink-3);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.wb-alert {
+  border: 1px solid rgba(185, 28, 28, 0.35);
+  background: #fdf3f3;
+  border-radius: 6px;
+  padding: 14px 18px;
+  font-size: 13px;
+  color: var(--wb-red);
+}
+.wb-alert-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.wb-alert code {
+  color: var(--wb-ink);
+}
+.wb-notice {
+  border: 1px solid #efd9a6;
+  background: #fdf7e8;
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #7a5307;
+}
+.wb-note {
+  font-size: 12px;
+  color: var(--wb-ink-3);
+  line-height: 1.5;
+}
+.wb-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+  font-size: 13px;
+  color: var(--wb-ink-2);
+}
+.wb-meta-row strong {
+  color: var(--wb-ink);
+  font-weight: 600;
+}
+.wb-progress {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--wb-bg);
+  overflow: hidden;
+}
+.wb-progress-bar {
+  height: 100%;
+  background: var(--wb-blue);
+}
+.wb-progress-bar.is-done {
+  background: var(--wb-green-dot);
+}
+
+/* --- Login -------------------------------------------------------- */
+.wb-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.wb-login-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--wb-panel);
+  border: 1px solid var(--wb-line);
+  border-radius: 6px;
+  padding: 28px;
+}
+.wb h1.wb-login-title {
+  font-size: 18px;
+  margin: 12px 0 20px;
+}
+.wb-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wb-ink-2);
+  margin-bottom: 6px;
+}
+.wb-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #cfd3d9;
+  border-radius: 6px;
+  background: var(--wb-panel);
+  font: inherit;
+  font-size: 14px;
+  color: var(--wb-ink);
+  outline: none;
+}
+.wb-input:focus {
+  border-color: var(--wb-blue);
+  box-shadow: 0 0 0 3px var(--wb-blue-tint);
+}
+.wb-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--wb-blue);
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wb-btn-primary:hover {
+  background: #2b56c4;
+}
+.wb-error-text {
+  font-size: 13px;
+  color: var(--wb-red);
+  margin: 10px 0 0;
+}
+
+/* --- Schmale Fenster ---------------------------------------------- */
+@media (max-width: 860px) {
+  .wb-shell {
+    flex-direction: column;
+  }
+  .wb-sidebar {
+    width: auto;
+    height: auto;
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--wb-line);
+  }
+  .wb-brand {
+    padding: 0 8px 0 0;
+  }
+  .wb-sidebar .wb-brand-tag {
+    display: none;
+  }
+  .wb-nav {
+    flex-direction: row;
+  }
+  .wb-nav-item span,
+  .wb-signout span {
+    display: none;
+  }
+  .wb-sidebar-foot {
+    margin-top: 0;
+    margin-left: auto;
+  }
+  .wb-signout {
+    width: auto;
+  }
+  .wb-topbar {
+    height: auto;
+    padding: 12px 16px;
+    flex-wrap: wrap;
+  }
+  .wb-topbar-sub {
+    white-space: normal;
+  }
+  .wb-content {
+    padding: 16px;
+  }
+  .wb-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .wb-metric {
+    border-bottom: 1px solid var(--wb-line-soft);
+  }
+  .wb-panel {
+    overflow-x: auto;
+  }
+}

@@ -5,65 +5,9 @@ import { useState, useTransition, type FormEvent } from "react";
 import { createAffiliateAction } from "../actions";
 
 /**
- * Inline-Create-Form mit Brand-Aesthetik (cream-bg-page, form-card-style
- * white panel, beta-field-Inputs, brand-blue Primary-Button).
+ * Inline-Formular zum Anlegen eines Affiliates. Liegt im Werkbank-Panel
+ * der Seite (WbPanel padded), bringt also keine eigene Karte mit.
  */
-
-const cardStyle: React.CSSProperties = {
-  background: "#ffffff",
-  border: "0.5px solid var(--line)",
-  borderRadius: 24,
-  padding: "28px 28px 24px",
-  boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-};
-
-const fieldRowStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-  gap: 16,
-  marginBottom: 18,
-};
-
-const inputBaseStyle: React.CSSProperties = {
-  width: "100%",
-  background: "rgba(26, 29, 38, 0.045)",
-  border: "1px solid transparent",
-  borderRadius: 12,
-  padding: "12px 14px",
-  fontSize: 16,
-  color: "var(--ink)",
-  outline: "none",
-  fontFamily: "inherit",
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 600,
-  color: "var(--ink-dim)",
-  letterSpacing: 0.2,
-  marginBottom: 6,
-};
-
-const hintStyle: React.CSSProperties = {
-  fontSize: 11,
-  color: "var(--ink-faint)",
-  marginTop: 4,
-  fontWeight: 400,
-};
-
-const primaryButtonStyle: React.CSSProperties = {
-  background: "linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%)",
-  color: "#ffffff",
-  border: "none",
-  borderRadius: 12,
-  padding: "12px 24px",
-  fontSize: 15,
-  fontWeight: 600,
-  cursor: "pointer",
-  boxShadow:
-    "0 6px 18px rgba(37,99,232,0.22), 0 2px 6px rgba(74,122,247,0.18)",
-  transition: "transform 0.15s, opacity 0.15s",
-};
 
 export function CreateAffiliateForm() {
   const [error, setError] = useState<string | null>(null);
@@ -85,111 +29,54 @@ export function CreateAffiliateForm() {
         return;
       }
       const slug = String(formData.get("slug") ?? "");
-      setSuccess(
-        `Created ${slug}. Open the row to send the welcome mail.`,
-      );
+      setSuccess(`${slug} angelegt. Zeile öffnen, um die Welcome-Mail zu senden.`);
       form.reset();
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} style={cardStyle} noValidate>
-      <div style={fieldRowStyle}>
-        <Field label="Slug" hint="lowercase · dashes ok · 2–30 chars">
+    <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="wb-field-grid">
+        <Field label="Slug" hint="Kleinbuchstaben, Bindestriche ok, 2 bis 30 Zeichen">
           <input
             name="slug"
             required
             placeholder="joe"
             autoComplete="off"
-            style={{
-              ...inputBaseStyle,
-              fontFamily: "var(--font-mono), monospace",
-            }}
+            className="wb-input"
+            style={{ fontFamily: "var(--wb-mono)" }}
           />
         </Field>
-
         <Field label="Name">
-          <input
-            name="name"
-            required
-            placeholder="Joe Bautista"
-            autoComplete="off"
-            style={inputBaseStyle}
-          />
+          <input name="name" required placeholder="Joe Bautista" autoComplete="off" className="wb-input" />
         </Field>
-
-        <Field label="Email">
-          <input
-            name="email"
-            type="email"
-            required
-            placeholder="joe@example.com"
-            autoComplete="off"
-            style={inputBaseStyle}
-          />
+        <Field label="E-Mail">
+          <input name="email" type="email" required placeholder="joe@example.com" autoComplete="off" className="wb-input" />
         </Field>
-
-        <Field label="Notes" hint="cohort tag · intro context · optional">
-          <input
-            name="notes"
-            placeholder="Twitter outreach · cold caller cohort"
-            autoComplete="off"
-            style={inputBaseStyle}
-          />
+        <Field label="Notizen" hint="Cohort-Tag, Kontext, optional">
+          <input name="notes" placeholder="Twitter-Outreach, Cold-Caller-Cohort" autoComplete="off" className="wb-input" />
         </Field>
       </div>
 
-      <label
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          fontSize: 14,
-          color: "var(--ink-dim)",
-          cursor: "pointer",
-          marginBottom: 22,
-        }}
-      >
-        <input
-          type="checkbox"
-          name="founder_tier"
-          defaultChecked
-          style={{ width: 16, height: 16, accentColor: "var(--blue-deep)" }}
-        />
-        Founding affiliate (first ~20–30 cohort)
+      <label className="wb-check">
+        <input type="checkbox" name="founder_tier" defaultChecked />
+        Founding-Affiliate (erste rund 20 bis 30)
       </label>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 16,
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ fontSize: 14, minHeight: 20, flex: 1 }}>
+      <div className="wb-form-row">
+        <div style={{ fontSize: 13, minHeight: 20, flex: 1 }}>
           {error ? (
-            <span style={{ color: "#b91c1c" }}>{error}</span>
+            <span className="wb-msg-error">{error}</span>
           ) : success ? (
-            <span style={{ color: "#15803d" }}>{success}</span>
+            <span className="wb-msg-ok">{success}</span>
           ) : (
-            <span style={{ color: "var(--ink-faint)" }}>
-              Slug becomes <code style={{ fontFamily: "var(--font-mono), monospace" }}>callday.io/a/[slug]</code> — make it stable.
+            <span style={{ color: "var(--wb-ink-3)" }}>
+              Der Slug wird <code>callday.io/a/[slug]</code> und bleibt danach fest.
             </span>
           )}
         </div>
-        <button
-          type="submit"
-          disabled={isPending}
-          aria-busy={isPending}
-          style={{
-            ...primaryButtonStyle,
-            opacity: isPending ? 0.7 : 1,
-            cursor: isPending ? "wait" : "pointer",
-          }}
-        >
-          {isPending ? "Creating…" : "Create affiliate"}
+        <button type="submit" disabled={isPending} aria-busy={isPending} className="wb-btn-primary is-small">
+          {isPending ? "Wird angelegt…" : "Affiliate anlegen"}
         </button>
       </div>
     </form>
@@ -206,10 +93,10 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label style={{ display: "block" }}>
-      <div style={labelStyle}>{label}</div>
+    <label className="wb-field">
+      <span className="wb-label">{label}</span>
       {children}
-      {hint ? <div style={hintStyle}>{hint}</div> : null}
+      {hint ? <div className="wb-hint">{hint}</div> : null}
     </label>
   );
 }

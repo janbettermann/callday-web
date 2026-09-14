@@ -3,10 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 
 import type { AffiliateRow } from "@/lib/admin/affiliate-queries";
-import type {
-  AffiliateLifecycle,
-  AffiliateStatus,
-} from "@/lib/admin/affiliate-lifecycle";
+import type { AffiliateStatus } from "@/lib/admin/affiliate-lifecycle";
 import { deriveLifecycle } from "@/lib/admin/affiliate-lifecycle";
 import type {
   AffiliatePayout,
@@ -15,6 +12,7 @@ import type {
 } from "@/lib/affiliate-payout";
 
 import { MethodMark } from "@/app/affiliate/MethodMark";
+import { WbBadge, WbDot, type WbTone } from "../../_components/admin-ui";
 import {
   changeAffiliateStatusAction,
   markCommissionsPaidAction,
@@ -22,11 +20,12 @@ import {
   resendInviteAction,
   updateAffiliateAction,
 } from "../actions";
+import { LIFECYCLE } from "./lifecycle-ui";
 
 /**
- * Detail-Drawer, on-brand. Slide-in von rechts, weisser Panel mit
- * cream-tinted Sections, brand-blue Primary-Buttons, Sun-Tint fuer
- * "Founding"-Toggle. Slug ist permanent (Vertragsklausel).
+ * Detail-Drawer im Werkbank-Design: Slide-Over von rechts, grauer
+ * Hintergrund, weisse Boxen mit 1px-Rand, Status als Segment-Schalter.
+ * Slug ist permanent (Vertragsklausel).
  */
 
 interface Props {
@@ -39,6 +38,12 @@ export function AffiliateDetailDrawer({ affiliate, open, onClose }: Props) {
   if (!open) return null;
   return <DrawerBody affiliate={affiliate} onClose={onClose} />;
 }
+
+const STATUS_OPTIONS: Array<{ value: AffiliateStatus; label: string }> = [
+  { value: "active", label: "Aktiv" },
+  { value: "paused", label: "Pausiert" },
+  { value: "removed", label: "Entfernt" },
+];
 
 function DrawerBody({
   affiliate,
@@ -70,7 +75,7 @@ function DrawerBody({
     startTransition(async () => {
       const result = await updateAffiliateAction(formData);
       if (!result.ok) setActionError(result.error);
-      else setActionInfo("Saved.");
+      else setActionInfo("Gespeichert.");
     });
   }
 
@@ -82,7 +87,7 @@ function DrawerBody({
     startTransition(async () => {
       const result = await changeAffiliateStatusAction(fd);
       if (!result.ok) setActionError(result.error);
-      else setActionInfo(`Status changed to ${next}.`);
+      else setActionInfo(`Status auf ${STATUS_OPTIONS.find((s) => s.value === next)?.label ?? next} gesetzt.`);
     });
   }
 
@@ -93,7 +98,7 @@ function DrawerBody({
     startTransition(async () => {
       const result = await resendInviteAction(fd);
       if (!result.ok) setActionError(result.error);
-      else setActionInfo(`Welcome mail sent to ${affiliate.email}.`);
+      else setActionInfo(`Welcome-Mail an ${affiliate.email} gesendet.`);
     });
   }
 
@@ -105,23 +110,20 @@ function DrawerBody({
     startTransition(async () => {
       const result = await markPayoutTestSentAction(fd);
       if (!result.ok) setActionError(result.error);
-      else
-        setActionInfo(
-          `Marked ${method === "paypal" ? "PayPal" : "Wise"} test transfer as sent.`,
-        );
+      else setActionInfo(`${method === "paypal" ? "PayPal" : "Wise"}-Testüberweisung als gesendet markiert.`);
     });
   }
 
   // Geld-Action: alle aktuell auszahlbaren Provisionen als bezahlt buchen +
   // Payout-Beleg anlegen (DB-Funktion mark_commissions_paid, atomar). window
   // .confirm davor, weil irreversibel + echtes Geld. Erfolg zeigt den REAL
-  // gebuchten Betrag (result.paidCents, aus der DB) — nicht die Seiten-Zahl.
+  // gebuchten Betrag (result.paidCents, aus der DB), nicht die Seiten-Zahl.
   function handleMarkPaid(formData: FormData) {
     clearMessages();
     if (affiliate.available_cents <= 0) return;
     const confirmed = window.confirm(
-      `Record a payout of ${fmtUsd(affiliate.available_cents)} to ${affiliate.slug}?\n\n` +
-        "This marks all currently available commissions as paid and can't be undone.",
+      `Auszahlung von ${fmtUsd(affiliate.available_cents)} an ${affiliate.slug} buchen?\n\n` +
+        "Das markiert alle aktuell auszahlbaren Provisionen als bezahlt und lässt sich nicht rückgängig machen.",
     );
     if (!confirmed) return;
     formData.set("id", affiliate.id);
@@ -130,472 +132,160 @@ function DrawerBody({
       if (!result.ok) setActionError(result.error);
       else
         setActionInfo(
-          `Paid ${fmtUsd(result.paidCents)} — ${result.count} commission${
-            result.count === 1 ? "" : "s"
-          } marked.`,
+          `${fmtUsd(result.paidCents)} gebucht, ${result.count} Provision${result.count === 1 ? "" : "en"} markiert.`,
         );
     });
   }
 
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 50,
-        display: "flex",
-      }}
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Edit affiliate ${affiliate.slug}`}
-    >
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close"
-        style={{
-          flex: 1,
-          background: "rgba(26,29,38,0.30)",
-          backdropFilter: "blur(2px)",
-          border: "none",
-          cursor: "pointer",
-        }}
-      />
+  const lc = LIFECYCLE[deriveLifecycle(affiliate)];
+  const removed = affiliate.status === "removed";
 
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 440,
-          background: "var(--bg)",
-          overflowY: "auto",
-          boxShadow: "-16px 0 48px rgba(0,0,0,0.12)",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <header
-          style={{
-            position: "sticky",
-            top: 0,
-            background: "var(--bg)",
-            borderBottom: "0.5px solid var(--line)",
-            padding: "20px 28px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            zIndex: 10,
-          }}
-        >
+  return (
+    <div className="wb-drawer-root" role="dialog" aria-modal="true" aria-label={`Affiliate ${affiliate.slug} bearbeiten`}>
+      <button type="button" onClick={onClose} aria-label="Schließen" className="wb-drawer-backdrop" />
+
+      <div className="wb-drawer">
+        <header className="wb-drawer-head">
           <div>
-            <div
-              style={{
-                fontFamily: "var(--font-label)",
-                fontSize: 10,
-                textTransform: "uppercase",
-                letterSpacing: "1.2px",
-                color: "var(--ink-faint)",
-              }}
-            >
-              Affiliate
-            </div>
-            <div
-              style={{
-                marginTop: 4,
-                fontFamily: "var(--font-mono), monospace",
-                fontSize: 22,
-                fontWeight: 700,
-                letterSpacing: "-0.4px",
-                color: "var(--ink)",
-              }}
-            >
-              {affiliate.slug}
-            </div>
-            <div
-              style={{
-                marginTop: 2,
-                fontSize: 13,
-                color: "var(--ink-dim)",
-                marginBottom: 8,
-              }}
-            >
-              {affiliate.name}
-            </div>
-            <LifecyclePill lifecycle={deriveLifecycle(affiliate)} />
+            <div style={{ fontSize: 12, color: "var(--wb-ink-2)", fontWeight: 500 }}>Affiliate</div>
+            <h2 className="wb-drawer-title" style={{ marginTop: 2 }}>{affiliate.slug}</h2>
+            <div style={{ fontSize: 13, color: "var(--wb-ink-2)", margin: "2px 0 8px" }}>{affiliate.name}</div>
+            <WbDot tone={lc.tone}>{lc.label}</WbDot>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              padding: 6,
-              borderRadius: 8,
-              color: "var(--ink-faint)",
-            }}
-            aria-label="Close"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <line x1="6" y1="6" x2="18" y2="18" />
-              <line x1="6" y1="18" x2="18" y2="6" />
+          <button type="button" onClick={onClose} className="wb-icon-btn" aria-label="Schließen">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M6 18L18 6" />
             </svg>
           </button>
         </header>
 
-        <div
-          style={{
-            padding: "28px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 28,
-            flex: 1,
-          }}
-        >
+        <div className="wb-drawer-body">
           <StatsRow affiliate={affiliate} />
 
-          <Section label="Status">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              <StatusButton
-                label="Active"
-                active={affiliate.status === "active"}
-                disabled={isPending || affiliate.status === "active"}
-                onClick={() => handleStatusChange("active")}
-                color="#10b981"
-              />
-              <StatusButton
-                label="Paused"
-                active={affiliate.status === "paused"}
-                disabled={isPending || affiliate.status === "paused"}
-                onClick={() => handleStatusChange("paused")}
-                color="#f59e0b"
-              />
-              <StatusButton
-                label="Removed"
-                active={affiliate.status === "removed"}
-                disabled={isPending || affiliate.status === "removed"}
-                onClick={() => handleStatusChange("removed")}
-                color="#94a3b8"
-              />
+          <div className="wb-group">
+            <div className="wb-group-label">Status</div>
+            <div className="wb-seg" style={{ alignSelf: "flex-start" }}>
+              {STATUS_OPTIONS.map((opt) => {
+                const active = affiliate.status === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`wb-seg-item${active ? " is-active" : ""}`}
+                    disabled={isPending || active}
+                    onClick={() => handleStatusChange(opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
-          </Section>
+          </div>
 
-          <Section label="Invite">
-            <div
-              style={{
-                background: "#ffffff",
-                border: "0.5px solid var(--line)",
-                borderRadius: 16,
-                padding: 18,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 13,
-                  color: "var(--ink-dim)",
-                  marginBottom: 12,
-                }}
-              >
+          <div className="wb-group">
+            <div className="wb-group-label">Einladung</div>
+            <div className="wb-box">
+              <div style={{ fontSize: 13, color: "var(--wb-ink-2)" }}>
                 {affiliate.invited_at
-                  ? `Last sent ${fmtDateTime(affiliate.invited_at)}`
-                  : "Not yet invited."}
+                  ? `Zuletzt gesendet ${fmtDateTime(affiliate.invited_at)}`
+                  : "Noch nicht eingeladen."}
               </div>
-              <button
-                type="button"
-                onClick={handleResendInvite}
-                disabled={isPending || affiliate.status === "removed"}
-                aria-busy={isPending}
-                style={{
-                  background: affiliate.invited_at
-                    ? "#ffffff"
-                    : "linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%)",
-                  color: affiliate.invited_at ? "var(--ink)" : "#ffffff",
-                  border: affiliate.invited_at
-                    ? "1px solid var(--line)"
-                    : "none",
-                  borderRadius: 10,
-                  padding: "10px 18px",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor:
-                    isPending || affiliate.status === "removed"
-                      ? "not-allowed"
-                      : "pointer",
-                  opacity:
-                    isPending || affiliate.status === "removed" ? 0.5 : 1,
-                  boxShadow: affiliate.invited_at
-                    ? "none"
-                    : "0 6px 18px rgba(37,99,232,0.22)",
-                }}
-              >
-                {affiliate.invited_at ? "Resend invite" : "Send invite"}
-              </button>
-              {affiliate.status === "removed" ? (
-                <p
-                  style={{
-                    marginTop: 10,
-                    fontSize: 12,
-                    color: "var(--ink-faint)",
-                  }}
+              <div>
+                <button
+                  type="button"
+                  onClick={handleResendInvite}
+                  disabled={isPending || removed}
+                  aria-busy={isPending}
+                  className={affiliate.invited_at ? "wb-btn" : "wb-btn-primary is-small"}
                 >
-                  Cannot send to removed affiliates. Set Active first.
-                </p>
+                  {affiliate.invited_at ? "Einladung erneut senden" : "Einladung senden"}
+                </button>
+              </div>
+              {removed ? (
+                <p className="wb-note">Entfernte Affiliates bekommen keine Mail. Erst auf Aktiv setzen.</p>
               ) : null}
             </div>
-          </Section>
+          </div>
 
-          <Section label="Balance">
-            <div
-              style={{
-                background: "#ffffff",
-                border: "0.5px solid var(--line)",
-                borderRadius: 16,
-                padding: 18,
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
-              }}
-            >
+          <div className="wb-group">
+            <div className="wb-group-label">Guthaben</div>
+            <div className="wb-box">
               <div>
-                <div
-                  style={{
-                    fontFamily: "var(--font-label)",
-                    fontSize: 10,
-                    textTransform: "uppercase",
-                    letterSpacing: "1.2px",
-                    color: "var(--ink-faint)",
-                  }}
-                >
-                  Available to pay out
-                </div>
-                <div
-                  style={{
-                    marginTop: 4,
-                    fontSize: 30,
-                    fontWeight: 700,
-                    letterSpacing: "-0.6px",
-                    fontVariantNumeric: "tabular-nums",
-                    color:
-                      affiliate.available_cents > 0
-                        ? "var(--ink)"
-                        : "var(--ink-faint)",
-                  }}
-                >
+                <div className="wb-mini-label">Auszahlbar</div>
+                <div className="wb-big" style={{ color: affiliate.available_cents > 0 ? undefined : "var(--wb-ink-3)" }}>
                   {fmtUsd(affiliate.available_cents)}
                 </div>
               </div>
 
               {affiliate.available_cents > 0 ? (
-                <form
-                  action={handleMarkPaid}
-                  style={{ display: "flex", flexDirection: "column", gap: 12 }}
-                >
-                  <Field label="Method (optional)">
-                    <select
-                      name="method"
-                      defaultValue={affiliate.payout.activeMethod ?? ""}
-                      style={{
-                        width: "100%",
-                        background: "rgba(26,29,38,0.045)",
-                        border: "1px solid transparent",
-                        borderRadius: 12,
-                        padding: "10px 14px",
-                        fontSize: 16,
-                        color: "var(--ink)",
-                        outline: "none",
-                        fontFamily: "inherit",
-                      }}
-                    >
-                      <option value="">—</option>
+                <form action={handleMarkPaid} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <Field label="Methode (optional)">
+                    <select name="method" defaultValue={affiliate.payout.activeMethod ?? ""} className="wb-select">
+                      <option value="">–</option>
                       <option value="paypal">PayPal</option>
                       <option value="wise">Wise</option>
                     </select>
                   </Field>
-                  <Field label="Transaction ref (optional)">
-                    <DrawerInput
-                      name="external_ref"
-                      placeholder="PayPal / Wise transaction id"
-                    />
+                  <Field label="Transaktions-Referenz (optional)">
+                    <input name="external_ref" placeholder="PayPal- oder Wise-Transaktions-ID" className="wb-input" />
                   </Field>
-                  <Field label="Note (optional)">
-                    <DrawerInput name="note" />
+                  <Field label="Notiz (optional)">
+                    <input name="note" className="wb-input" />
                   </Field>
-                  <button
-                    type="submit"
-                    disabled={isPending}
-                    aria-busy={isPending}
-                    style={{
-                      alignSelf: "flex-start",
-                      background:
-                        "linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%)",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: 10,
-                      padding: "10px 18px",
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: isPending ? "wait" : "pointer",
-                      opacity: isPending ? 0.7 : 1,
-                      boxShadow: "0 6px 18px rgba(37,99,232,0.22)",
-                    }}
-                  >
-                    {isPending
-                      ? "Recording…"
-                      : `Mark ${fmtUsd(affiliate.available_cents)} paid`}
-                  </button>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 12,
-                      color: "var(--ink-faint)",
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    Send the real money via the method below first, then log it
-                    here. Records a payout receipt grouping the paid commissions.
+                  <div>
+                    <button type="submit" disabled={isPending} aria-busy={isPending} className="wb-btn-primary is-small">
+                      {isPending ? "Wird gebucht…" : `${fmtUsd(affiliate.available_cents)} als bezahlt buchen`}
+                    </button>
+                  </div>
+                  <p className="wb-note">
+                    Erst das Geld über die Methode unten schicken, dann hier buchen. Legt einen
+                    Auszahlungsbeleg an, der die bezahlten Provisionen bündelt.
                   </p>
                 </form>
               ) : (
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "var(--ink-dim)",
-                    lineHeight: 1.5,
-                  }}
-                >
-                  Nothing available yet. Commissions become payable after the
-                  90-day hold.
+                <div style={{ fontSize: 13, color: "var(--wb-ink-2)", lineHeight: 1.5 }}>
+                  Noch nichts auszahlbar. Provisionen werden nach der 90-Tage-Sperrfrist fällig.
                 </div>
               )}
             </div>
-          </Section>
+          </div>
 
-          <Section label="Payouts">
-            <PayoutAdmin
-              payout={affiliate.payout}
-              disabled={isPending}
-              onMarkTestSent={handleMarkTestSent}
-            />
-          </Section>
+          <div className="wb-group">
+            <div className="wb-group-label">Auszahlungswege</div>
+            <PayoutAdmin payout={affiliate.payout} disabled={isPending} onMarkTestSent={handleMarkTestSent} />
+          </div>
 
-          <Section label="Details">
-            <form
-              action={handleUpdate}
-              style={{
-                background: "#ffffff",
-                border: "0.5px solid var(--line)",
-                borderRadius: 16,
-                padding: 18,
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
-              }}
-            >
+          <div className="wb-group">
+            <div className="wb-group-label">Details</div>
+            <form action={handleUpdate} className="wb-box">
               <Field label="Name">
-                <DrawerInput name="name" defaultValue={affiliate.name} required />
+                <input name="name" defaultValue={affiliate.name} required className="wb-input" />
               </Field>
-              <Field label="Email">
-                <DrawerInput
-                  name="email"
-                  type="email"
-                  defaultValue={affiliate.email}
-                  required
-                />
+              <Field label="E-Mail">
+                <input name="email" type="email" defaultValue={affiliate.email} required className="wb-input" />
               </Field>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  fontSize: 14,
-                  color: "var(--ink-dim)",
-                  cursor: "pointer",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  name="founder_tier"
-                  defaultChecked={affiliate.founder_tier}
-                  style={{
-                    width: 16,
-                    height: 16,
-                    accentColor: "var(--blue-deep)",
-                  }}
-                />
-                Founding affiliate
+              <label className="wb-check">
+                <input type="checkbox" name="founder_tier" defaultChecked={affiliate.founder_tier} />
+                Founding-Affiliate
               </label>
-              <Field label="Notes">
-                <textarea
-                  name="notes"
-                  rows={3}
-                  defaultValue={affiliate.notes ?? ""}
-                  style={{
-                    width: "100%",
-                    background: "rgba(26,29,38,0.045)",
-                    border: "1px solid transparent",
-                    borderRadius: 12,
-                    padding: "10px 14px",
-                    fontSize: 16,
-                    color: "var(--ink)",
-                    outline: "none",
-                    fontFamily: "inherit",
-                    resize: "vertical",
-                  }}
-                />
+              <Field label="Notizen">
+                <textarea name="notes" rows={3} defaultValue={affiliate.notes ?? ""} className="wb-textarea" />
               </Field>
-              <button
-                type="submit"
-                disabled={isPending}
-                aria-busy={isPending}
-                style={{
-                  alignSelf: "flex-start",
-                  background:
-                    "linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%)",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: 10,
-                  padding: "10px 18px",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: isPending ? "wait" : "pointer",
-                  opacity: isPending ? 0.7 : 1,
-                  boxShadow: "0 6px 18px rgba(37,99,232,0.22)",
-                }}
-              >
-                {isPending ? "Saving…" : "Save details"}
-              </button>
+              <div>
+                <button type="submit" disabled={isPending} aria-busy={isPending} className="wb-btn-primary is-small">
+                  {isPending ? "Wird gespeichert…" : "Details speichern"}
+                </button>
+              </div>
             </form>
-          </Section>
+          </div>
         </div>
 
-        {(actionError || actionInfo) && (
-          <div
-            style={{
-              position: "sticky",
-              bottom: 0,
-              background: "var(--bg)",
-              borderTop: "0.5px solid var(--line)",
-              padding: "14px 28px",
-            }}
-          >
-            {actionError ? (
-              <p style={{ margin: 0, fontSize: 14, color: "#b91c1c" }}>
-                {actionError}
-              </p>
-            ) : null}
-            {actionInfo ? (
-              <p style={{ margin: 0, fontSize: 14, color: "#15803d" }}>
-                {actionInfo}
-              </p>
-            ) : null}
+        {actionError || actionInfo ? (
+          <div className="wb-drawer-foot">
+            {actionError ? <p className="wb-msg-error">{actionError}</p> : null}
+            {actionInfo ? <p className="wb-msg-ok">{actionInfo}</p> : null}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -604,257 +294,49 @@ function DrawerBody({
 function StatsRow({ affiliate }: { affiliate: AffiliateRow }) {
   const signupRate =
     affiliate.view_count === 0
-      ? "—"
-      : `${Math.round(
-          (affiliate.signup_count / affiliate.view_count) * 100,
-        )}%`;
+      ? "–"
+      : `${Math.round((affiliate.signup_count / affiliate.view_count) * 100)} %`;
   const activationRate =
     affiliate.signup_count === 0
-      ? "—"
-      : `${Math.round(
-          (affiliate.activated_count / affiliate.signup_count) * 100,
-        )}%`;
+      ? "–"
+      : `${Math.round((affiliate.activated_count / affiliate.signup_count) * 100)} %`;
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
-        gap: 10,
-      }}
-    >
+    <div className="wb-mini-grid">
       <Stat label="Views" value={affiliate.view_count} />
       <Stat label="Sign-ups" value={affiliate.signup_count} />
-      <Stat label="Activated" value={affiliate.activated_count} />
-      <Stat label="Sign-up rate" value={signupRate} />
-      <Stat label="Activation" value={activationRate} />
+      <Stat label="Aktiviert" value={affiliate.activated_count} />
+      <Stat label="Sign-up-Rate" value={signupRate} />
+      <Stat label="Aktivierung" value={activationRate} />
     </div>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div
-      style={{
-        background: "#ffffff",
-        border: "0.5px solid var(--line)",
-        borderRadius: 14,
-        padding: "12px 14px",
-      }}
-    >
-      <div
-        style={{
-          fontFamily: "var(--font-label)",
-          fontSize: 10,
-          textTransform: "uppercase",
-          letterSpacing: "1.2px",
-          color: "var(--ink-faint)",
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          marginTop: 4,
-          fontSize: 20,
-          fontWeight: 700,
-          fontVariantNumeric: "tabular-nums",
-          color: "var(--ink)",
-          letterSpacing: "-0.3px",
-        }}
-      >
-        {value}
-      </div>
+    <div className="wb-mini">
+      <div className="wb-mini-label">{label}</div>
+      <div className="wb-mini-value">{value}</div>
     </div>
   );
 }
 
-function Section({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <div
-        style={{
-          fontFamily: "var(--font-label)",
-          fontSize: 10,
-          textTransform: "uppercase",
-          letterSpacing: "1.2px",
-          color: "var(--ink-faint)",
-          marginBottom: 10,
-        }}
-      >
-        {label}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label style={{ display: "block" }}>
-      <div
-        style={{
-          fontSize: 12,
-          fontWeight: 600,
-          color: "var(--ink-dim)",
-          marginBottom: 6,
-        }}
-      >
-        {label}
-      </div>
+    <label className="wb-field">
+      <span className="wb-label">{label}</span>
       {children}
     </label>
   );
 }
 
-function DrawerInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      style={{
-        width: "100%",
-        background: "rgba(26,29,38,0.045)",
-        border: "1px solid transparent",
-        borderRadius: 12,
-        padding: "10px 14px",
-        fontSize: 16,
-        color: "var(--ink)",
-        outline: "none",
-        fontFamily: "inherit",
-        ...(props.style ?? {}),
-      }}
-    />
-  );
-}
-
-function StatusButton({
-  label,
-  active,
-  disabled,
-  onClick,
-  color,
-}: {
-  label: string;
-  active: boolean;
-  disabled: boolean;
-  onClick: () => void;
-  color: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      style={
-        active
-          ? {
-              background: `${color}1F`,
-              border: `1px solid ${color}66`,
-              color: color,
-              borderRadius: 10,
-              padding: "8px 16px",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "default",
-            }
-          : {
-              background: "#ffffff",
-              border: "1px solid var(--line)",
-              color: "var(--ink-dim)",
-              borderRadius: 10,
-              padding: "8px 16px",
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: disabled ? "not-allowed" : "pointer",
-              opacity: disabled ? 0.5 : 1,
-            }
-      }
-    >
-      {label}
-    </button>
-  );
-}
-
-function LifecyclePill({ lifecycle }: { lifecycle: AffiliateLifecycle }) {
-  const styles: Record<
-    AffiliateLifecycle,
-    { background: string; color: string; label: string }
-  > = {
-    created: {
-      background: "rgba(26, 29, 38, 0.06)",
-      color: "var(--ink-dim)",
-      label: "Created",
-    },
-    invited: {
-      background: "rgba(74, 122, 247, 0.12)",
-      color: "var(--blue-deep)",
-      label: "Invited",
-    },
-    active_logged_in: {
-      background: "rgba(16, 185, 129, 0.12)",
-      color: "#047857",
-      label: "Active",
-    },
-    paused: {
-      background: "rgba(245, 158, 11, 0.15)",
-      color: "#a16207",
-      label: "Paused",
-    },
-    removed: {
-      background: "rgba(26, 29, 38, 0.07)",
-      color: "var(--ink-faint)",
-      label: "Removed",
-    },
-  };
-  const s = styles[lifecycle];
-  return (
-    <span
-      style={{
-        background: s.background,
-        color: s.color,
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "3px 9px",
-        borderRadius: 100,
-        fontSize: 10,
-        fontWeight: 700,
-        textTransform: "uppercase",
-        letterSpacing: "0.6px",
-      }}
-    >
-      <span
-        aria-hidden="true"
-        style={{
-          width: 5,
-          height: 5,
-          borderRadius: 3,
-          background: "currentColor",
-        }}
-      />
-      {s.label}
-    </span>
-  );
-}
-
 function fmtDateTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
+  return new Date(iso).toLocaleString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Berlin",
   });
 }
 
@@ -870,7 +352,7 @@ function fmtUsd(cents: number): string {
 /**
  * Admin-Sicht der Payout-Methoden. Zeigt die vom Affiliate eingegebenen
  * Zahldaten (damit Jan die Testueberweisung schicken kann) + den Verify-State.
- * Bei state='pending' der „Mark test transfer sent"-Button — die andere
+ * Bei state='pending' der Button "Testüberweisung gesendet"; die andere
  * Seite des Handshakes (Affiliate bestaetigt Eingang) lebt in den Settings.
  */
 function PayoutAdmin({
@@ -883,7 +365,7 @@ function PayoutAdmin({
   onMarkTestSent: (method: PayoutMethod) => void;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <PayoutMethodRow
         method="paypal"
         state={payout.paypal.state}
@@ -897,11 +379,7 @@ function PayoutAdmin({
         state={payout.wise.state}
         active={payout.activeMethod === "wise"}
         details={
-          [
-            payout.wise.accountHolder,
-            payout.wise.country,
-            payout.wise.details,
-          ].filter(Boolean) as string[]
+          [payout.wise.accountHolder, payout.wise.country, payout.wise.details].filter(Boolean) as string[]
         }
         disabled={disabled}
         onMarkTestSent={onMarkTestSent}
@@ -909,6 +387,13 @@ function PayoutAdmin({
     </div>
   );
 }
+
+const PAYOUT_STATE: Record<PayoutMethodState, { label: string; tone: WbTone }> = {
+  unset: { label: "Nicht eingerichtet", tone: "gray" },
+  pending: { label: "Test ausstehend", tone: "amber" },
+  test_sent: { label: "Wartet auf Bestätigung", tone: "blue" },
+  verified: { label: "Verifiziert", tone: "green" },
+};
 
 function PayoutMethodRow({
   method,
@@ -925,133 +410,35 @@ function PayoutMethodRow({
   disabled: boolean;
   onMarkTestSent: (method: PayoutMethod) => void;
 }) {
+  const s = PAYOUT_STATE[state];
   return (
-    <div
-      style={{
-        background: "#ffffff",
-        border: "0.5px solid var(--line)",
-        borderRadius: 16,
-        padding: 16,
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 10,
-        }}
-      >
+    <div className="wb-box">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <MethodMark method={method} height={16} />
-          {active ? (
-            <span
-              style={{
-                fontSize: 9,
-                fontWeight: 700,
-                letterSpacing: "0.6px",
-                textTransform: "uppercase",
-                color: "var(--blue-deep)",
-                background: "rgba(37,99,232,0.1)",
-                borderRadius: 100,
-                padding: "3px 7px",
-              }}
-            >
-              Active
-            </span>
-          ) : null}
+          {active ? <WbBadge tone="blue">Aktiv</WbBadge> : null}
         </div>
-        <PayoutStatePill state={state} />
+        <WbBadge tone={s.tone}>{s.label}</WbBadge>
       </div>
 
       {details.length > 0 ? (
-        <div
-          style={{
-            background: "rgba(26,29,38,0.045)",
-            borderRadius: 10,
-            padding: "10px 12px",
-            fontSize: 13,
-            color: "var(--ink)",
-            fontFamily: "var(--font-mono), monospace",
-            lineHeight: 1.5,
-            wordBreak: "break-word",
-            whiteSpace: "pre-wrap",
-            userSelect: "all",
-          }}
-        >
-          {details.join("\n")}
-        </div>
+        <div className="wb-code-box">{details.join("\n")}</div>
       ) : (
-        <div style={{ fontSize: 13, color: "var(--ink-faint)" }}>
-          Not set up yet.
-        </div>
+        <div style={{ fontSize: 13, color: "var(--wb-ink-3)" }}>Noch nicht eingerichtet.</div>
       )}
 
       {state === "pending" ? (
-        <button
-          type="button"
-          onClick={() => onMarkTestSent(method)}
-          disabled={disabled}
-          style={{
-            alignSelf: "flex-start",
-            background:
-              "linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%)",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: 10,
-            padding: "8px 14px",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: disabled ? "wait" : "pointer",
-            opacity: disabled ? 0.6 : 1,
-            boxShadow: "0 4px 12px rgba(37,99,232,0.2)",
-          }}
-        >
-          Mark test transfer sent
-        </button>
+        <div>
+          <button type="button" onClick={() => onMarkTestSent(method)} disabled={disabled} className="wb-btn-primary is-small">
+            Testüberweisung gesendet
+          </button>
+        </div>
       ) : null}
       {state === "test_sent" ? (
-        <div style={{ fontSize: 12.5, color: "var(--ink-dim)" }}>
-          Test sent — waiting for the affiliate to confirm it arrived.
+        <div style={{ fontSize: 12, color: "var(--wb-ink-2)" }}>
+          Test gesendet, wartet auf Bestätigung durch den Affiliate.
         </div>
       ) : null}
     </div>
-  );
-}
-
-function PayoutStatePill({ state }: { state: PayoutMethodState }) {
-  const map: Record<
-    PayoutMethodState,
-    { label: string; bg: string; fg: string }
-  > = {
-    unset: { label: "Not set up", bg: "rgba(26,29,38,0.06)", fg: "var(--ink-dim)" },
-    pending: { label: "Test pending", bg: "rgba(245,158,11,0.14)", fg: "#a16207" },
-    test_sent: {
-      label: "Awaiting confirm",
-      bg: "rgba(37,99,232,0.12)",
-      fg: "var(--blue-deep)",
-    },
-    verified: { label: "Verified", bg: "rgba(16,185,129,0.14)", fg: "#047857" },
-  };
-  const s = map[state];
-  return (
-    <span
-      style={{
-        fontSize: 10,
-        fontWeight: 700,
-        textTransform: "uppercase",
-        letterSpacing: "0.5px",
-        color: s.fg,
-        background: s.bg,
-        borderRadius: 100,
-        padding: "3px 9px",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {s.label}
-    </span>
   );
 }

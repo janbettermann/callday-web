@@ -4,13 +4,9 @@ import { useEffect } from "react";
 
 /**
  * Lokale Error-Boundary fuer die Admin-Route. Faengt Server-Errors aus
- * der page.tsx ab BEVOR sie auf global-error.tsx hochlaufen — und
- * zeigt Message + Digest im UI, damit Diagnose ohne Vercel-Log-Zugriff
- * machbar ist.
- *
- * Sobald das Dashboard stabil laeuft kann diese Datei entweder
- * weggelassen werden (faellt auf global-error zurueck) oder einen
- * generischen Fehler-Screen wie alle anderen Routes liefern.
+ * den Pages ab BEVOR sie auf global-error.tsx hochlaufen, und zeigt
+ * Message + Digest im UI, damit Diagnose ohne Vercel-Log-Zugriff
+ * machbar ist. Optik: Werkbank (admin.css), liegt im .wb-Layout.
  */
 
 export default function AdminError({
@@ -25,48 +21,56 @@ export default function AdminError({
   }, [error]);
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="mb-2 text-xl font-semibold">Admin route crashed</h1>
-      <p className="mb-6 text-sm text-[#1a1d26]/60">
-        Lokal gefangen — siehe Details unten.
-      </p>
-
-      <div className="mb-4 rounded-lg border border-[#1a1d26]/[0.12] bg-white p-4">
-        <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-[#1a1d26]/50">
-          Message
-        </div>
-        <pre className="whitespace-pre-wrap break-words font-mono text-xs text-[#dc2626]">
-          {error.message || "(empty)"}
-        </pre>
+    <div className="wb-content" style={{ maxWidth: 760, margin: "0 auto", paddingTop: 48 }}>
+      <div>
+        <h1 style={{ fontSize: 18 }}>Admin-Seite abgestürzt</h1>
+        <p style={{ fontSize: 13, color: "var(--wb-ink-2)", marginTop: 4 }}>
+          Lokal gefangen, Details unten.
+        </p>
       </div>
 
-      {error.digest ? (
-        <div className="mb-4 rounded-lg border border-[#1a1d26]/[0.12] bg-white p-4">
-          <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-[#1a1d26]/50">
-            Digest
+      <section className="wb-panel">
+        <div className="wb-panel-head">
+          <div className="wb-panel-heading">
+            <h2 className="wb-panel-title">Meldung</h2>
           </div>
-          <code className="font-mono text-xs">{error.digest}</code>
         </div>
+        <pre className="wb-panel-body" style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "var(--wb-mono)", fontSize: 12, color: "var(--wb-red)" }}>
+          {error.message || "(leer)"}
+        </pre>
+      </section>
+
+      {error.digest ? (
+        <section className="wb-panel">
+          <div className="wb-panel-head">
+            <div className="wb-panel-heading">
+              <h2 className="wb-panel-title">Digest</h2>
+            </div>
+          </div>
+          <div className="wb-panel-body">
+            <code>{error.digest}</code>
+          </div>
+        </section>
       ) : null}
 
       {error.stack ? (
-        <div className="mb-6 rounded-lg border border-[#1a1d26]/[0.12] bg-white p-4">
-          <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-[#1a1d26]/50">
-            Stack
+        <section className="wb-panel">
+          <div className="wb-panel-head">
+            <div className="wb-panel-heading">
+              <h2 className="wb-panel-title">Stack</h2>
+            </div>
           </div>
-          <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-[11px] text-[#1a1d26]/80">
+          <pre className="wb-panel-body" style={{ margin: 0, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "var(--wb-mono)", fontSize: 11, color: "var(--wb-ink-2)" }}>
             {error.stack}
           </pre>
-        </div>
+        </section>
       ) : null}
 
-      <button
-        type="button"
-        onClick={reset}
-        className="rounded-lg bg-[#3564e0] px-4 py-2 text-sm font-medium text-white"
-      >
-        Try again
-      </button>
+      <div>
+        <button type="button" onClick={reset} className="wb-btn-primary is-small">
+          Nochmal versuchen
+        </button>
+      </div>
     </div>
   );
 }

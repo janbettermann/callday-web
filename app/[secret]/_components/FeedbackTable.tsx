@@ -1,123 +1,105 @@
-import type { FeedbackRow } from "@/lib/admin/queries";
+import type { FeedbackRow } from "@/lib/admin/dashboard-metrics";
+
 import {
-  AdminEmptyState,
-  AdminMailLink,
-  AdminTable,
-  AdminTd,
-  AdminTh,
-  AdminTRow,
+  WbBadge,
+  WbEmpty,
+  WbMailLink,
+  WbTable,
+  WbTd,
+  WbTh,
+  WbRow,
 } from "./admin-ui";
+
+const STAR_PATH =
+  "M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z";
 
 function Stars({ n }: { n: number }) {
   return (
     <span
-      aria-label={`${n} out of 5`}
-      style={{
-        color: "var(--sun)",
-        letterSpacing: "1px",
-      }}
+      style={{ display: "inline-flex", gap: 2, verticalAlign: "middle" }}
+      role="img"
+      aria-label={`${n} von 5 Sternen`}
     >
-      {"★".repeat(n)}
-      <span style={{ color: "var(--ink-mute)" }}>{"★".repeat(5 - n)}</span>
+      {Array.from({ length: 5 }, (_, i) => (
+        <svg key={i} width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+          <path d={STAR_PATH} fill={i < n ? "#e0a526" : "#dfe2e6"} />
+        </svg>
+      ))}
     </span>
   );
 }
 
 /**
  * Typ-Zelle: Sterne nur bei echtem Rating (rating ist seit Migration 0050
- * nullable — Bug/Idea-Rows brachen hier vorher mit fuenf leeren Sternen),
- * sonst Kategorie-Badge.
+ * nullable), sonst Kategorie-Badge. Bug bewusst grau statt rot, das ist
+ * eine Meldung, kein Alarm.
  */
 function TypeCell({ row }: { row: FeedbackRow }) {
   if (row.category === "rating" && row.rating != null) {
     return <Stars n={row.rating} />;
   }
-  const isBug = row.category === "bug";
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "2px 8px",
-        borderRadius: 100,
-        fontSize: 11,
-        fontWeight: 600,
-        background: isBug ? "rgba(178, 58, 58, 0.10)" : "rgba(74, 122, 247, 0.12)",
-        color: isBug ? "#b23a3a" : "var(--blue-deep)",
-      }}
-    >
-      {isBug ? "Bug" : row.category === "idea" ? "Idea" : "Rating"}
-    </span>
-  );
+  if (row.category === "idea") return <WbBadge tone="blue">Idee</WbBadge>;
+  if (row.category === "bug") return <WbBadge>Bug</WbBadge>;
+  return <WbBadge>Rating</WbBadge>;
 }
 
 function fmtWhen(iso: string): string {
-  const d = new Date(iso);
-  const now = Date.now();
-  const diff = now - d.getTime();
+  const diff = Date.now() - new Date(iso).getTime();
   const day = 86_400_000;
   if (diff < day) {
     const h = Math.floor(diff / 3_600_000);
-    if (h === 0) {
-      const m = Math.floor(diff / 60_000);
-      return `${m}m ago`;
-    }
-    return `${h}h ago`;
+    if (h === 0) return `vor ${Math.floor(diff / 60_000)} min`;
+    return `vor ${h} h`;
   }
-  return d.toISOString().slice(0, 10);
+  return new Date(iso).toLocaleDateString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    timeZone: "Europe/Berlin",
+  });
 }
 
 export function FeedbackTable({ rows }: { rows: FeedbackRow[] }) {
   if (rows.length === 0) {
-    return (
-      <AdminEmptyState>
-        No feedback yet. Wait for the first user to send something.
-      </AdminEmptyState>
-    );
+    return <WbEmpty>Noch kein Feedback mit Text.</WbEmpty>;
   }
 
   return (
-    <AdminTable>
+    <WbTable>
       <thead>
         <tr>
-          <AdminTh>Type</AdminTh>
-          <AdminTh>Feedback</AdminTh>
-          <AdminTh>From</AdminTh>
-          <AdminTh>Source</AdminTh>
-          <AdminTh align="right">When</AdminTh>
+          <WbTh width={110}>Typ</WbTh>
+          <WbTh>Feedback</WbTh>
+          <WbTh width={240}>Von</WbTh>
+          <WbTh width={120}>Quelle</WbTh>
+          <WbTh align="right" width={100}>
+            Wann
+          </WbTh>
         </tr>
       </thead>
       <tbody>
         {rows.map((r) => (
-          <AdminTRow key={r.id} align="top">
-            <AdminTd nowrap>
+          <WbRow key={r.id} align="top">
+            <WbTd nowrap>
               <TypeCell row={r} />
-            </AdminTd>
-            <AdminTd style={{ color: "var(--ink)", whiteSpace: "pre-wrap" }}>
-              {r.text ?? (
-                <span style={{ color: "var(--ink-mute)" }}>—</span>
-              )}
-            </AdminTd>
-            <AdminTd nowrap>
+            </WbTd>
+            <WbTd wrap>{r.text}</WbTd>
+            <WbTd nowrap>
               {r.email ? (
-                <AdminMailLink
-                  email={r.email}
-                  subject="Re: your Callday feedback"
-                />
+                <WbMailLink email={r.email} subject="Re: dein Callday-Feedback" />
               ) : (
-                <span style={{ color: "var(--ink-mute)" }}>anon</span>
+                <span className="is-faint">anonym</span>
               )}
-            </AdminTd>
-            <AdminTd mono nowrap>
-              {r.source === "web_generator"
-                ? "web generator"
-                : (r.app_version ?? "app")}
-            </AdminTd>
-            <AdminTd align="right" nowrap muted>
+            </WbTd>
+            <WbTd nowrap muted>
+              {r.source === "web_generator" ? "Web-Generator" : `App ${r.app_version ?? ""}`.trim()}
+            </WbTd>
+            <WbTd align="right" nowrap muted>
               {fmtWhen(r.created_at)}
-            </AdminTd>
-          </AdminTRow>
+            </WbTd>
+          </WbRow>
         ))}
       </tbody>
-    </AdminTable>
+    </WbTable>
   );
 }

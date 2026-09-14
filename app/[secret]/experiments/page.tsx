@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
@@ -26,16 +25,20 @@ import type { LpPage, LpSource } from "@/lib/lp/shared";
 
 import { LoginForm } from "../_components/LoginForm";
 import {
-  AdminEmptyState,
-  AdminNav,
-  AdminNumeric,
-  AdminTRow,
-  AdminTable,
-  AdminTd,
-  AdminTh,
-  monoLabelStyle,
+  WbAlert,
+  WbBadge,
+  WbEmpty,
+  WbMetricStrip,
+  WbNotice,
+  WbNumeric,
+  WbPanel,
+  WbSegmented,
+  AdminShell,
+  WbTable,
+  WbTd,
+  WbTh,
+  WbRow,
 } from "../_components/admin-ui";
-import { logoutAction } from "../actions";
 
 /**
  * /[secret]/experiments — Landing-Funnel + Split-Test-Auswertung.
@@ -44,7 +47,7 @@ import { logoutAction } from "../actions";
  * der Funnel ueber alle Besucher (Baseline: was bringen die Ads?), nach
  * Quelle und Geraet; darunter das aktive Experiment mit Varianten-
  * Vergleich, Stichproben-Fortschritt und Signifikanz. Auth + Composition
- * wie /[secret]/lists.
+ * wie /[secret]/page.tsx.
  */
 
 type PageProps = {
@@ -104,6 +107,7 @@ function formatDateTime(iso: string): string {
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Berlin",
   });
 }
 
@@ -170,47 +174,20 @@ export default async function ExperimentsAdminPage({ params, searchParams }: Pag
     `${basePath}/experiments?range=${r}&page=${p}`;
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
-      <div className="container" style={{ paddingTop: 48, paddingBottom: 80 }}>
-        <header style={{ marginBottom: 36 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: 8,
-              alignItems: "center",
-              flexWrap: "wrap",
-              marginBottom: 28,
-            }}
-          >
-            <AdminNav current="experiments" basePath={basePath} />
-            <form action={logoutAction}>
-              <button type="submit" style={signOutStyle}>
-                Sign out
-              </button>
-            </form>
-          </div>
-          <h1
-            style={{
-              fontFamily: "var(--font-geist-sans), sans-serif",
-              fontSize: 32,
-              fontWeight: 600,
-              letterSpacing: "-0.5px",
-              margin: "0 0 8px",
-              color: "var(--ink)",
-            }}
-          >
-            Landing-Experimente
-          </h1>
-          <p style={{ margin: 0, fontSize: 14, color: "var(--ink-dim)", maxWidth: 640 }}>
-            Besucher, CTA-Klicks und Sign-ups der Landing Page, cookielos
-            aus lp_events. Ein Besucher zaehlt pro Schritt hoechstens einmal.
-            Workflow und Stichproben-Tabelle: docs/experiments.md.
-          </p>
-        </header>
-
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 28 }}>
-          <Tabs
+    <AdminShell
+      current="experiments"
+      basePath={basePath}
+      title="Landing-Experimente"
+      subtitle="Besucher, CTA-Klicks und Sign-ups der Landing Page, cookielos aus lp_events"
+      actions={
+        <>
+          <WbSegmented
+            items={[
+              { key: "landing", label: "Landing", href: tabHref(range, "landing"), active: page === "landing" },
+              { key: "affiliate", label: "Affiliate-Landings", href: tabHref(range, "affiliate"), active: page === "affiliate" },
+            ]}
+          />
+          <WbSegmented
             items={RANGES.map((r) => ({
               key: r.key,
               label: r.label,
@@ -218,79 +195,83 @@ export default async function ExperimentsAdminPage({ params, searchParams }: Pag
               active: r.key === range,
             }))}
           />
-          <Tabs
-            items={[
-              { key: "landing", label: "Landing", href: tabHref(range, "landing"), active: page === "landing" },
-              { key: "affiliate", label: "Affiliate-Landings", href: tabHref(range, "affiliate"), active: page === "affiliate" },
-            ]}
-          />
-        </div>
+        </>
+      }
+    >
+      {loadError ? (
+        <WbAlert title="Daten konnten nicht geladen werden">
+          <code>{loadError}</code>
+        </WbAlert>
+      ) : null}
 
-        {loadError && (
-          <p className="beta-submit-error" role="alert">
-            {loadError}
-          </p>
-        )}
+      {tableMissing ? (
+        <WbNotice>
+          Die Tabelle <code>lp_events</code> existiert noch nicht. Migration
+          <code> 0058_lp_events.sql</code> im App-Repo anwenden (siehe
+          docs/experiments.md), danach laufen die Zahlen hier auf.
+        </WbNotice>
+      ) : null}
 
-        {tableMissing && (
-          <Notice tone="warn">
-            Die Tabelle <code>lp_events</code> existiert noch nicht. Migration
-            <code> 0058_lp_events.sql</code> im App-Repo anwenden (siehe
-            docs/experiments.md), danach laufen die Zahlen hier auf.
-          </Notice>
-        )}
+      <WbPanel
+        title="Funnel"
+        subtitle={`Alle Besucher der ${page === "landing" ? "Landing" : "Affiliate-Landings"} im Zeitraum`}
+        meta="Ein Besucher zählt pro Schritt höchstens einmal"
+      >
+        <WbMetricStrip
+          items={[
+            { key: "visitors", label: "Besucher", value: num(total.visitors), sub: "Distinct, mit JS geladen" },
+            { key: "cta", label: "CTA geklickt", value: num(total.ctaClickers), sub: `${pct(total.ctaClickers, total.visitors)} der Besucher` },
+            { key: "started", label: "Sign-up gestartet", value: num(total.starters), sub: `${pct(total.starters, total.visitors)} der Besucher` },
+            { key: "confirmed", label: "Bestätigt", value: num(total.confirmed), sub: `${pct(total.confirmed, total.visitors, 2)} der Besucher` },
+          ]}
+        />
+      </WbPanel>
 
-        <Section title="Funnel" subtitle={`Alle Besucher der ${page === "landing" ? "Landing" : "Affiliate-Landings"} im Zeitraum`}>
-          <FunnelTiles counts={total} />
-        </Section>
+      {page === "landing" ? (
+        <WbPanel
+          title="Aktives Experiment"
+          subtitle={
+            report
+              ? `${report.experiment.name} · seit ${report.experiment.startedAt} (${report.daysRunning} Tage)`
+              : "Kein Test aktiv, die Seite läuft als Default, der Funnel oben ist die Baseline"
+          }
+        >
+          {report ? (
+            <ExperimentPanel report={report} />
+          ) : (
+            <WbEmpty>
+              Einen Test starten: in <code>lib/lp/experiments.ts</code> das Objekt{" "}
+              <code>ACTIVE_EXPERIMENT</code> befüllen, die Variante in <code>app/page.tsx</code>{" "}
+              verzweigen, deployen. Ab dann zählt jeder Besucher für eine Variante.
+            </WbEmpty>
+          )}
+        </WbPanel>
+      ) : null}
 
-        {page === "landing" && (
-          <Section
-            title="Aktives Experiment"
-            subtitle={
-              report
-                ? `${report.experiment.name} · seit ${report.experiment.startedAt} (${report.daysRunning} Tage)`
-                : "Kein Test aktiv — die Seite laeuft als Default, der Funnel oben ist die Baseline"
-            }
-          >
-            {report ? (
-              <ExperimentPanel report={report} />
-            ) : (
-              <AdminEmptyState>
-                Einen Test starten: in <code>lib/lp/experiments.ts</code> das
-                Objekt <code>ACTIVE_EXPERIMENT</code> befuellen, die Variante in{" "}
-                <code>app/page.tsx</code> verzweigen, deployen. Ab dann zaehlt
-                jeder Besucher fuer eine Variante.
-              </AdminEmptyState>
-            )}
-          </Section>
-        )}
+      <WbPanel title="Nach Quelle" subtitle="UTM schlägt Referrer; fbclid ohne UTM zählt als Meta">
+        <FunnelTable
+          rows={sources.map((s) => ({ key: s.key, label: SOURCE_LABELS[s.key], counts: s.counts }))}
+        />
+      </WbPanel>
 
-        <Section title="Nach Quelle" subtitle="UTM schlaegt Referrer; fbclid ohne UTM zaehlt als Meta">
-          <FunnelTable
-            rows={sources.map((s) => ({ key: s.key, label: SOURCE_LABELS[s.key], counts: s.counts }))}
-          />
-        </Section>
+      <WbPanel title="Nach Gerät" subtitle="Meta-Traffic landet fast komplett im Instagram- und Facebook-In-App-Browser">
+        <FunnelTable
+          rows={devices.map((d) => ({
+            key: d.key,
+            label: DEVICE_ORDER.find((x) => x.key === d.key)?.label ?? d.key,
+            counts: d.counts,
+          }))}
+        />
+      </WbPanel>
 
-        <Section title="Nach Geraet" subtitle="Meta-Traffic landet fast komplett im Instagram-/Facebook-In-App-Browser">
-          <FunnelTable
-            rows={devices.map((d) => ({
-              key: d.key,
-              label: DEVICE_ORDER.find((x) => x.key === d.key)?.label ?? d.key,
-              counts: d.counts,
-            }))}
-          />
-        </Section>
+      <WbPanel title="Pro Tag" subtitle="UTC-Tage, Lücken sind Tage ohne Besucher">
+        <DailyTable rows={daily} />
+      </WbPanel>
 
-        <Section title="Pro Tag" subtitle="UTC-Tage, Luecken sind Tage ohne Besucher">
-          <DailyTable rows={daily} />
-        </Section>
-
-        <Section title="Letzte Sign-ups" subtitle="Bestaetigte Accounts mit Herkunft, neueste zuerst">
-          <SignupsTable rows={signups} />
-        </Section>
-      </div>
-    </div>
+      <WbPanel title="Letzte Sign-ups" subtitle="Bestätigte Accounts mit Herkunft, neueste zuerst">
+        <SignupsTable rows={signups} />
+      </WbPanel>
+    </AdminShell>
   );
 }
 
@@ -298,199 +279,57 @@ export default async function ExperimentsAdminPage({ params, searchParams }: Pag
 // Bausteine
 // ----------------------------------------------------------------
 
-const signOutStyle: React.CSSProperties = {
-  background: "#ffffff",
-  border: "0.5px solid var(--line)",
-  color: "var(--ink-dim)",
-  fontSize: 13,
-  fontWeight: 500,
-  padding: "8px 14px",
-  borderRadius: 10,
-  cursor: "pointer",
-  boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-};
-
-function Tabs({
-  items,
-}: {
-  items: Array<{ key: string; label: string; href: string; active: boolean }>;
-}) {
-  return (
-    <div
-      style={{
-        display: "inline-flex",
-        background: "#ffffff",
-        border: "0.5px solid var(--line)",
-        borderRadius: 12,
-        padding: 3,
-        boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-      }}
-    >
-      {items.map((item) => (
-        <Link
-          key={item.key}
-          href={item.href}
-          style={{
-            background: item.active ? "var(--ink)" : "transparent",
-            color: item.active ? "#ffffff" : "var(--ink-dim)",
-            borderRadius: 9,
-            padding: "6px 14px",
-            fontSize: 13,
-            fontWeight: 500,
-            textDecoration: "none",
-          }}
-        >
-          {item.label}
-        </Link>
-      ))}
-    </div>
-  );
-}
-
-function Section({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section style={{ marginBottom: 44 }}>
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ ...monoLabelStyle, fontSize: 11, letterSpacing: "1.5px", marginBottom: 6 }}>
-          {title}
-        </div>
-        {subtitle ? (
-          <p style={{ margin: 0, fontSize: 14, color: "var(--ink-dim)", lineHeight: 1.5 }}>
-            {subtitle}
-          </p>
-        ) : null}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Notice({ tone, children }: { tone: "warn" | "info"; children: React.ReactNode }) {
-  const color = tone === "warn" ? "#92400e" : "var(--blue-deep)";
-  const bg = tone === "warn" ? "rgba(245, 158, 11, 0.08)" : "rgba(74, 122, 247, 0.06)";
-  return (
-    <div
-      style={{
-        marginBottom: 28,
-        border: `0.5px solid ${tone === "warn" ? "rgba(245,158,11,0.4)" : "rgba(74,122,247,0.3)"}`,
-        background: bg,
-        borderRadius: 14,
-        padding: "14px 18px",
-        fontSize: 14,
-        color,
-        lineHeight: 1.55,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function FunnelTiles({ counts }: { counts: FunnelCounts }) {
-  const tiles = [
-    { label: "Besucher", value: num(counts.visitors), sub: "Distinct, mit JS geladen" },
-    { label: "CTA geklickt", value: num(counts.ctaClickers), sub: pct(counts.ctaClickers, counts.visitors) + " der Besucher" },
-    { label: "Sign-up gestartet", value: num(counts.starters), sub: pct(counts.starters, counts.visitors) + " der Besucher" },
-    { label: "Bestaetigt", value: num(counts.confirmed), sub: pct(counts.confirmed, counts.visitors, 2) + " der Besucher" },
-  ];
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-        gap: 12,
-      }}
-    >
-      {tiles.map((t) => (
-        <div
-          key={t.label}
-          style={{
-            background: "#ffffff",
-            border: "0.5px solid var(--line)",
-            borderRadius: 16,
-            padding: "16px 18px",
-            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-          }}
-        >
-          <div style={monoLabelStyle}>{t.label}</div>
-          <div
-            style={{
-              marginTop: 8,
-              fontSize: 28,
-              fontWeight: 700,
-              letterSpacing: "-0.6px",
-              color: "var(--ink)",
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
-            {t.value}
-          </div>
-          <div style={{ marginTop: 4, fontSize: 11, color: "var(--ink-faint)" }}>{t.sub}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function FunnelTable({
   rows,
 }: {
   rows: Array<{ key: string; label: string; counts: FunnelCounts }>;
 }) {
   return (
-    <AdminTable>
+    <WbTable>
       <thead>
         <tr>
-          <AdminTh>Segment</AdminTh>
-          <AdminTh align="right">Besucher</AdminTh>
-          <AdminTh align="right">CTA</AdminTh>
-          <AdminTh align="right">Gestartet</AdminTh>
-          <AdminTh align="right">Bestaetigt</AdminTh>
-          <AdminTh align="right">Start-Rate</AdminTh>
-          <AdminTh align="right">Confirm-Rate</AdminTh>
+          <WbTh>Segment</WbTh>
+          <WbTh align="right">Besucher</WbTh>
+          <WbTh align="right">CTA</WbTh>
+          <WbTh align="right">Gestartet</WbTh>
+          <WbTh align="right">Bestätigt</WbTh>
+          <WbTh align="right">Start-Rate</WbTh>
+          <WbTh align="right">Confirm-Rate</WbTh>
         </tr>
       </thead>
       <tbody>
         {rows.map((r) => (
-          <AdminTRow key={r.key}>
-            <AdminTd nowrap style={{ color: "var(--ink)", fontWeight: 500 }}>
+          <WbRow key={r.key}>
+            <WbTd nowrap style={{ fontWeight: 500 }}>
               {r.label}
-            </AdminTd>
-            <AdminTd align="right"><AdminNumeric value={num(r.counts.visitors)} bold /></AdminTd>
-            <AdminTd align="right"><AdminNumeric value={num(r.counts.ctaClickers)} /></AdminTd>
-            <AdminTd align="right"><AdminNumeric value={num(r.counts.starters)} /></AdminTd>
-            <AdminTd align="right"><AdminNumeric value={num(r.counts.confirmed)} /></AdminTd>
-            <AdminTd align="right"><AdminNumeric value={pct(r.counts.starters, r.counts.visitors)} /></AdminTd>
-            <AdminTd align="right"><AdminNumeric value={pct(r.counts.confirmed, r.counts.visitors, 2)} /></AdminTd>
-          </AdminTRow>
+            </WbTd>
+            <WbTd align="right"><WbNumeric value={num(r.counts.visitors)} bold /></WbTd>
+            <WbTd align="right"><WbNumeric value={num(r.counts.ctaClickers)} /></WbTd>
+            <WbTd align="right"><WbNumeric value={num(r.counts.starters)} /></WbTd>
+            <WbTd align="right"><WbNumeric value={num(r.counts.confirmed)} /></WbTd>
+            <WbTd align="right"><WbNumeric value={pct(r.counts.starters, r.counts.visitors)} /></WbTd>
+            <WbTd align="right"><WbNumeric value={pct(r.counts.confirmed, r.counts.visitors, 2)} /></WbTd>
+          </WbRow>
         ))}
       </tbody>
-    </AdminTable>
+    </WbTable>
   );
 }
 
 function DailyTable({ rows }: { rows: Array<{ date: string; counts: FunnelCounts }> }) {
   const hasAny = rows.some((r) => r.counts.visitors > 0);
   if (!hasAny) {
-    return <AdminEmptyState>Noch keine Besucher im Zeitraum.</AdminEmptyState>;
+    return <WbEmpty>Noch keine Besucher im Zeitraum.</WbEmpty>;
   }
   return (
-    <AdminTable>
+    <WbTable>
       <thead>
         <tr>
-          <AdminTh>Tag</AdminTh>
-          <AdminTh align="right">Besucher</AdminTh>
-          <AdminTh align="right">CTA</AdminTh>
-          <AdminTh align="right">Gestartet</AdminTh>
-          <AdminTh align="right">Bestaetigt</AdminTh>
+          <WbTh>Tag</WbTh>
+          <WbTh align="right">Besucher</WbTh>
+          <WbTh align="right">CTA</WbTh>
+          <WbTh align="right">Gestartet</WbTh>
+          <WbTh align="right">Bestätigt</WbTh>
         </tr>
       </thead>
       <tbody>
@@ -498,63 +337,63 @@ function DailyTable({ rows }: { rows: Array<{ date: string; counts: FunnelCounts
           .slice()
           .reverse()
           .map((r) => (
-            <AdminTRow key={r.date}>
-              <AdminTd mono nowrap>{r.date}</AdminTd>
-              <AdminTd align="right"><AdminNumeric value={num(r.counts.visitors)} bold /></AdminTd>
-              <AdminTd align="right"><AdminNumeric value={num(r.counts.ctaClickers)} /></AdminTd>
-              <AdminTd align="right"><AdminNumeric value={num(r.counts.starters)} /></AdminTd>
-              <AdminTd align="right"><AdminNumeric value={num(r.counts.confirmed)} /></AdminTd>
-            </AdminTRow>
+            <WbRow key={r.date}>
+              <WbTd mono nowrap>{r.date}</WbTd>
+              <WbTd align="right"><WbNumeric value={num(r.counts.visitors)} bold /></WbTd>
+              <WbTd align="right"><WbNumeric value={num(r.counts.ctaClickers)} /></WbTd>
+              <WbTd align="right"><WbNumeric value={num(r.counts.starters)} /></WbTd>
+              <WbTd align="right"><WbNumeric value={num(r.counts.confirmed)} /></WbTd>
+            </WbRow>
           ))}
       </tbody>
-    </AdminTable>
+    </WbTable>
   );
 }
 
 function SignupsTable({ rows }: { rows: RecentSignupRow[] }) {
   if (rows.length === 0) {
-    return <AdminEmptyState>Noch kein bestaetigter Sign-up ueber die Landing im Zeitraum.</AdminEmptyState>;
+    return <WbEmpty>Noch kein bestätigter Sign-up über die Landing im Zeitraum.</WbEmpty>;
   }
   return (
-    <AdminTable>
+    <WbTable>
       <thead>
         <tr>
-          <AdminTh>Zeit</AdminTh>
-          <AdminTh>Email</AdminTh>
-          <AdminTh>Quelle</AdminTh>
-          <AdminTh>Kampagne / Anzeige</AdminTh>
-          <AdminTh>Variante</AdminTh>
-          <AdminTh>Geraet</AdminTh>
-          <AdminTh>Land</AdminTh>
+          <WbTh>Zeit</WbTh>
+          <WbTh>E-Mail</WbTh>
+          <WbTh>Quelle</WbTh>
+          <WbTh>Kampagne / Anzeige</WbTh>
+          <WbTh>Variante</WbTh>
+          <WbTh>Gerät</WbTh>
+          <WbTh>Land</WbTh>
         </tr>
       </thead>
       <tbody>
         {rows.map((r, i) => (
-          <AdminTRow key={`${r.created_at}-${i}`}>
-            <AdminTd nowrap muted>{formatDateTime(r.created_at)}</AdminTd>
-            <AdminTd style={{ color: "var(--ink)" }}>{r.email ?? "–"}</AdminTd>
-            <AdminTd nowrap>{SOURCE_LABELS[r.source]}</AdminTd>
-            <AdminTd muted>
+          <WbRow key={`${r.created_at}-${i}`}>
+            <WbTd nowrap muted>{formatDateTime(r.created_at)}</WbTd>
+            <WbTd>{r.email ?? "–"}</WbTd>
+            <WbTd nowrap>{SOURCE_LABELS[r.source]}</WbTd>
+            <WbTd muted>
               {[r.utm_campaign, r.utm_content].filter(Boolean).join(" / ") || "–"}
-            </AdminTd>
-            <AdminTd mono nowrap>
+            </WbTd>
+            <WbTd mono nowrap>
               {r.experiment_key ? `${r.experiment_key} · ${r.variant ?? "?"}` : "–"}
-            </AdminTd>
-            <AdminTd nowrap>
+            </WbTd>
+            <WbTd nowrap>
               {r.device === "desktop" ? "Desktop" : r.in_app ? "Mobile, In-App" : "Mobile"}
-            </AdminTd>
-            <AdminTd mono nowrap>{r.country ?? "–"}</AdminTd>
-          </AdminTRow>
+            </WbTd>
+            <WbTd mono nowrap>{r.country ?? "–"}</WbTd>
+          </WbRow>
         ))}
       </tbody>
-    </AdminTable>
+    </WbTable>
   );
 }
 
 const METRIC_LABELS = {
   cta_click: "CTA-Klick",
   signup_started: "Sign-up gestartet",
-  signup_confirmed: "Sign-up bestaetigt",
+  signup_confirmed: "Sign-up bestätigt",
 } as const;
 
 function ExperimentPanel({ report }: { report: ExperimentReport }) {
@@ -566,106 +405,89 @@ function ExperimentPanel({ report }: { report: ExperimentReport }) {
   const done = report.progress >= 1;
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
-      <div
-        style={{
-          background: "#ffffff",
-          border: "0.5px solid var(--line)",
-          borderRadius: 16,
-          padding: "18px 20px",
-          boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-        }}
-      >
-        <div style={{ fontSize: 14, color: "var(--ink)", lineHeight: 1.55, marginBottom: 12 }}>
+    <>
+      <div className="wb-panel-body has-divider">
+        <div style={{ fontSize: 14, lineHeight: 1.55, marginBottom: 10 }}>
           <strong>Hypothese:</strong> {exp.hypothesis}
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 24px", fontSize: 13, color: "var(--ink-dim)" }}>
+        <div className="wb-meta-row">
           <span>
-            Entscheidungsmetrik: <strong style={{ color: "var(--ink)" }}>{METRIC_LABELS[exp.primaryMetric]}</strong>
+            Entscheidungsmetrik: <strong>{METRIC_LABELS[exp.primaryMetric]}</strong>
           </span>
           <span>
             Basisrate {pct(exp.baselineRate, 1)} · gesuchter Effekt +{Math.round(exp.relativeMde * 100)} %
           </span>
           <span>
-            Geplant: <strong style={{ color: "var(--ink)" }}>{required}</strong> Besucher pro Variante
+            Geplant: <strong>{required}</strong> Besucher pro Variante
           </span>
         </div>
         <div style={{ marginTop: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--ink-faint)", marginBottom: 6 }}>
+          <div className="wb-note" style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
             <span>Stichprobe (kleinste Variante)</span>
-            <span style={{ fontVariantNumeric: "tabular-nums" }}>
+            <span className="wb-num">
               {num(report.minVisitors)} von {required} · {progressPct} %
             </span>
           </div>
-          <div style={{ height: 8, borderRadius: 999, background: "rgba(26,29,38,0.08)", overflow: "hidden" }}>
-            <div
-              style={{
-                width: `${progressPct}%`,
-                height: "100%",
-                borderRadius: 999,
-                background: done ? "var(--green)" : "var(--blue)",
-                transition: "width 0.4s ease",
-              }}
-            />
+          <div className="wb-progress">
+            <div className={`wb-progress-bar${done ? " is-done" : ""}`} style={{ width: `${progressPct}%` }} />
           </div>
-          <div style={{ marginTop: 8, fontSize: 12, color: done ? "var(--green-deep)" : "var(--ink-faint)" }}>
+          <div className="wb-note" style={{ marginTop: 8, color: done ? "var(--wb-green)" : undefined }}>
             {done
-              ? "Stichprobe erreicht — auswerten, Gewinner als Default schalten, Ergebnis ins Logbuch."
-              : "Erst auswerten, wenn die Stichprobe voll ist. Zwischenstaende wechseln bei kleinen Zahlen noch das Vorzeichen."}
+              ? "Stichprobe erreicht: auswerten, Gewinner als Default schalten, Ergebnis ins Logbuch."
+              : "Erst auswerten, wenn die Stichprobe voll ist. Zwischenstände wechseln bei kleinen Zahlen noch das Vorzeichen."}
           </div>
         </div>
       </div>
 
-      <AdminTable>
+      <WbTable>
         <thead>
           <tr>
-            <AdminTh>Variante</AdminTh>
-            <AdminTh align="right">Besucher</AdminTh>
-            <AdminTh align="right">CTA</AdminTh>
-            <AdminTh align="right">Gestartet</AdminTh>
-            <AdminTh align="right">Bestaetigt</AdminTh>
-            <AdminTh align="right">{METRIC_LABELS[exp.primaryMetric]}</AdminTh>
-            <AdminTh align="right">Lift</AdminTh>
-            <AdminTh align="right">P(besser)</AdminTh>
-            <AdminTh align="right">p-Wert</AdminTh>
-            <AdminTh>Vorschau</AdminTh>
+            <WbTh>Variante</WbTh>
+            <WbTh align="right">Besucher</WbTh>
+            <WbTh align="right">CTA</WbTh>
+            <WbTh align="right">Gestartet</WbTh>
+            <WbTh align="right">Bestätigt</WbTh>
+            <WbTh align="right">{METRIC_LABELS[exp.primaryMetric]}</WbTh>
+            <WbTh align="right">Lift</WbTh>
+            <WbTh align="right">P(besser)</WbTh>
+            <WbTh align="right">p-Wert</WbTh>
+            <WbTh>Vorschau</WbTh>
           </tr>
         </thead>
         <tbody>
           {report.variants.map((v) => (
-            <AdminTRow key={v.key}>
-              <AdminTd>
-                <div style={{ color: "var(--ink)", fontWeight: 600 }}>
-                  {v.key.toUpperCase()}
-                  {v.isControl ? (
-                    <span style={{ ...monoLabelStyle, marginLeft: 8 }}>Kontrolle</span>
-                  ) : null}
-                </div>
-                <div style={{ fontSize: 12, color: "var(--ink-faint)", marginTop: 2 }}>{v.label}</div>
-              </AdminTd>
-              <AdminTd align="right"><AdminNumeric value={num(v.counts.visitors)} bold /></AdminTd>
-              <AdminTd align="right"><AdminNumeric value={num(v.counts.ctaClickers)} /></AdminTd>
-              <AdminTd align="right"><AdminNumeric value={num(v.counts.starters)} /></AdminTd>
-              <AdminTd align="right"><AdminNumeric value={num(v.counts.confirmed)} /></AdminTd>
-              <AdminTd align="right"><AdminNumeric value={pct(v.successes, v.counts.visitors)} bold /></AdminTd>
-              <AdminTd align="right"><AdminNumeric value={v.comparison ? fmtLift(v.comparison.relativeLift) : "–"} /></AdminTd>
-              <AdminTd align="right"><AdminNumeric value={v.comparison ? fmtProb(v.comparison.probabilityBBeatsA) : "–"} /></AdminTd>
-              <AdminTd align="right"><AdminNumeric value={v.comparison ? fmtP(v.comparison.pValue) : "–"} /></AdminTd>
-              <AdminTd nowrap>
-                <a href={`/?v=${encodeURIComponent(v.key)}`} className="admin-link" target="_blank" rel="noreferrer">
+            <WbRow key={v.key}>
+              <WbTd>
+                <span style={{ fontWeight: 600 }}>{v.key.toUpperCase()}</span>
+                {v.isControl ? (
+                  <span style={{ marginLeft: 8 }}>
+                    <WbBadge>Kontrolle</WbBadge>
+                  </span>
+                ) : null}
+                <div className="wb-sub">{v.label}</div>
+              </WbTd>
+              <WbTd align="right"><WbNumeric value={num(v.counts.visitors)} bold /></WbTd>
+              <WbTd align="right"><WbNumeric value={num(v.counts.ctaClickers)} /></WbTd>
+              <WbTd align="right"><WbNumeric value={num(v.counts.starters)} /></WbTd>
+              <WbTd align="right"><WbNumeric value={num(v.counts.confirmed)} /></WbTd>
+              <WbTd align="right"><WbNumeric value={pct(v.successes, v.counts.visitors)} bold /></WbTd>
+              <WbTd align="right"><WbNumeric value={v.comparison ? fmtLift(v.comparison.relativeLift) : "–"} /></WbTd>
+              <WbTd align="right"><WbNumeric value={v.comparison ? fmtProb(v.comparison.probabilityBBeatsA) : "–"} /></WbTd>
+              <WbTd align="right"><WbNumeric value={v.comparison ? fmtP(v.comparison.pValue) : "–"} /></WbTd>
+              <WbTd nowrap>
+                <a href={`/?v=${encodeURIComponent(v.key)}`} className="wb-link" target="_blank" rel="noreferrer">
                   /?v={v.key}
                 </a>
-              </AdminTd>
-            </AdminTRow>
+              </WbTd>
+            </WbRow>
           ))}
         </tbody>
-      </AdminTable>
-      <p style={{ margin: 0, fontSize: 12, color: "var(--ink-faint)", lineHeight: 1.5 }}>
-        P(besser) = Wahrscheinlichkeit, dass die Variante die Kontrolle auf
-        der Entscheidungsmetrik schlaegt. p-Wert = zweiseitiger Zwei-Anteile-
-        Test. Beides erst ab 20 Besuchern pro Variante. Vorschau-Links werden
-        nicht getrackt.
-      </p>
-    </div>
+      </WbTable>
+      <div className="wb-panel-body wb-note" style={{ borderTop: "1px solid var(--wb-line-soft)" }}>
+        P(besser) = Wahrscheinlichkeit, dass die Variante die Kontrolle auf der Entscheidungsmetrik
+        schlägt. p-Wert = zweiseitiger Zwei-Anteile-Test. Beides erst ab 20 Besuchern pro Variante.
+        Vorschau-Links werden nicht getrackt.
+      </div>
+    </>
   );
 }

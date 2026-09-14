@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 
+import "../werkbank.css";
+
 /**
  * Layout fuer die Admin-Routen. Setzt globale `noindex,nofollow`-Robots-
  * Meta, damit selbst wenn der geheime Pfad mal in einer Referer-Chain
  * landet, Crawler ihn nicht aufnehmen.
  *
- * Wrapper-Background ueberschreibt den dunklen `html`-Bg aus globals.css
- * (Marketing-Site-Default), damit das Dashboard hell + leserlich ist.
+ * `.wb` traegt die Werkbank-Tokens (admin.css): kuehles Grau, System-
+ * schrift, eigene Farben. Ueberschreibt den dunklen `html`-Bg und die
+ * Inter-Schrift aus globals.css, die fuer die Marketing-Site gelten.
  */
 
 export const metadata: Metadata = {
@@ -22,9 +25,5 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="min-h-screen bg-[#faf9f5] text-[#1a1d26]">
-      {children}
-    </div>
-  );
+  return <div className="wb">{children}</div>;
 }
