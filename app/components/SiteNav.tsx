@@ -100,17 +100,25 @@ export function SiteNav() {
             Dashboard
           </a>
         ) : (
-          <a
-            href="#signup"
-            className="nav-cta"
-            onClick={(e) => {
-              e.preventDefault();
-              trackLpEvent("cta_click", "nav");
-              openSignupModal();
-            }}
-          >
-            Get started
-          </a>
+          <div className="nav-actions">
+            {/* Leiser Nebenausgang fuer Bestandskunden, damit sie nicht
+                ueber den CTA gehen und den Landing-Funnel (cta_click,
+                signup_started) verfaelschen. Bewusst ohne Tracking. */}
+            <a href="/login" className="nav-login">
+              Log in
+            </a>
+            <a
+              href="#signup"
+              className="nav-cta"
+              onClick={(e) => {
+                e.preventDefault();
+                trackLpEvent("cta_click", "nav");
+                openSignupModal();
+              }}
+            >
+              Get started
+            </a>
+          </div>
         )}
       </div>
     </nav>

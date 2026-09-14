@@ -268,6 +268,33 @@ body::before {
 .site-nav[data-scrolled="true"] .nav-cta:hover {
   background: rgba(255, 255, 255, 0.85);
 }
+/* Textlink fuer Bestandskunden neben dem CTA, bewusst leiser als die
+   Pille: der Button bleibt das einzige laute Element. Die Nav ist auf
+   der Landing immer hell (body:has(.hero-light)), der dunkle Default
+   deckt nur Seiten mit Legacy-Dark-Hero ab. */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.nav-login {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.72);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.nav-login:hover {
+  color: #ffffff;
+}
+.site-nav[data-scrolled="true"] .nav-login,
+body:has(.hero-light) .site-nav .nav-login {
+  color: var(--ink-dim);
+}
+.site-nav[data-scrolled="true"] .nav-login:hover,
+body:has(.hero-light) .site-nav .nav-login:hover {
+  color: var(--ink);
+}
 
 /* === HERO — dark "spotlight" band (Notion-style) ===
    The hero is the ONE intentionally dark section on an otherwise
