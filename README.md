@@ -1,26 +1,25 @@
 # Callday Web
 
-Marketing-Site für [callday.io](https://callday.io) — landing page,
-Privacy & Terms — und später Web-Checkout, Affiliate-Dashboard
-und Web-App-Routes.
+Marketing-Site und eingeloggter Web-Bereich für [callday.io](https://callday.io):
+Landing, Sign-up, Lead-Listen-Generator, Account-Dashboard, Affiliate-Bereich,
+Admin, Privacy & Terms.
 
-Successor to the archived
-[dealswipe-web](https://github.com/janbettermann/dealswipe-web) repo
-(pre-rebrand, May 2026).
-
-**Mobile-App-Repo:** [`dealswipe-app`](https://github.com/janbettermann/dealswipe-app)
-(Pfad bleibt aus Legacy-Gründen, kein Rename geplant). Cross-Repo-Themen wie
-Schema-Änderungen, Privacy-URL-Updates oder geteilte Marken-Tokens betreffen
-beide.
+**Mobile-App-Repo:** [`callday-app`](https://github.com/janbettermann/callday-app)
+(lokal `C:\Dev\callday-app`). Cross-Repo-Themen wie Schema-Änderungen,
+Privacy-URL-Updates oder geteilte Marken-Tokens betreffen beide — Schema zuerst
+im App-Repo (`supabase/migrations`), dann ggf. ein Read-Endpunkt hier.
 
 ## Stack
 
 - **Framework:** Next.js 16 (App Router, Turbopack)
 - **Sprache:** TypeScript
-- **Styling:** Tailwind CSS v4 + globaler `globals.css` für die Marketing-Page
-- **Content:** MDX für Privacy / Terms (`app/(legal)/`)
-- **Hosting:** Vercel (geplant)
-- **Domain-DNS:** Hostinger
+- **Styling:** globales `globals.css` (Brand-Tokens als CSS-Variablen), Tailwind v4 nur als Postcss-Basis
+- **Content:** MDX für Privacy / Terms / Zoom-Doku (`app/(legal)/`)
+- **Daten/Auth:** Supabase (SSR-Cookies via `@supabase/ssr`, Service-Role server-seitig)
+- **Mail:** Resend (React-Email-Templates in `emails/`)
+- **Hosting:** Vercel — **jeder Push auf `main` ist ein Live-Deploy**
+- **Domain-DNS:** Vercel (Registrar Hostinger)
+- **Tests:** Vitest (`npm test`), `@/`-Alias über `vitest.config.ts`
 
 ## Lokal starten
 
@@ -29,34 +28,35 @@ npm install
 npm run dev
 ```
 
-→ http://localhost:3000
+→ http://localhost:3000. Eingeloggt testen ohne Passwort-Eingabe:
+`http://localhost:3000/api/dev/login` (nur `NODE_ENV=development` +
+`DEV_LOGIN_EMAIL` in `.env.local`).
 
 ## Struktur
 
 ```
 app/
-├── page.tsx              # Landing Page (server component)
-├── layout.tsx            # Root layout (Fonts, Metadata)
-├── globals.css           # Marketing-Site-CSS (sun-glow background, light theme)
-├── components/
-│   └── SignupForm.tsx    # Account-Sign-Up (client component, Landing + /a/[slug])
-├── auth/
-│   └── confirmed/page.tsx       # Supabase-Email-Confirmation-Landing
-└── (legal)/              # Route group → URL ist /privacy bzw. /terms
-    ├── layout.tsx
-    ├── privacy/page.mdx
-    └── terms/page.mdx
-mdx-components.tsx        # MDX-Typografie-Overrides für Legal-Seiten
+├── page.tsx                  # Landing (leitet Eingeloggte auf /dashboard)
+├── a/[slug]/                 # Affiliate-Landing (Attribution beim Sign-up)
+├── login/, confirm/          # Sign-in, OTP-Bestätigung nach Sign-up
+├── auth/callback/            # Supabase OAuth/PKCE-Callback + Post-Signup-Mail
+├── auth/confirmed/           # Fallback-Seite für den Bestätigungs-Link der App
+├── dashboard/, lists/, calldays/, account/   # eingeloggter Bereich (AppShell + AppNav)
+├── lists/new/                # Lead-Listen-Generator (Outscraper, lib/lists/*)
+├── affiliate/                # Affiliate-Self-Service (eigene Cookie-Auth)
+├── [secret]/                 # Admin (Pfad aus Env, Cookie-Auth)
+├── api/                      # lists/*, credits, app-download-mail, dev/login
+├── (legal)/                  # /privacy, /terms (EN + DE), /zoom, /support
+└── components/               # SignupForm, AppNav, GetAppCard, …
+emails/                       # Resend-Templates
+lib/                          # supabase-*, app-download(-mail), lists/*, admin/*, affiliate-*
+specs/                        # lists-generator.md, affiliate-*.md
+docs/                         # auth-provider-setup.md, marketing/
 ```
 
-## TODOs vor Public-Launch
+## Wo weiterlesen
 
-- [ ] Privacy & Terms: Platzhalter (`[Vor- und Nachname]`, `[Adresse]`, `[DATUM]`,
-      `[USt-IdNr.]`, etc.) ersetzen, von einem Anwalt prüfen lassen
-- [ ] Phone-Mockup: aktuelles Callday-Screenshot statt Platzhalter einsetzen
-      (`public/phone-mockup.png`)
-- [ ] OpenGraph-Image (`public/og.png`, 1200×630) erstellen
-- [ ] Favicon-Set bauen (16/32/180/512 px) + `manifest.json`
-- [ ] Cookie-Banner ergänzen, sobald Tracking eingebaut wird
-- [ ] Stripe-Integration für Web-Checkout (Phase 2)
-- [ ] Tolt / Rewardful für Affiliate-Programm (Phase 3)
+- Produkt-Kontext, Design-Tokens, Plan-Modell: `CLAUDE.md` im App-Repo
+- Generator: `specs/lists-generator.md`
+- Web-OAuth (Apple/Google, JWT-Renewal alle ~5 Monate): `docs/auth-provider-setup.md`
+- Launch-Schalter Store vs. TestFlight: `lib/app-download.ts` (`APP_STORE_LIVE`, seit 2026-09-13 `true`)
