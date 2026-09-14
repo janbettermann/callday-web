@@ -70,7 +70,7 @@ export function FeedbackTable({ rows }: { rows: FeedbackRow[] }) {
   if (rows.length === 0) {
     return (
       <AdminEmptyState>
-        No feedback yet. Wait for the first beta tester to send something.
+        No feedback yet. Wait for the first user to send something.
       </AdminEmptyState>
     );
   }

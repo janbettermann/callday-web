@@ -7,7 +7,9 @@ type Step = {
 };
 
 const STEPS: Step[] = [
-  { key: "applications", label: "Applications", sub: "Beta interest signals" },
+  // Historischer Bestand: das Beta-Bewerbungsformular ist seit 2026-07-05
+  // weg, die applications-Tabelle bekommt keine neuen Rows mehr.
+  { key: "applications", label: "Applications", sub: "Beta form, closed July 2026" },
   { key: "signups", label: "Sign-ups", sub: "Created an account" },
   { key: "withList", label: "Created list", sub: "Uploaded their own leads" },
   { key: "withFirstCall", label: "First call", sub: "Hit the call button once" },
