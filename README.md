@@ -44,14 +44,14 @@ app/
 ├── dashboard/, lists/, calldays/, account/   # eingeloggter Bereich (AppShell + AppNav)
 ├── lists/new/                # Lead-Listen-Generator (Outscraper, lib/lists/*)
 ├── affiliate/                # Affiliate-Self-Service (eigene Cookie-Auth)
-├── [secret]/                 # Admin (Pfad aus Env, Cookie-Auth)
-├── api/                      # lists/*, credits, app-download-mail, dev/login
+├── [secret]/                 # Admin (Pfad aus Env, Cookie-Auth) — inkl. /experiments
+├── api/                      # lists/*, credits, app-download-mail, lp-event, dev/login
 ├── (legal)/                  # /privacy, /terms (EN + DE), /zoom, /support
-└── components/               # SignupForm, AppNav, GetAppCard, …
+└── components/               # SignupForm, AppNav, GetAppCard, LpSession, …
 emails/                       # Resend-Templates
-lib/                          # supabase-*, app-download(-mail), lists/*, admin/*, affiliate-*
+lib/                          # supabase-*, app-download(-mail), lists/*, admin/*, affiliate-*, lp/*
 specs/                        # lists-generator.md, affiliate-*.md
-docs/                         # auth-provider-setup.md, marketing/
+docs/                         # auth-provider-setup.md, experiments.md, marketing/
 ```
 
 ## Wo weiterlesen
@@ -59,4 +59,5 @@ docs/                         # auth-provider-setup.md, marketing/
 - Produkt-Kontext, Design-Tokens, Plan-Modell: `CLAUDE.md` im App-Repo
 - Generator: `specs/lists-generator.md`
 - Web-OAuth (Apple/Google, JWT-Renewal alle ~5 Monate): `docs/auth-provider-setup.md`
+- Landing-Split-Tests mit Meta Ads (Zuweisung, Events, Admin, Workflow): `docs/experiments.md`
 - Launch-Schalter Store vs. TestFlight: `lib/app-download.ts` (`APP_STORE_LIVE`, seit 2026-09-13 `true`)
