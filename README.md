@@ -43,11 +43,12 @@ app/
 ├── auth/confirmed/           # Fallback-Seite für den Bestätigungs-Link der App
 ├── dashboard/, lists/, calldays/, account/   # eingeloggter Bereich (AppShell + AppNav)
 ├── lists/new/                # Lead-Listen-Generator (Outscraper, lib/lists/*)
-├── affiliate/                # Affiliate-Self-Service (eigene Cookie-Auth)
-├── [secret]/                 # Admin (Pfad aus Env, Cookie-Auth) — inkl. /experiments
+├── affiliate/                # Affiliate-Portal (eigene Cookie-Auth), Werkbank-Design
+├── [secret]/                 # Admin (Pfad aus Env, Cookie-Auth) — inkl. /experiments, Werkbank-Design
 ├── api/                      # lists/*, credits, app-download-mail, lp-event, dev/login
 ├── (legal)/                  # /privacy, /terms (EN + DE), /zoom, /support
-└── components/               # SignupForm, AppNav, GetAppCard, LpSession, …
+├── werkbank.css              # Design "Werkbank" für Admin + Affiliate-Portal (Präfix wb, Wurzel .wb)
+└── components/               # SignupForm, AppNav, GetAppCard, LpSession, werkbank.tsx (WbShell, WbPanel, WbTable, …)
 emails/                       # Resend-Templates
 lib/                          # supabase-*, app-download(-mail), lists/*, admin/*, affiliate-*, lp/*
 specs/                        # lists-generator.md, affiliate-*.md
@@ -60,4 +61,5 @@ docs/                         # auth-provider-setup.md, experiments.md, marketin
 - Generator: `specs/lists-generator.md`
 - Web-OAuth (Apple/Google, JWT-Renewal alle ~5 Monate): `docs/auth-provider-setup.md`
 - Landing-Split-Tests mit Meta Ads (Zuweisung, Events, Admin, Workflow): `docs/experiments.md`
+- Werkbank-Design (Admin + Affiliate-Portal): Tokens und Klassen in `app/werkbank.css`, Bausteine in `app/components/werkbank.tsx`; Seiten bauen über `AdminShell` (`app/[secret]/_components/admin-ui.tsx`) bzw. `PortalShell` (`app/affiliate/PortalShell.tsx`)
 - Launch-Schalter Store vs. TestFlight: `lib/app-download.ts` (`APP_STORE_LIVE`, seit 2026-09-13 `true`)
