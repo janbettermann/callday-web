@@ -1,32 +1,34 @@
 /**
- * POST /api/testflight-invite
+ * POST /api/app-download-mail
  *
- * Triggert die TestFlight-Invite-Mail an den eingeloggten User.
- * Hiess bis 2026-07-05 /api/affiliate/post-signup — seit der
- * Sign-Up-Vereinheitlichung (organic + affiliate nutzen dieselbe
- * SignupForm) ist der Endpoint nicht mehr affiliate-spezifisch.
+ * Schickt die Post-Signup-Mail ("You're in" + Weg zur App) an den
+ * eingeloggten User. Hiess bis zum App-Store-Launch /api/testflight-invite
+ * (und davor, bis 2026-07-05, /api/affiliate/post-signup — seit der
+ * Sign-Up-Vereinheitlichung ist der Endpoint nicht mehr affiliate-
+ * spezifisch).
  *
  * Auth-Modell (post Audit-Fix #5/#6):
  *   - Auth via Supabase-SSR-Session-Cookie. Nicht-eingeloggte Caller → 401.
  *   - Mail-Adresse kommt aus user.email — Caller kann KEINE Ziel-Adresse
  *     vorgeben. Das schliesst den unauthenticated-Mailer-Vektor (Audit
- *     #5) und entfernt das 1h-Account-Age-Gate (Audit #6, Resend-Button
- *     funktioniert dauerhaft).
+ *     #5); ein Account-Age-Gate gibt es seit Audit #6 nicht mehr.
  *   - Kein Body noetig — Attribution laeuft komplett durch den Trigger
  *     bzw /auth/callback.
  *
- * Caller:
- *   - SignupForm (Email/PW-Pfad) nach erfolgreichem verifyOtp
- *   - ResendTestFlightButton auf /account
+ * Einziger Caller: ConfirmCard (Email/PW-Pfad) nach erfolgreichem
+ * verifyOtp, via requestAppDownloadMail in lib/signup-confirm.ts. Der
+ * fruehere Resend-Button auf /account ist mit dem Entruempeln der Seite
+ * (2026-07-24) entfallen — der Recovery-Pfad ist heute die "Get the app"-
+ * Karte (GetAppCard auf /account und dem Dashboard).
  *
  * /auth/callback ruft NICHT diesen Endpoint sondern direkt
- * sendTestflightInvite() (kein Self-HTTP-Roundtrip, Audit #7).
+ * sendAppDownloadMail() (kein Self-HTTP-Roundtrip, Audit #7).
  */
 
 import { NextRequest } from "next/server";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
-import { sendTestflightInvite } from "@/lib/testflight-invite";
+import { sendAppDownloadMail } from "@/lib/app-download-mail";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -56,7 +58,7 @@ export async function POST(_request: NextRequest) {
     (user.user_metadata?.full_name as string | undefined) ||
     "there";
 
-  const result = await sendTestflightInvite({
+  const result = await sendAppDownloadMail({
     toEmail: user.email,
     displayName,
   });

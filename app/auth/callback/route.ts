@@ -24,23 +24,24 @@
  *   Die Form setzt vor signInWithOAuth den Cookie `signup_flow` (analog
  *   zum login_next-Cookie, da Supabase Query-Params von redirectTo
  *   strippt). Ist er gesetzt, schicken wir nach dem PKCE-Exchange die
- *   TestFlight-Mail — aber nur fuer frische Profile (<5 min), damit ein
- *   Re-Login ueber die Form keinen Mail-Spam ausloest. Der /login-Pfad
- *   setzt den Cookie nicht und triggert daher nie eine Mail.
+ *   Post-Signup-Mail (Weg zur App, lib/app-download-mail.ts) — aber nur
+ *   fuer frische Profile (<5 min), damit ein Re-Login ueber die Form
+ *   keinen Mail-Spam ausloest. Der /login-Pfad setzt den Cookie nicht
+ *   und triggert daher nie eine Mail.
  *
  * Affiliate-Attribution (Phase 1 Affiliate-Programm):
  *   /a/[slug] setzt zusaetzlich den Cookie `affiliate_slug`. Nach
  *   erfolgreichem PKCE-Exchange resolven wir den Slug gegen affiliates
  *   und UPDATEn profiles.referred_by_affiliate_id — nur wenn aktuell
  *   null (idempotent gegen Re-Login derselben User). Attribution und
- *   TestFlight-Mail sind bewusst entkoppelt: ein pausierter/unbekannter
+ *   Post-Signup-Mail sind bewusst entkoppelt: ein pausierter/unbekannter
  *   Slug kostet nur die Attribution, nicht die Mail.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
-import { sendTestflightInvite } from "@/lib/testflight-invite";
+import { sendAppDownloadMail } from "@/lib/app-download-mail";
 
 export const dynamic = "force-dynamic";
 
@@ -128,12 +129,11 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // TestFlight-Mail fuer frische Sign-Ups aus der SignupForm. Der
-  // affiliate_slug-Fallback deckt Sessions ab, die die Form noch vor dem
-  // signup_flow-Cookie-Deploy gestartet haben — kann nach ein paar Tagen
-  // entfallen.
-  const isSignupFlow =
-    request.cookies.get("signup_flow")?.value === "1" || affiliateSlug !== null;
+  // Post-Signup-Mail fuer frische Sign-Ups aus der SignupForm. (Der
+  // fruehere affiliate_slug-Fallback fuer Sessions von vor dem
+  // signup_flow-Cookie-Deploy im Juli 2026 ist entfallen — die Cookies
+  // leben 5 Minuten, und die Form setzt seither immer beide.)
+  const isSignupFlow = request.cookies.get("signup_flow")?.value === "1";
   if (isSignupFlow) {
     try {
       await maybeSendSignupInvite(supabase);
@@ -199,8 +199,8 @@ async function attachAffiliateAttribution(
 }
 
 /**
- * Schickt die TestFlight-Mail — aber nur wenn das Profil in den letzten
- * 5 Min angelegt wurde. Schuetzt vor Mail-Spam wenn ein existierender
+ * Schickt die Post-Signup-Mail (Weg zur App) — aber nur wenn das Profil
+ * in den letzten 5 Min angelegt wurde. Schuetzt vor Mail-Spam wenn ein existierender
  * User nochmal ueber die SignupForm einloggt (OAuth-Sign-Up und -Sign-In
  * sind aus Supabase-Sicht derselbe Flow).
  */
@@ -225,13 +225,13 @@ async function maybeSendSignupInvite(
   if (Date.now() - createdMs > SIGNUP_PROFILE_FRESHNESS_MS) return;
 
   // Direkter Funktions-Call statt Self-HTTP-Roundtrip — siehe
-  // lib/testflight-invite.ts. sendTestflightInvite returnt strukturiert
+  // lib/app-download-mail.ts. sendAppDownloadMail returnt strukturiert
   // statt zu throwen, daher kein try/catch noetig.
   const displayName =
     (profile.name && profile.name.trim()) ||
     (user.user_metadata?.full_name as string | undefined) ||
     "there";
-  await sendTestflightInvite({
+  await sendAppDownloadMail({
     toEmail: profile.email,
     displayName,
   });

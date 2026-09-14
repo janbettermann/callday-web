@@ -8,7 +8,7 @@ import {
   SIGNUP_CODE_LENGTH,
   clearSignupConfirmHandoff,
   readSignupConfirmHandoff,
-  sendTestflightInviteMail,
+  requestAppDownloadMail,
   type SignupConfirmHandoff,
 } from "@/lib/signup-confirm";
 
@@ -86,8 +86,9 @@ export function ConfirmCard() {
 
     clearSignupConfirmHandoff();
 
-    // Email ist jetzt verifiziert — TestFlight-Mail rausschicken.
-    void sendTestflightInviteMail("ConfirmCard");
+    // Email ist jetzt verifiziert — Post-Signup-Mail mit dem Weg zur App
+    // rausschicken.
+    void requestAppDownloadMail("ConfirmCard");
 
     // Funnel-Einstiege (z. B. /lists) geben ihr Ziel im Handoff mit;
     // Default ist das Dashboard (Post-Login-Startseite seit 2026-07-15).

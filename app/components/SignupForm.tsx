@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
 import {
-  sendTestflightInviteMail,
+  requestAppDownloadMail,
   writeSignupConfirmHandoff,
 } from "@/lib/signup-confirm";
 
@@ -56,8 +56,8 @@ function isUserAlreadyRegistered(error: {
  *     Marketing-Tracking-Cookie (siehe Plan-Decision in
  *     project_beta_affiliate_program).
  *
- * TestFlight-Mail-Trigger:
- *   - Email/PW: /confirm ruft /api/testflight-invite nach erfolgreichem
+ * Post-Signup-Mail-Trigger (Weg zur App, lib/app-download-mail.ts):
+ *   - Email/PW: /confirm ruft /api/app-download-mail nach erfolgreichem
  *     verifyOtp (siehe ConfirmCard + lib/signup-confirm.ts).
  *   - OAuth: der `signup_flow`-Cookie (gesetzt in handleOAuth) signalisiert
  *     /auth/callback, dass dieser PKCE-Exchange aus einem Sign-Up-Form kam
@@ -143,7 +143,7 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
       setSignupCookie("affiliate_slug", slug);
     }
     // Markiert den PKCE-Exchange als Sign-Up-Form-Ursprung — /auth/callback
-    // schickt dann die TestFlight-Mail fuer frische Profile.
+    // schickt dann die Post-Signup-Mail (Weg zur App) fuer frische Profile.
     setSignupCookie("signup_flow", "1");
     setSignupCookie("login_next", nextPath);
 
@@ -233,10 +233,10 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
 
     // Email-Confirmation aktiv → session ist null, User muss den OTP-Code
     // aus der Mail auf /confirm eintippen. Kein Magic-Link, reiner Code.
-    // TestFlight-Mail wird ERST nach erfolgreichem verifyOtp rausgeschickt
-    // — sonst landen zwei Mails parallel im Postfach (Verification +
-    // TestFlight) was verwirrend ist + Typo-Emails kriegen unnoetig
-    // TestFlight-Links.
+    // Die Post-Signup-Mail (Weg zur App) geht ERST nach erfolgreichem
+    // verifyOtp raus — sonst landen zwei Mails parallel im Postfach
+    // (Verification + App-Link) was verwirrend ist + Typo-Emails kriegen
+    // unnoetig Download-Links.
     if (!data.session) {
       writeSignupConfirmHandoff({
         email: cleanEmail,
@@ -247,9 +247,9 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
       return;
     }
 
-    // Auto-confirmed (z.B. dev-Env oder Confirmation off) → TestFlight-Mail
+    // Auto-confirmed (z.B. dev-Env oder Confirmation off) → Post-Signup-Mail
     // jetzt senden, dann weiter zum Ziel-Pfad.
-    void sendTestflightInviteMail("SignupForm");
+    void requestAppDownloadMail("SignupForm");
     router.push(nextPath);
   }
 

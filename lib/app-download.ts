@@ -2,7 +2,7 @@
  * APP_STORE_LIVE — der Launch-Tag-Schalter fuer den Web-Funnel.
  *
  * Geflippt am 2026-09-13 (App-Store-Go-Live). Seitdem schicken Signup-Mail
- * (lib/testflight-invite.ts → AppStoreDownload-Template) und die
+ * (lib/app-download-mail.ts → AppStoreDownload-Template) und die
  * "Get the app"-Karte (GetAppCard) auf den App Store; der TestFlight-Public-Link
  * (Env TESTFLIGHT_PUBLIC_LINK) wird nicht mehr gelesen. Der Beta-Zweig
  * bleibt im Code, damit ein Rueckflip (z.B. Store-Pull) ohne Rebuild

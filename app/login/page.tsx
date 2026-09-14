@@ -38,14 +38,12 @@ function useAffiliateCookieCleanup() {
  *   - otp-email    : Email-only, sendet 8-stelligen Code
  *   - otp-code     : Code-Input (8 Ziffern)
  *
- * KEIN Sign-Up-Modus mehr (entfernt 2026-07-05): Sign-up laeuft in der
- * Beta ausschliesslich ueber die SignupForm auf der Landing (/#beta) —
- * nur dort haengt die TestFlight-Mail-Logik dran; der /login-Sign-Up
- * war eine Sackgasse ohne Invite-Mail und zeigte veraltete Trial-Copy
- * (Pre-Launch-Regel: keine Preis-Kommunikation). Der "New to Callday?"-
- * Link unten fuehrt zur Landing-Card. Beim Launch-Cutover braucht das
- * Checkout-Auth-Gate (?mode=signup, lebt auf launch-prep) wieder einen
- * Sign-Up-Einstieg — dann bewusst neu entscheiden.
+ * KEIN Sign-Up-Modus (entfernt 2026-07-05): Sign-up laeuft ausschliesslich
+ * ueber die SignupForm auf der Landing (/#signup) — nur dort haengt die
+ * Post-Signup-Mail (Weg zur App) dran; der /login-Sign-Up war eine
+ * Sackgasse ohne diese Mail und zeigte veraltete Trial-Copy. Der "New to
+ * Callday?"-Link unten fuehrt zur Landing-Card. (Das frueher geplante
+ * Web-Checkout-Auth-Gate ist mit dem IAP-only-Launch entfallen.)
  *
  * Reset-Password gibt's nicht als eigenen Flow — Forgot-Password leitet
  * zum OTP-Mode, da der User sich damit auch ohne Passwort einloggen kann.
@@ -527,7 +525,7 @@ function LoginForm({ embed = false }: { embed?: boolean }) {
       )}
 
       {/* Sign-up lebt auf der Landing (#signup) — nur dort haengt die
-          TestFlight-Mail-Logik dran, siehe Doc-Comment oben. Im Embed-Modus
+          Post-Signup-Mail dran, siehe Doc-Comment oben. Im Embed-Modus
           (User hat bereits einen Account) ausgeblendet. */}
       {!embed && (
         <div className="login-switch-mode">

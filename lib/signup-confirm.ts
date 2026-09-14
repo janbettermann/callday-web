@@ -74,14 +74,15 @@ export function clearSignupConfirmHandoff() {
 }
 
 /**
- * TestFlight-Invite-Mail nach abgeschlossenem Sign-Up. Fire-and-forget —
- * Failures sind nicht kritisch fuer den Flow, /account hat einen
- * Resend-Button als Recovery-Pfad. Der Server liest die Ziel-Email aus
- * der SSR-Session (kein Body noetig).
+ * Post-Signup-Mail ("You're in" + Weg zur App) nach abgeschlossenem
+ * Sign-Up anstossen. Fire-and-forget — Failures sind nicht kritisch fuer
+ * den Flow, die "Get the app"-Karte auf /account und dem Dashboard ist
+ * der Recovery-Pfad. Der Server liest die Ziel-Email aus der SSR-Session
+ * (kein Body noetig).
  */
-export async function sendTestflightInviteMail(context: string) {
+export async function requestAppDownloadMail(context: string) {
   try {
-    await fetch("/api/testflight-invite", { method: "POST" });
+    await fetch("/api/app-download-mail", { method: "POST" });
   } catch (err) {
     console.error(`[${context}] post-signup mail failed`, err);
   }
