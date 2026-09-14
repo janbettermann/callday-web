@@ -3,27 +3,39 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
+import {
+  closeSignupModal,
+  openLoginModal,
+  openSignupModal,
+  registerAuthModal,
+  useAuthModalState,
+} from "@/lib/use-signup-modal";
+
+import { LoginForm } from "./LoginForm";
 import { SignupForm } from "./SignupForm";
-import { useSignupModalOpen, closeSignupModal } from "@/lib/use-signup-modal";
 
 /**
- * Sign-up-Modal: der Hero-/Nav-„Get started"-CTA oeffnet dieses Popup mit dem
- * geteilten SignupForm, statt zur #signup-Sektion ganz unten zu scrollen —
- * faengt die Spitzen-Absicht direkt am Hero ab (Anti-Friktion).
+ * Auth-Popup der Landings. Der Hero-/Nav-"Get started"-CTA oeffnet es im
+ * Sign-up-Modus (faengt die Spitzen-Absicht direkt am Hero ab), der Nav-
+ * Link "Log in" im Login-Modus. Im Popup laesst sich zwischen beiden
+ * wechseln, ohne die Seite zu verlassen.
  *
- * Rezept 1:1 vom PostComposer (app/affiliate/dashboard/PostComposer.tsx):
- * createPortal nach document.body (entkommt dem .container-Stacking-Context),
- * ESC-Close, Body-Scroll-Lock, Backdrop-Klick schliesst. Das Panel ist nur
- * Positionierung — die sichtbare Flaeche ist die .login-card des SignupForm
- * selbst (kein Card-in-Card). z-index 10000 schlaegt die z:9999-Nav.
+ * Rezept 1:1 vom PostComposer: createPortal nach document.body (entkommt
+ * dem .container-Stacking-Context), ESC-Close, Body-Scroll-Lock, Backdrop-
+ * Klick schliesst. Das Panel ist nur Positionierung, die sichtbare Flaeche
+ * ist die .login-card des jeweiligen Formulars. z-index 10000 schlaegt die
+ * z:9999-Nav.
  *
- * `slug` reist pro Landing durch (Affiliate-Attribution auf /a/[slug]); der
- * Store teilt nur den Open-Boolean. Success-Navigation (email/PW → /confirm,
- * OAuth → Redirect) macht der SignupForm selbst — kein onSuccess noetig.
+ * `slug` reist pro Landing durch (Affiliate-Attribution auf /a/[slug]).
+ * Success-Navigation machen die Formulare selbst.
  */
 export function SignupModal({ slug }: { slug?: string }) {
-  const open = useSignupModalOpen();
+  const { open, mode } = useAuthModalState();
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // Anmelden, damit die Nav weiss, dass ein Popup uebernimmt (sonst
+  // navigiert "Log in" auf die Vollseite).
+  useEffect(() => registerAuthModal(), []);
 
   useEffect(() => {
     if (!open) return;
@@ -39,7 +51,7 @@ export function SignupModal({ slug }: { slug?: string }) {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    // Fokus ins Modal ziehen (a11y), aber NICHT ins Email-Feld — das wuerde
+    // Fokus ins Modal ziehen (a11y), aber NICHT ins Email-Feld, das wuerde
     // auf Mobile sofort die Tastatur hochreissen und die OAuth-Buttons
     // verdecken. Panel-Container (tabIndex -1) fokussieren.
     panelRef.current?.focus();
@@ -58,7 +70,7 @@ export function SignupModal({ slug }: { slug?: string }) {
       className="signup-modal-backdrop"
       role="dialog"
       aria-modal="true"
-      aria-label="Sign up"
+      aria-label={mode === "login" ? "Sign in" : "Sign up"}
       onClick={() => closeSignupModal()}
     >
       <div
@@ -75,7 +87,11 @@ export function SignupModal({ slug }: { slug?: string }) {
         >
           ×
         </button>
-        <SignupForm slug={slug} />
+        {mode === "login" ? (
+          <LoginForm variant="modal" onSwitchToSignup={() => openSignupModal()} />
+        ) : (
+          <SignupForm slug={slug} onSwitchToLogin={() => openLoginModal()} />
+        )}
       </div>
     </div>,
     document.body,

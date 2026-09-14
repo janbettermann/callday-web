@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { CalldayLogo } from "./CalldayLogo";
 import { trackLpEvent } from "@/lib/lp/client";
 import { useIsLoggedIn } from "@/lib/use-is-logged-in";
-import { openSignupModal } from "@/lib/use-signup-modal";
+import { openLoginModal, openSignupModal } from "@/lib/use-signup-modal";
 
 /**
  * Notion-style sticky nav: transparent + light text while the dark
@@ -103,17 +103,24 @@ export function SiteNav() {
           <div className="nav-actions">
             {/* Leiser Nebenausgang fuer Bestandskunden, damit sie nicht
                 ueber den CTA gehen und den Landing-Funnel (cta_click,
-                signup_started) verfaelschen. Bewusst ohne Tracking. */}
-            <a href="/login" className="nav-login">
+                signup_started) verfaelschen. Bewusst ohne Tracking. Oeffnet
+                das Auth-Popup im Login-Modus; ohne gemountetes Popup (Seiten
+                ohne SignupModal) bleibt der Link eine normale Navigation. */}
+            <a
+              href="/login"
+              className="nav-login"
+              onClick={(e) => {
+                if (openLoginModal()) e.preventDefault();
+              }}
+            >
               Log in
             </a>
             <a
               href="#signup"
               className="nav-cta"
               onClick={(e) => {
-                e.preventDefault();
                 trackLpEvent("cta_click", "nav");
-                openSignupModal();
+                if (openSignupModal()) e.preventDefault();
               }}
             >
               Get started

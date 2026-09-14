@@ -98,6 +98,11 @@ interface Props {
    * zurueckkommt; Default ist das Dashboard.
    */
   nextPath?: string;
+  /**
+   * Im Auth-Popup: Wechsel zum Login ohne Navigation (SignupModal). Ohne
+   * Callback fuehrt "Sign in" als Link auf /login (Inline-Card der Landing).
+   */
+  onSwitchToLogin?: () => void;
 }
 
 // 5 Minuten = OAuth-Round-Trip-Realismus. Vorher waren das 10 Min,
@@ -112,7 +117,7 @@ function setSignupCookie(name: string, value: string) {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${SIGNUP_COOKIE_MAX_AGE_S}; samesite=lax`;
 }
 
-export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
+export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH, onSwitchToLogin }: Props) {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -369,12 +374,22 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
 
       <div className="login-switch-mode">
         Already have an account?{" "}
-        <Link
-          href={`/login?next=${encodeURIComponent(nextPath)}`}
-          className="login-text-link login-text-link-strong"
-        >
-          Sign in
-        </Link>
+        {onSwitchToLogin ? (
+          <button
+            type="button"
+            onClick={onSwitchToLogin}
+            className="login-text-link login-text-link-strong"
+          >
+            Sign in
+          </button>
+        ) : (
+          <Link
+            href={`/login?next=${encodeURIComponent(nextPath)}`}
+            className="login-text-link login-text-link-strong"
+          >
+            Sign in
+          </Link>
+        )}
       </div>
     </div>
   );
