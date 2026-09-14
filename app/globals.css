@@ -1039,6 +1039,31 @@ body:has(.hero-light) .site-nav .nav-cta:hover {
   background: var(--line-strong);
 }
 
+/* Auth-Popup, Schritt 1: der E-Mail-Weg als kleiner Link unter Google,
+   in der Schrift des "or"-Trenners, aber eine Stufe dunkler, damit er
+   als Link lesbar bleibt (Jan-Decision 2026-09-14). */
+.login-email-link {
+  display: block;
+  margin: 18px auto 0;
+  padding: 4px 0;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+.login-email-link:hover {
+  color: var(--ink);
+}
+/* Im Popup ersetzt Abstand den "or"-Trenner zwischen OAuth und Feldern. */
+.login-form-gap {
+  margin-top: 20px;
+}
+
 .login-link-row {
   display: flex;
   justify-content: center;

@@ -99,10 +99,14 @@ interface Props {
    */
   nextPath?: string;
   /**
-   * Im Auth-Popup: Wechsel zum Login ohne Navigation (SignupModal). Ohne
-   * Callback fuehrt "Sign in" als Link auf /login (Inline-Card der Landing).
+   * Popup-Variante (SignupModal, Jan-Decision 2026-09-14): erst nur Apple
+   * und Google plus ein kleiner Link "Continue with email"; der klappt das
+   * E-Mail-Feld aus, danach wie gehabt das Passwort. Kein "or"-Trenner,
+   * keine "Already have an account?"-Fusszeile (der Wechsel laeuft ueber
+   * die Kopfzeile der Landing). Die Inline-Card unten auf der Landing
+   * bleibt bei der offenen Variante.
    */
-  onSwitchToLogin?: () => void;
+  oauthFirst?: boolean;
 }
 
 // 5 Minuten = OAuth-Round-Trip-Realismus. Vorher waren das 10 Min,
@@ -117,7 +121,7 @@ function setSignupCookie(name: string, value: string) {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${SIGNUP_COOKIE_MAX_AGE_S}; samesite=lax`;
 }
 
-export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH, onSwitchToLogin }: Props) {
+export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH, oauthFirst = false }: Props) {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -125,24 +129,31 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH, onSwitchToLogin
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Zwei-Schritt (email-first, Jan-Decision 2026-07-23, Figma-Vorbild):
-  // OAuth + "or" + Email stehen in BEIDEN Schritten. Schritt "email" zeigt
+  // OAuth + Email stehen in BEIDEN Schritten. Schritt "email" zeigt
   // zusaetzlich Titel+Sub und den Button "Continue with email"; nach Klick
   // verschwinden Titel+Sub, das Passwortfeld schiebt sich rein, der Button
   // wird "Create account" (Schritt "password"). OAuth bleibt sichtbar (kein
   // verlorener Ausweg), deshalb kein Back-Button noetig. Kein Email-Existenz-
   // Vorabcheck (Enumeration-Risiko) — der "already registered"-Recovery-Pfad
   // faengt Rueckkehrer eh sauber ab.
-  const [step, setStep] = useState<"email" | "password">("email");
+  //
+  // Popup (oauthFirst): davor liegt Schritt "oauth", nur Apple/Google und
+  // der Link, der das E-Mail-Feld ausklappt.
+  const [step, setStep] = useState<"oauth" | "email" | "password">(
+    oauthFirst ? "oauth" : "email",
+  );
 
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
-  // Passwort-Feld fokussieren, sobald Schritt 2 rendert (der User hat
-  // "Continue with email" bewusst geklickt — Tastatur auf Mobile ist hier
-  // erwuenscht).
+  // Feld fokussieren, sobald es per Klick ausgeklappt wurde (der User hat
+  // sich bewusst fuer E-Mail entschieden, Tastatur auf Mobile ist hier
+  // erwuenscht). Beim offenen Formular der Inline-Card nicht (waere ein
+  // Autofokus beim Seitenaufruf).
   useEffect(() => {
     if (step === "password") passwordInputRef.current?.focus();
-  }, [step]);
+    else if (step === "email" && oauthFirst) emailInputRef.current?.focus();
+  }, [step, oauthFirst]);
 
   async function handleOAuth(provider: "apple" | "google") {
     if (status === "submitting") return;
@@ -286,7 +297,7 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH, onSwitchToLogin
 
   return (
     <div className="login-card">
-      {step === "email" && (
+      {step !== "password" && (
         <>
           <h3 className="login-card-title">Get started for free</h3>
           <p className="login-card-sub">
@@ -316,11 +327,28 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH, onSwitchToLogin
         </button>
       </div>
 
-      <div className="login-divider">
-        <span>or</span>
-      </div>
+      {step === "oauth" ? (
+        <button
+          type="button"
+          className="login-email-link"
+          onClick={() => setStep("email")}
+        >
+          Continue with email
+        </button>
+      ) : null}
 
-      <form className="beta-form" onSubmit={handleSignupSubmit} noValidate>
+      {!oauthFirst && (
+        <div className="login-divider">
+          <span>or</span>
+        </div>
+      )}
+
+      {step !== "oauth" && (
+      <form
+        className={`beta-form${oauthFirst ? " login-form-gap" : ""}`}
+        onSubmit={handleSignupSubmit}
+        noValidate
+      >
         <label className="beta-field">
           <span className="beta-field-label">Email</span>
           <input
@@ -371,26 +399,21 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH, onSwitchToLogin
           </p>
         )}
       </form>
+      )}
 
-      <div className="login-switch-mode">
-        Already have an account?{" "}
-        {onSwitchToLogin ? (
-          <button
-            type="button"
-            onClick={onSwitchToLogin}
-            className="login-text-link login-text-link-strong"
-          >
-            Sign in
-          </button>
-        ) : (
+      {/* Nur in der Inline-Card: im Popup laeuft der Wechsel zum Login
+          ueber die Kopfzeile der Landing. */}
+      {!oauthFirst && (
+        <div className="login-switch-mode">
+          Already have an account?{" "}
           <Link
             href={`/login?next=${encodeURIComponent(nextPath)}`}
             className="login-text-link login-text-link-strong"
           >
             Sign in
           </Link>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

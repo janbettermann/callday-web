@@ -5,8 +5,6 @@ import { createPortal } from "react-dom";
 
 import {
   closeSignupModal,
-  openLoginModal,
-  openSignupModal,
   registerAuthModal,
   useAuthModalState,
 } from "@/lib/use-signup-modal";
@@ -17,8 +15,9 @@ import { SignupForm } from "./SignupForm";
 /**
  * Auth-Popup der Landings. Der Hero-/Nav-"Get started"-CTA oeffnet es im
  * Sign-up-Modus (faengt die Spitzen-Absicht direkt am Hero ab), der Nav-
- * Link "Log in" im Login-Modus. Im Popup laesst sich zwischen beiden
- * wechseln, ohne die Seite zu verlassen.
+ * Link "Log in" im Login-Modus. Beide Formulare zeigen erst nur Apple und
+ * Google, der E-Mail-Weg klappt per Link aus (Jan-Decision 2026-09-14);
+ * der Wechsel zwischen Sign-up und Login laeuft ueber die Kopfzeile.
  *
  * Rezept 1:1 vom PostComposer: createPortal nach document.body (entkommt
  * dem .container-Stacking-Context), ESC-Close, Body-Scroll-Lock, Backdrop-
@@ -88,9 +87,9 @@ export function SignupModal({ slug }: { slug?: string }) {
           ×
         </button>
         {mode === "login" ? (
-          <LoginForm variant="modal" onSwitchToSignup={() => openSignupModal()} />
+          <LoginForm variant="modal" />
         ) : (
-          <SignupForm slug={slug} onSwitchToLogin={() => openLoginModal()} />
+          <SignupForm slug={slug} oauthFirst />
         )}
       </div>
     </div>,

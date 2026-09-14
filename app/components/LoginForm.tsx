@@ -93,10 +93,15 @@ export interface LoginFormProps {
   initialError?: string | null;
   /** In-App-Browser-Variante: Email/Passwort hinter einem Link, kein Sign-up-Hinweis. */
   embed?: boolean;
-  /** "page" = grosse Headline (/login), "modal" = kleiner Kartentitel wie im Sign-up-Popup. */
+  /**
+   * "page" = grosse Headline, alle Felder offen (/login).
+   * "modal" = Popup der Landing (Jan-Decision 2026-09-14): erst nur Apple
+   * und Google plus Link "Sign in with email"; der Klick ist die bewusste
+   * Entscheidung, danach sind die OAuth-Buttons weg und E-Mail plus
+   * Passwort stehen sofort da. Keine "New to Callday?"-Fusszeile, der
+   * Wechsel laeuft ueber die Kopfzeile.
+   */
   variant?: "page" | "modal";
-  /** Im Popup: Wechsel zum Sign-up ohne Navigation. */
-  onSwitchToSignup?: () => void;
 }
 
 export function LoginForm({
@@ -105,7 +110,6 @@ export function LoginForm({
   initialError = null,
   embed = false,
   variant = "page",
-  onSwitchToSignup,
 }: LoginFormProps) {
   const router = useRouter();
 
@@ -118,11 +122,12 @@ export function LoginForm({
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(initialError);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
-  // Im Embed-Modus sind Email/Passwort initial versteckt (OAuth zuerst,
-  // Mail per Progressive Disclosure); sonst sofort sichtbar.
-  const [emailRevealed, setEmailRevealed] = useState(!embed);
-
   const inModal = variant === "modal";
+  // Embed und Popup verstecken Email/Passwort initial (OAuth zuerst, Mail
+  // per Klick); die Vollseite zeigt alles sofort. Im Popup verschwinden
+  // nach dem Klick zusaetzlich die OAuth-Buttons.
+  const [emailRevealed, setEmailRevealed] = useState(!(embed || inModal));
+  const showOAuth = !(inModal && emailRevealed);
 
   function resetMessages() {
     setErrorMessage(null);
@@ -385,36 +390,44 @@ export function LoginForm({
         </>
       ) : (
         <Heading inModal={inModal} title={inModal ? "Welcome back" : "Sign in to Callday"}>
-          {inModal ? "Sign in to your Callday account." : "Welcome back. Pick a method to continue."}
+          {inModal
+            ? emailRevealed
+              ? "Sign in with your email and password."
+              : "Sign in to your Callday account."
+            : "Welcome back. Pick a method to continue."}
         </Heading>
       )}
 
-      <div className="login-oauth-stack">
-        <button
-          type="button"
-          className="login-oauth-btn login-oauth-btn-apple"
-          onClick={() => handleOAuth("apple")}
-          disabled={status === "submitting"}
-        >
-          <AppleIcon />
-          <span>Continue with Apple</span>
-        </button>
-        <button
-          type="button"
-          className="login-oauth-btn login-oauth-btn-google"
-          onClick={() => handleOAuth("google")}
-          disabled={status === "submitting"}
-        >
-          <GoogleIcon />
-          <span>Continue with Google</span>
-        </button>
-      </div>
+      {showOAuth && (
+        <div className="login-oauth-stack">
+          <button
+            type="button"
+            className="login-oauth-btn login-oauth-btn-apple"
+            onClick={() => handleOAuth("apple")}
+            disabled={status === "submitting"}
+          >
+            <AppleIcon />
+            <span>Continue with Apple</span>
+          </button>
+          <button
+            type="button"
+            className="login-oauth-btn login-oauth-btn-google"
+            onClick={() => handleOAuth("google")}
+            disabled={status === "submitting"}
+          >
+            <GoogleIcon />
+            <span>Continue with Google</span>
+          </button>
+        </div>
+      )}
 
       {emailRevealed ? (
         <>
-          <div className="login-divider">
-            <span>or</span>
-          </div>
+          {showOAuth && (
+            <div className="login-divider">
+              <span>or</span>
+            </div>
+          )}
 
           <form className="beta-form" onSubmit={handlePasswordSubmit}>
             <label className="beta-field">
@@ -485,32 +498,22 @@ export function LoginForm({
       ) : (
         <button
           type="button"
-          className="login-text-link login-embed-email-link"
+          className={inModal ? "login-email-link" : "login-text-link login-embed-email-link"}
           onClick={() => setEmailRevealed(true)}
         >
           Sign in with email
         </button>
       )}
 
-      {/* Sign-up lebt auf der Landing: im Popup per Wechsel, auf /login als
-          Link zur Landing-Card. Im Embed-Modus (User hat schon ein Konto)
-          ausgeblendet. */}
-      {!embed && (
+      {/* Sign-up lebt auf der Landing. Auf /login als Link zur Landing-Card;
+          im Popup (Wechsel ueber die Kopfzeile) und im Embed-Modus (User
+          hat schon ein Konto) ausgeblendet. */}
+      {!embed && !inModal && (
         <div className="login-switch-mode">
           New to Callday?{" "}
-          {onSwitchToSignup ? (
-            <button
-              type="button"
-              onClick={onSwitchToSignup}
-              className="login-text-link login-text-link-strong"
-            >
-              Sign up
-            </button>
-          ) : (
-            <Link href="/#signup" className="login-text-link login-text-link-strong">
-              Sign up
-            </Link>
-          )}
+          <Link href="/#signup" className="login-text-link login-text-link-strong">
+            Sign up
+          </Link>
         </div>
       )}
     </div>
