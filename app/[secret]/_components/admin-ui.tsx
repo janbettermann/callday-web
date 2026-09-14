@@ -171,7 +171,7 @@ export function AdminMonoMeta({ children }: { children: ReactNode }) {
  * aktiv (dark fill) — analog der ViewTabs (Real / Internal / All) und
  * der StatusFilter-Pills auf /affiliates.
  */
-type AdminNavKey = "dashboard" | "affiliates" | "lists";
+type AdminNavKey = "dashboard" | "affiliates" | "lists" | "experiments";
 
 export function AdminNav({
   current,
@@ -184,6 +184,7 @@ export function AdminNav({
     { key: "dashboard", label: "Dashboard", href: basePath },
     { key: "affiliates", label: "Affiliates", href: `${basePath}/affiliates` },
     { key: "lists", label: "Lists", href: `${basePath}/lists` },
+    { key: "experiments", label: "Experiments", href: `${basePath}/experiments` },
   ];
 
   return (
