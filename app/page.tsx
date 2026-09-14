@@ -42,10 +42,14 @@ export default async function Home() {
       <section className="hero hero-light">
         <div className="container hero-inner hero-split">
           <div className="hero-copy">
-            <div className="pill reveal">
-              <span className="pill-dot" />
-              Generate call list for free
-            </div>
+            {/* Eyebrow als Textmarker statt Announcement-Pille (Jan
+                2026-09-14): die Pille (Milchglas + pulsierender Punkt) las
+                sich als Landing-Page-Baukasten. Markup + Styles siehe
+                .hero-eyebrow in globals.css; das Pendant auf /a/[slug]
+                traegt denselben Text. */}
+            <p className="hero-eyebrow reveal">
+              <mark>Generate your first call list for free</mark>
+            </p>
 
             <h1 className="reveal delay-1">
               Less avoiding.

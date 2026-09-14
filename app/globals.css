@@ -250,9 +250,9 @@ body::before {
   border-radius: 9px;
   box-shadow: 0 4px 14px rgba(74, 122, 247, 0.32);
 }
-/* CTA: muted dark-mode pill on the dark hero (matches the .hero .pill
-   style — translucent white on dark + blue-tinted border, so it doesn't
-   "grell" punch through the hero atmosphere), dark pill once scrolled. */
+/* CTA: muted dark-mode pill on the dark hero (translucent white on dark,
+   so it doesn't "grell" punch through the hero atmosphere), dark pill
+   once scrolled. */
 .nav-cta {
   background: rgba(255, 255, 255, 0.06);
   color: #f7f8fb;
@@ -337,30 +337,61 @@ body::before {
   align-items: center;
 }
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(8px);
-  padding: 7px 14px 7px 12px;
-  border-radius: 100px;
-  font-size: 12px;
-  color: var(--blue-deep);
+/* === HERO EYEBROW — Textmarker (Jan-Entscheidung 2026-09-14) ===
+   Ersetzt die Announcement-Pille (.pill: Milchglas, blauer Schatten,
+   pulsierender Punkt), die nach Landing-Page-Baukasten aussah — der
+   Puls behauptete zudem einen Live-Zustand, den es nicht gibt. Der
+   sonnengelbe Markerstrich ist der dritte Auftritt des Sonnen-Motivs
+   (Logo-Mark, Footer-Punkt) und haelt das Angebot als eigenen Block vor
+   der H1 zusammen, ohne eine Box zu bauen.
+
+   Technik: Verlauf als Hintergrund + box-decoration-break: clone statt
+   Pseudo-Element, damit bei einem Zeilenumbruch (sehr schmale Phones)
+   jedes Zeilenfragment einzeln unterlegt wird. Die leichte Drehung gibt
+   es nur ab 600px, wo die Zeile garantiert einzeilig ist — inline-block
+   + rotate wuerde ein umgebrochenes Fragment-Paar als Ganzes kippen.
+
+   Bewusst genau EINMAL auf der Seite einsetzen: als wiederkehrendes
+   Muster wuerde der Marker zum Gimmick. */
+.hero-eyebrow {
+  margin: 0 0 26px;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: 0.1px;
-  margin-bottom: 28px;
-  box-shadow: 0 2px 12px rgba(74, 122, 247, 0.08);
+  letter-spacing: -0.1px;
+  line-height: 1.4;
+  color: var(--ink);
 }
-.pill-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, var(--sun-light), var(--sun));
-  box-shadow: 0 0 10px rgba(251, 191, 36, 0.55);
-  animation: pulse 2.4s ease-in-out infinite;
-  flex-shrink: 0;
+.hero-eyebrow mark {
+  color: inherit;
+  padding: 0.06em 0.3em 0.02em;
+  /* Negativer Rand zieht den Streifen leicht ueber die Textkante hinaus,
+     wie ein Marker, der vor dem Wort ansetzt und dahinter abhebt. */
+  margin: 0 -0.1em;
+  background: linear-gradient(
+    to bottom,
+    transparent 24%,
+    var(--sun-light) 24%,
+    var(--sun-light) 96%,
+    transparent 96%
+  );
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  border-radius: 3px;
 }
+@media (min-width: 600px) {
+  .hero-eyebrow mark {
+    display: inline-block;
+    transform: rotate(-0.9deg);
+  }
+}
+/* Legacy-Dark-Hero (ohne .hero-light): Text hell, der Marker traegt
+   sich auf Navy selbst. */
+.hero:not(.hero-light) .hero-eyebrow {
+  color: #f7f8fb;
+}
+
+/* Puls-Keyframes: seit dem Textmarker-Eyebrow nicht mehr im Hero, aber
+   weiterhin von affiliate/payouts/page.tsx (Inline-Style) genutzt. */
 @keyframes pulse {
   0%,
   100% {
@@ -440,11 +471,6 @@ h1 .accent {
 .hero .container {
   z-index: 1;
 }
-.hero .pill {
-  background: rgba(255, 255, 255, 0.06);
-  color: #c9d6ff;
-  box-shadow: 0 2px 18px rgba(74, 122, 247, 0.16);
-}
 .hero h1 {
   color: #f7f8fb;
 }
@@ -506,11 +532,6 @@ h1 .accent {
     rgba(122, 162, 255, 0.1),
     transparent 70%
   );
-}
-.hero.hero-light .pill {
-  background: rgba(255, 255, 255, 0.7);
-  color: var(--blue-deep);
-  box-shadow: 0 2px 12px rgba(74, 122, 247, 0.08);
 }
 .hero.hero-light h1 {
   color: var(--ink);

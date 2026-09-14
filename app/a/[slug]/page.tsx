@@ -104,10 +104,11 @@ export default async function AffiliateLanding({
       {/* === HERO === */}
       <section className="hero hero-light">
         <div className="container hero-inner">
-          <div className="pill reveal">
-            <span className="pill-dot" />
-            Generate call list for free
-          </div>
+          {/* Textmarker-Eyebrow, identisch zur organischen Landing
+              (app/page.tsx) — Styles unter .hero-eyebrow in globals.css. */}
+          <p className="hero-eyebrow reveal">
+            <mark>Generate your first call list for free</mark>
+          </p>
 
           <h1 className="reveal delay-1">
             Less avoiding.
