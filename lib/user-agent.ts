@@ -1,9 +1,9 @@
 /**
- * Server-side User-Agent-Parsing fuer die Account-Welcome-Card.
+ * Server-side User-Agent-Parsing fuer die "Get the app"-Karte (GetAppCard).
  *
- * TestFlight laeuft nur auf iPhone/iPad. Auf Desktop/Android sind die
- * Install-Buttons eine Sackgasse — wir sagen dem User dann explizit, dass
- * er auf dem iPhone weitermachen muss.
+ * Callday gibt es nur fuer iPhone. Auf Desktop/Android ist der Store-
+ * Button eine Sackgasse — wir sagen dem User dann explizit, dass er auf
+ * dem iPhone weitermachen muss.
  */
 export interface UserAgentInfo {
   isIOS: boolean;

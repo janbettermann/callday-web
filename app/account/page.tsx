@@ -1,14 +1,12 @@
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { AppNav } from "../components/AppNav";
 import { AppShell } from "../components/AppShell";
+import { GetAppCard } from "../components/GetAppCard";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { getCreditSummary, type CreditSummary } from "@/lib/lists/credits";
-import { parseUserAgent } from "@/lib/user-agent";
-import { getAppDownloadLink } from "@/lib/app-download";
 import { deleteAccountAction, signOutAction } from "./actions";
 import { avatarInitial } from "@/lib/dashboard/data";
 
@@ -80,9 +78,9 @@ function linkedProviders(
  * einen read-only Hinweis.
  *
  * Sektionen:
- *   1. Get-the-app: Einzeiler-Karte — einziger In-Product-Zeiger auf die
- *      App (das Dashboard hat keinen). Haelt den Funnel Web-Liste → App
- *      intakt.
+ *   1. Get-the-app: Einzeiler-Karte (GetAppCard, geteilt mit dem
+ *      Dashboard, das sie bis zum ersten Callday zeigt). Haelt den Funnel
+ *      Web-Liste → App intakt.
  *   2. Account: Email, Sign-in-Methoden, Subscription-Row (read-only,
  *      "managed in the app"), "Delete account" mit Re-Type-Safeguard.
  *
@@ -98,14 +96,6 @@ export default async function AccountPage() {
   if (!user) {
     redirect("/login?next=/account");
   }
-
-  // TestFlight (Beta) oder App Store (ab Launch) — gesteuert zentral
-  // ueber APP_STORE_LIVE in lib/app-download.ts. Layout bleibt identisch.
-  const appLink = getAppDownloadLink();
-
-  // Device-Kontext: auf Desktop ergaenzt die Karte den "auf dem iPhone
-  // oeffnen"-Hinweis.
-  const { isIOS } = parseUserAgent((await headers()).get("user-agent"));
 
   const { data: profileRow } = await supabase
     .from("profiles")
@@ -161,42 +151,11 @@ export default async function AccountPage() {
         <div className="account-inner">
           <h1 className="account-headline">Account</h1>
 
-          {/* Get-the-app — bewusst ein Einzeiler statt der frueheren
-              Onboarding-Karte: /account ist der einzige In-Product-Weg
-              zur App, mehr als ein Zeiger muss es aber nicht sein. */}
-          {appLink && (
-            <section
-              className="account-card"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 16,
-                flexWrap: "wrap",
-              }}
-            >
-              <div style={{ minWidth: 220, flex: 1 }}>
-                <h2
-                  className="account-card-title"
-                  style={{ marginBottom: 4 }}
-                >
-                  Callday for iPhone
-                </h2>
-                <p className="account-hint" style={{ margin: 0 }}>
-                  Your lists sync to the app — that&apos;s where the calling
-                  happens.
-                  {!isIOS && " Open this page on your iPhone to install."}
-                </p>
-              </div>
-              <a
-                href={appLink}
-                className="account-btn account-btn-primary"
-                style={{ width: "auto", whiteSpace: "nowrap", marginTop: 0 }}
-              >
-                Get the app
-              </a>
-            </section>
-          )}
+          {/* Get-the-app — hier immer sichtbar: /account ist der
+              dauerhafte In-Product-Weg zur App (Neuinstallation, neues
+              Handy), das Dashboard zeigt dieselbe Karte nur bis zum
+              ersten Callday. */}
+          <GetAppCard />
 
           {/* Lead credits — Gold-Balken (Rest/gesamt, wie Header-Ring und
               Popover-Faden). Kein Upgrade-CTA, solange es kein Ziel gibt;

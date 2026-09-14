@@ -3,7 +3,7 @@
  *
  * Geflippt am 2026-09-13 (App-Store-Go-Live). Seitdem schicken Signup-Mail
  * (lib/testflight-invite.ts → AppStoreDownload-Template) und die
- * /account-Download-Karte auf den App Store; der TestFlight-Public-Link
+ * "Get the app"-Karte (GetAppCard) auf den App Store; der TestFlight-Public-Link
  * (Env TESTFLIGHT_PUBLIC_LINK) wird nicht mehr gelesen. Der Beta-Zweig
  * bleibt im Code, damit ein Rueckflip (z.B. Store-Pull) ohne Rebuild
  * geht — bewusst kein Env-Schalter, das Flag soll im Diff sichtbar sein.
@@ -20,9 +20,9 @@ export const APP_STORE_LIVE: boolean = true;
 export const APP_STORE_URL = "https://apps.apple.com/app/id6767268376";
 
 /**
- * Der eine Download-Link fuer alle Web-Oberflaechen (/account-Karte).
- * Null nur im Beta-Modus ohne konfigurierte Env — Caller blenden die
- * Karte dann aus (bestehendes Verhalten).
+ * Der eine Download-Link fuer alle Web-Oberflaechen (GetAppCard auf
+ * /account und Dashboard). Null nur im Beta-Modus ohne konfigurierte Env —
+ * die Karte rendert dann nichts (bestehendes Verhalten).
  */
 export function getAppDownloadLink(): string | null {
   if (APP_STORE_LIVE) return APP_STORE_URL;

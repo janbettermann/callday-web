@@ -12,6 +12,7 @@ import {
 } from "@/lib/dashboard/data";
 import { AppNav } from "../components/AppNav";
 import { AppShell } from "../components/AppShell";
+import { GetAppCard } from "../components/GetAppCard";
 import { CalldaySticker, EmptyCalldaySticker } from "../components/CalldaySticker";
 import { ListCardActions } from "../components/ListCardActions";
 import { DashboardGreeting } from "./DashboardGreeting";
@@ -137,6 +138,14 @@ export default async function DashboardPage() {
           )}
         </section>
 
+        {/* App-Zeiger, solange der User noch keinen Callday hat: ohne
+            Callday ist die App vermutlich nicht installiert, und das
+            Dashboard ist die Post-Signup-Landung — der Web-Funnel (Liste
+            bauen) braucht hier die Bruecke zur App. Ab dem ersten Callday
+            verschwindet die Karte; der "Open in Callday"-Button auf den
+            Listen-Kacheln bleibt der Weg. (Vertagt am 2026-07-15, eingeloest
+            mit dem App-Store-Launch.) */}
+        {calldays.length === 0 && <GetAppCard />}
       </main>
     </AppShell>
   );
