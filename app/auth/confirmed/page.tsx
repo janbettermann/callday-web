@@ -2,22 +2,29 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { CalldayLogo } from "../../components/CalldayLogo";
 import { SiteFooter } from "../../components/SiteFooter";
+import { OpenAppLink } from "./OpenAppLink";
 
 export const metadata: Metadata = {
-  title: "E-Mail bestätigt bei Callday",
+  title: "Email confirmed · Callday",
   description:
-    "Deine E-Mail-Adresse ist verifiziert. Zurück zur Callday-App auf dem iPhone.",
+    "Your email address is verified. Head back to the Callday app on your iPhone.",
   robots: { index: false, follow: false },
 };
 
 /**
- * Landing page that Supabase redirects to after successful email
- * confirmation. Server Component — no auth logic, no API calls.
+ * Landing page that Supabase redirects to after a successful email
+ * confirmation link. Server Component — no auth logic, no API calls.
  *
  * Supabase verifies the token server-side BEFORE the user's browser
  * lands here, so anyone reaching this URL is already confirmed. The
- * URL fragment (#access_token=…&refresh_token=…&type=signup) is for
- * the mobile app deep-link flow and is intentionally ignored here.
+ * URL fragment (#access_token=…&refresh_token=…&type=signup) is meant
+ * for the app's deep-link handler — OpenAppLink forwards it into the
+ * `dealswipe://` scheme so the app can pick up the session.
+ *
+ * Seit die App den Sign-up per 8-stelligem Code bestaetigt
+ * (onboarding/verify-email.tsx), ist diese Seite nur noch der Fallback
+ * fuer den Link in der Bestaetigungsmail. Copy Englisch wie der Rest der
+ * UI (bis 2026-09-14 stand hier noch deutscher Beta-Text).
  */
 export default function AuthConfirmedPage() {
   return (
@@ -33,7 +40,7 @@ export default function AuthConfirmedPage() {
             Callday
           </Link>
           <Link href="/" className="nav-cta">
-            ← Zur Startseite
+            ← Back to home
           </Link>
         </div>
       </nav>
@@ -56,17 +63,16 @@ export default function AuthConfirmedPage() {
           </div>
 
           <h1 className="confirm-headline">
-            E-Mail bestätigt <span className="confirm-emoji">🎉</span>
+            Email confirmed <span className="confirm-emoji">🎉</span>
           </h1>
 
           <p className="confirm-body">
-            Deine E-Mail-Adresse ist jetzt verifiziert. Geh zurück zur
-            Callday-App auf deinem iPhone und logge dich ein. Dort
-            geht&apos;s los.
+            Your email address is now verified. Head back to the Callday app
+            on your iPhone and sign in. That&apos;s where it starts.
           </p>
 
-          <a href="callday://" className="hero-cta confirm-cta">
-            Callday öffnen
+          <OpenAppLink className="hero-cta confirm-cta">
+            Open Callday
             <svg
               width={14}
               height={14}
@@ -80,11 +86,10 @@ export default function AuthConfirmedPage() {
               <line x1={5} y1={12} x2={19} y2={12} />
               <polyline points="12 5 19 12 12 19" />
             </svg>
-          </a>
+          </OpenAppLink>
 
           <p className="confirm-note">
-            Funktioniert nur auf einem iPhone, auf dem Callday schon
-            installiert ist.
+            Only works on an iPhone with Callday installed.
           </p>
         </div>
       </main>
