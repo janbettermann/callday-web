@@ -25,15 +25,20 @@
  * sendAppDownloadMail() (kein Self-HTTP-Roundtrip, Audit #7).
  */
 
-import { NextRequest } from "next/server";
+import { after, type NextRequest } from "next/server";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { sendAppDownloadMail } from "@/lib/app-download-mail";
+import {
+  parseLpSignupContext,
+  recordSignupConfirmed,
+  requestInfoFrom,
+} from "@/lib/lp/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
   const supabase = await createSupabaseSSR();
   const {
     data: { user },
@@ -41,6 +46,33 @@ export async function POST(_request: NextRequest) {
 
   if (!user || !user.email) {
     return Response.json({ error: "not authenticated" }, { status: 401 });
+  }
+
+  // Landing-Attribution (Split-Test-Funnel, lib/lp): die SignupForm hat
+  // den Landing-Kontext als user_metadata.lp mitgegeben. Dieser Endpoint
+  // wird genau einmal nach erfolgreichem verifyOtp gerufen — das ist der
+  // Moment "bestaetigter Sign-up" fuer den Email/PW-Pfad. Doppelte Rows
+  // faengt der Unique-Index auf lp_events ab. Laeuft nach der Antwort,
+  // damit die Mail nicht auf das Tracking wartet.
+  const lpCtx = parseLpSignupContext(user.user_metadata?.lp);
+  if (lpCtx) {
+    const info = requestInfoFrom((name) => request.headers.get(name));
+    const origin = new URL(request.url).origin;
+    const userId = user.id;
+    const email = user.email;
+    after(async () => {
+      try {
+        await recordSignupConfirmed({
+          userId,
+          email,
+          ctx: lpCtx,
+          info,
+          sourceUrl: `${origin}/`,
+        });
+      } catch (err) {
+        console.error("[app-download-mail] lp attribution failed", err);
+      }
+    });
   }
 
   // Profile-Lookup ueber service-role weil profiles RLS u.U. noch nicht

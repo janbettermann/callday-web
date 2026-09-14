@@ -1,5 +1,6 @@
 "use client";
 
+import { trackLpEvent } from "@/lib/lp/client";
 import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 import { openSignupModal } from "@/lib/use-signup-modal";
 
@@ -34,6 +35,7 @@ export function HeroCta() {
             className="hero-cta"
             onClick={(e) => {
               e.preventDefault();
+              trackLpEvent("cta_click", "hero");
               openSignupModal();
             }}
           >

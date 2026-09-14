@@ -3,6 +3,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  lpSignupMetadata,
+  trackLpEvent,
+  writeLpSignupCookie,
+} from "@/lib/lp/client";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
 import {
   requestAppDownloadMail,
@@ -146,6 +151,12 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
     // schickt dann die Post-Signup-Mail (Weg zur App) fuer frische Profile.
     setSignupCookie("signup_flow", "1");
     setSignupCookie("login_next", nextPath);
+    // Landing-Attribution fuer den Split-Test-Funnel (lib/lp): Kontext
+    // reist als lp_ctx-Cookie ueber den OAuth-Umweg, /auth/callback
+    // schreibt daraus das signup_confirmed-Event. No-op ohne Landing-
+    // Kontext (z. B. auf /lists).
+    trackLpEvent("signup_started", provider);
+    writeLpSignupCookie();
 
     const supabase = createSupabaseBrowser();
     const origin = window.location.origin;
@@ -176,6 +187,9 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
         emailInputRef.current?.focus();
         return;
       }
+      // "Sign-up gestartet" = der Besucher ist mit Email ueber Schritt 1
+      // hinaus — die frueheste Absichts-Metrik im Split-Test-Funnel.
+      trackLpEvent("signup_started", "email");
       setStep("password");
       return;
     }
@@ -197,16 +211,19 @@ export function SignupForm({ slug, nextPath = DEFAULT_NEXT_PATH }: Props) {
 
     const supabase = createSupabaseBrowser();
 
+    // user_metadata: der Affiliate-Slug fuer den handle_new_user-Trigger
+    // (profiles.referred_by_affiliate_id, atomisch im selben INSERT) und
+    // der Landing-Kontext `lp` fuer die Split-Test-Attribution — den liest
+    // /api/app-download-mail nach der OTP-Bestaetigung (kein Trigger-Touch).
+    const metadata: Record<string, unknown> = {
+      ...(slug ? { referred_by_affiliate_slug: slug } : {}),
+      ...lpSignupMetadata(),
+    };
+
     const { data, error } = await supabase.auth.signUp({
       email: cleanEmail,
       password,
-      options: slug
-        ? {
-            // handle_new_user Trigger liest das hier und schreibt es als
-            // profiles.referred_by_affiliate_id (atomisch im selben INSERT).
-            data: { referred_by_affiliate_slug: slug },
-          }
-        : undefined,
+      options: Object.keys(metadata).length > 0 ? { data: metadata } : undefined,
     });
 
     if (error) {

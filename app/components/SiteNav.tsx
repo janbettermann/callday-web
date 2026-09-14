@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CalldayLogo } from "./CalldayLogo";
+import { trackLpEvent } from "@/lib/lp/client";
 import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 import { openSignupModal } from "@/lib/use-signup-modal";
 
@@ -104,6 +105,7 @@ export function SiteNav() {
             className="nav-cta"
             onClick={(e) => {
               e.preventDefault();
+              trackLpEvent("cta_click", "nav");
               openSignupModal();
             }}
           >

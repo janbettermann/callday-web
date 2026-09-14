@@ -4,6 +4,7 @@ import { BrainIcon } from "../../components/BrainIcon";
 import { FaqAccordion } from "../../components/FaqAccordion";
 import { FlowTabs } from "../../components/FlowTabs";
 import { GeneratorFeatureCard } from "../../components/GeneratorFeatureCard";
+import { LpSession } from "../../components/LpSession";
 import { SignupModal } from "../../components/SignupModal";
 import { SiteNav } from "../../components/SiteNav";
 import { getServerSupabase } from "@/lib/supabase-server";
@@ -96,6 +97,10 @@ export default async function AffiliateLanding({
 
   return (
     <>
+      {/* Funnel-Tracking wie auf der organischen Landing (lib/lp), aber
+          ohne Experiment: Split-Tests laufen nur auf /. Events tragen
+          page="affiliate" und sind im Admin getrennt auswertbar. */}
+      <LpSession page="affiliate" experiment={null} variant={null} overridden={false} />
       <div className="bg-orb bg-orb-2" />
 
       {/* === NAV === */}

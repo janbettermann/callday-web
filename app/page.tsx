@@ -8,12 +8,18 @@ import { BoxIcon } from "./components/BoxIcon";
 import { BrainIcon } from "./components/BrainIcon";
 import { GeneratorFeatureCard } from "./components/GeneratorFeatureCard";
 import { HeroCta } from "./components/HeroCta";
+import { LpSession } from "./components/LpSession";
 import { PhoneMockup } from "./components/PhoneMockup";
 import { SignupModal } from "./components/SignupModal";
 import { SiteNav } from "./components/SiteNav";
 import { SiteFooter } from "./components/SiteFooter";
+import { assignLandingVariant } from "@/lib/lp/server";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   // Eingeloggte gehoeren in die Web-App, nicht auf den Pitch: die Homepage
   // leitet sie direkt aufs Dashboard (Jan-Entscheidung 2026-07-17). Greift
   // NUR hier (/) — /a/[slug], /lists, Legal regeln ihren eingeloggten
@@ -24,8 +30,23 @@ export default async function Home() {
   } = await supabase.auth.getUser();
   if (user) redirect("/dashboard");
 
+  // Split-Test-Zuweisung (lib/lp/experiments.ts + docs/experiments.md).
+  // Ohne aktives Experiment ist `assignment.variant` null und die Seite
+  // rendert den Default; das Funnel-Tracking (LpSession) laeuft immer.
+  // Varianten werden HIER im Markup verzweigt, z. B.
+  //   const headline = assignment.variant === "b" ? <>…</> : <>…</>;
+  // und nach dem Test wieder auf den Gewinner eingedampft. `?v=<key>`
+  // erzwingt eine Variante zur Vorschau (wird nicht getrackt).
+  const assignment = await assignLandingVariant(await searchParams);
+
   return (
     <>
+      <LpSession
+        page="landing"
+        experiment={assignment.experiment}
+        variant={assignment.variant}
+        overridden={assignment.overridden}
+      />
       <div className="bg-orb bg-orb-2" />
 
       {/* === NAV === */}

@@ -42,6 +42,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseSSR } from "@/lib/supabase-ssr";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { sendAppDownloadMail } from "@/lib/app-download-mail";
+import {
+  LP_COOKIE_NAME,
+  parseLpCookie,
+  recordSignupConfirmed,
+  requestInfoFrom,
+  type LpSignupContext,
+} from "@/lib/lp/server";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +78,7 @@ function clearAuthStateCookies(response: NextResponse): void {
   response.cookies.delete("affiliate_slug");
   response.cookies.delete("signup_flow");
   response.cookies.delete("affiliate_signup_provider");
+  response.cookies.delete(LP_COOKIE_NAME);
 }
 
 export async function GET(request: NextRequest) {
@@ -139,6 +147,19 @@ export async function GET(request: NextRequest) {
       await maybeSendSignupInvite(supabase);
     } catch (err) {
       console.error("[/auth/callback] signup invite failed", err);
+    }
+
+    // Landing-Attribution (Split-Test-Funnel, lib/lp): der lp_ctx-Cookie
+    // traegt Experiment/Variante/UTM ueber den OAuth-Umweg. Nur fuer
+    // frische Profile — ein Re-Login ueber die SignupForm ist kein neuer
+    // Sign-up. Soft-failure wie alles hier.
+    const lpCtx = parseLpCookie(request.cookies.get(LP_COOKIE_NAME)?.value);
+    if (lpCtx) {
+      try {
+        await maybeRecordLpSignup(supabase, request, lpCtx, origin);
+      } catch (err) {
+        console.error("[/auth/callback] lp attribution failed", err);
+      }
     }
   }
 
@@ -234,5 +255,41 @@ async function maybeSendSignupInvite(
   await sendAppDownloadMail({
     toEmail: profile.email,
     displayName,
+  });
+}
+
+/**
+ * signup_confirmed fuer den OAuth-Pfad. Dieselbe 5-Minuten-Frische wie
+ * die Post-Signup-Mail: Apple/Google-Sign-Up und -Sign-In sind aus
+ * Supabase-Sicht derselbe Flow, nur das Profil-Alter trennt sie.
+ */
+async function maybeRecordLpSignup(
+  ssrClient: Awaited<ReturnType<typeof createSupabaseSSR>>,
+  request: NextRequest,
+  ctx: LpSignupContext,
+  origin: string,
+): Promise<void> {
+  const {
+    data: { user },
+  } = await ssrClient.auth.getUser();
+  if (!user) return;
+
+  const admin = getServerSupabase();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("created_at")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!profile?.created_at) return;
+
+  const createdMs = new Date(profile.created_at).getTime();
+  if (Date.now() - createdMs > SIGNUP_PROFILE_FRESHNESS_MS) return;
+
+  await recordSignupConfirmed({
+    userId: user.id,
+    email: user.email ?? null,
+    ctx,
+    info: requestInfoFrom((name) => request.headers.get(name)),
+    sourceUrl: `${origin}/`,
   });
 }
