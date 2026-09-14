@@ -6,8 +6,6 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "launch:send-codes": "tsx scripts/launch-send-codes.ts",
-    "launch:send-codes:dry": "tsx scripts/launch-send-codes.ts --dry-run",
     "test": "vitest run"
   },
   "dependencies": {
