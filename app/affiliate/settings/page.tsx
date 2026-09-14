@@ -9,17 +9,15 @@ import {
 } from "@/lib/affiliate-auth";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { PAYOUT_COLUMNS, mapPayout, type RawPayout } from "@/lib/affiliate-payout";
+import { WbPanel } from "@/app/components/werkbank";
 
-import { AffiliateNav } from "../AffiliateNav";
-import { SiteFooter } from "../../components/SiteFooter";
-import { affiliateMainStyle } from "../layout-styles";
+import { PortalShell } from "../PortalShell";
 import { PayoutSettings } from "./PayoutSettings";
 
 /**
- * /affiliate/settings — Payout-Methoden-Einrichtung (self-service PayPal/Wise
- * + Verify-Handshake) plus ein schlanker read-only Account-Block. Die
- * Auszahlungs-BETRÄGE leben auf /affiliate/payouts; hier wird nur konfiguriert,
- * WOHIN gezahlt wird.
+ * /affiliate/settings: Payout-Methoden-Einrichtung (self-service PayPal/
+ * Wise + Verify-Handshake) plus ein schlanker read-only Account-Block.
+ * Die Auszahlungs-BETRAEGE leben auf /affiliate/payouts.
  */
 
 export const dynamic = "force-dynamic";
@@ -49,124 +47,41 @@ export default async function AffiliateSettingsPage() {
   const payout = mapPayout(row);
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
-      <AffiliateNav />
+    <PortalShell
+      current="settings"
+      title="Settings"
+      subtitle="Where your commission gets paid, and your account"
+    >
+      <WbPanel
+        title="Payout method"
+        subtitle="We send a small test transfer to a new method and you confirm it here before any real payout goes out"
+        padded
+      >
+        <PayoutSettings payout={payout} />
+      </WbPanel>
 
-      <main className="container" style={affiliateMainStyle}>
-        <header style={{ marginBottom: 24 }}>
-          <h1
-            style={{
-              fontSize: 32,
-              fontWeight: 700,
-              letterSpacing: "-0.8px",
-              lineHeight: 1.1,
-              margin: 0,
-              color: "var(--ink)",
-            }}
-          >
-            Settings
-          </h1>
-          <p style={{ margin: "6px 0 0", fontSize: 14, color: "var(--ink-dim)" }}>
-            Where your commission gets paid, and your account.
-          </p>
-        </header>
-
-        {/* === Payout method === */}
-        <SectionLabel>Payout method</SectionLabel>
-        <div style={{ marginBottom: 32 }}>
-          <PayoutSettings payout={payout} />
-        </div>
-
-        {/* === Account === */}
-        <SectionLabel>Account</SectionLabel>
-        <section
-          style={{
-            background: "#ffffff",
-            border: "0.5px solid var(--line)",
-            borderRadius: 20,
-            padding: 22,
-            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-            display: "flex",
-            flexDirection: "column",
-            gap: 18,
-          }}
-        >
+      <WbPanel title="Account" padded>
+        <div className="wb-stack" style={{ gap: 16 }}>
           <div>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--ink-dim)",
-                marginBottom: 4,
-              }}
-            >
-              Sign-in email
-            </div>
-            <div style={{ fontSize: 15, color: "var(--ink)" }}>{row.email}</div>
-            <div
-              style={{
-                marginTop: 4,
-                fontSize: 12,
-                color: "var(--ink-faint)",
-                lineHeight: 1.4,
-              }}
-            >
+            <div className="wb-kv-label">Sign-in email</div>
+            <div className="wb-kv-value">{row.email}</div>
+            <div className="wb-hint">
               This is where your sign-in links go. Need to change it?{" "}
-              <a
-                href="mailto:hello@callday.io"
-                style={{ color: "var(--blue-deep)", textDecoration: "none" }}
-              >
+              <a href="mailto:hello@callday.io" className="wb-link-blue">
                 Contact us
               </a>
               .
             </div>
           </div>
-
-          <div style={{ borderTop: "0.5px solid var(--line)" }} />
-
+          <div style={{ borderTop: "1px solid var(--wb-line-soft)" }} />
           <div>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--ink-dim)",
-                marginBottom: 4,
-              }}
-            >
-              Agreement
-            </div>
-            <Link
-              href="/affiliate/agreement"
-              style={{
-                fontSize: 15,
-                color: "var(--blue-deep)",
-                textDecoration: "none",
-              }}
-            >
-              View your affiliate agreement →
+            <div className="wb-kv-label">Agreement</div>
+            <Link href="/affiliate/agreement" className="wb-link-blue">
+              View your affiliate agreement
             </Link>
           </div>
-        </section>
-      </main>
-
-      <SiteFooter />
-    </div>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        fontFamily: "var(--font-label)",
-        fontSize: 11,
-        textTransform: "uppercase",
-        letterSpacing: "1.5px",
-        color: "var(--ink-faint)",
-        marginBottom: 12,
-      }}
-    >
-      {children}
-    </div>
+        </div>
+      </WbPanel>
+    </PortalShell>
   );
 }

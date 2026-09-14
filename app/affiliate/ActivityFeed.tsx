@@ -4,26 +4,21 @@ import { useMemo, useState } from "react";
 
 import type { ActivityEvent } from "@/lib/affiliate-activity";
 import { ActivityList } from "./ActivityList";
-import {
-  FilterMenu,
-  TIME_OPTIONS,
-  timeFloor,
-  type TimeRange,
-} from "./FilterMenu";
+import { SegmentedButtons } from "./SegmentedButtons";
+import { TIME_OPTIONS, timeFloor, type TimeRange } from "./time-range";
 
 type EventType = "all" | ActivityEvent["type"];
 
 const EVENT_OPTIONS: { value: EventType; label: string }[] = [
-  { value: "all", label: "All activity" },
+  { value: "all", label: "All" },
   { value: "view", label: "Visitors" },
   { value: "signup", label: "Sign-ups" },
 ];
 
 /**
- * /affiliate/activity — Client-Wrapper um ActivityList mit zwei Filter-Pillen
- * (Zeitraum + Event-Typ) aus der geteilten `FilterMenu`. Gefiltert wird
- * clientseitig auf der bereits geladenen Liste (kleines Volumen, kein
- * Server-Round-Trip). ActivityList bleibt rein präsentational.
+ * /affiliate/activity: Werkzeugleiste mit zwei Segment-Schaltern
+ * (Zeitraum + Ereignis-Typ) ueber der Tabelle. Gefiltert wird
+ * clientseitig auf der bereits geladenen Liste (kleines Volumen).
  */
 export function ActivityFeed({ activity }: { activity: ActivityEvent[] }) {
   const [range, setRange] = useState<TimeRange>("all");
@@ -40,20 +35,17 @@ export function ActivityFeed({ activity }: { activity: ActivityEvent[] }) {
 
   return (
     <>
-      <div
-        style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}
-      >
-        <FilterMenu options={TIME_OPTIONS} value={range} onChange={setRange} />
-        <FilterMenu options={EVENT_OPTIONS} value={type} onChange={setType} />
+      <div className="wb-toolbar" style={{ flexWrap: "wrap" }}>
+        <SegmentedButtons options={TIME_OPTIONS} value={range} onChange={setRange} label="Time range" />
+        <SegmentedButtons options={EVENT_OPTIONS} value={type} onChange={setType} label="Event type" />
+        <span style={{ fontSize: 12, color: "var(--wb-ink-3)", marginLeft: "auto" }}>
+          {filtered.length} of {activity.length}
+        </span>
       </div>
-
-      {filtered.length === 0 && activity.length > 0 ? (
-        <p style={{ margin: 0, color: "var(--ink-dim)", fontSize: 14 }}>
-          No activity in this range.
-        </p>
-      ) : (
-        <ActivityList activity={filtered} />
-      )}
+      <ActivityList
+        activity={filtered}
+        emptyText={activity.length > 0 ? "No activity in this range." : undefined}
+      />
     </>
   );
 }

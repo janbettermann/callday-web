@@ -1,14 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
+import { useMemo, useState } from "react";
 
 import {
   formatMoney,
   type CommissionRow,
   type CommissionStatus,
 } from "@/lib/affiliate-commissions";
-import { FilterMenu } from "../FilterMenu";
+import {
+  WbBadge,
+  WbEmpty,
+  WbRow,
+  WbTable,
+  WbTd,
+  WbTh,
+  type WbTone,
+} from "@/app/components/werkbank";
+import { WbModal } from "@/app/components/werkbank-modal";
+
+import { SegmentedButtons } from "../SegmentedButtons";
 
 // Liste kappen (bei vielen Referrals sonst hunderte Rows).
 const EARNINGS_CAP = 12;
@@ -16,28 +26,35 @@ const EARNINGS_CAP = 12;
 type StatusFilter = "all" | CommissionStatus;
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All commissions" },
+  { value: "all", label: "All" },
   { value: "pending", label: "Pending" },
   { value: "available", label: "Available" },
   { value: "paid", label: "Paid" },
   { value: "clawback", label: "Refunded" },
 ];
 
+const STATUS_BADGE: Record<CommissionStatus, { label: string; tone: WbTone }> = {
+  pending: { label: "Pending", tone: "amber" },
+  available: { label: "Available", tone: "blue" },
+  paid: { label: "Paid", tone: "green" },
+  clawback: { label: "Refunded", tone: "gray" },
+};
+
+/** Kurzdatum "Apr 5" fuer den Reverses-Hinweis. */
+function fmtShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 /**
- * Earnings-Liste der Payout-Seite mit zwei Filter-Pillen (Status + Zeitraum)
- * aus der geteilten `FilterMenu`. Clientseitig gefiltert auf den bereits
- * geladenen Rows (Status ist schon abgeleitet), dann auf `EARNINGS_CAP` gekappt.
+ * Earnings-Tabelle der Payout-Seite mit Status-Schalter in der Werkzeug-
+ * leiste. Kein Zeit-Filter: der Status ist auf Earnings quasi schon die
+ * Zeit-Achse (pending = innerhalb Hold, available/paid = nach Hold).
  */
 export function EarningsFeed({ rows }: { rows: CommissionRow[] }) {
   const [status, setStatus] = useState<StatusFilter>("all");
-  // Ein geteiltes Info-Sheet für alle "Reversed"-Zeilen (gleiche Erklärung).
+  // Ein geteiltes Info-Modal fuer alle "Reversed"-Zeilen (gleiche Erklaerung).
   const [infoOpen, setInfoOpen] = useState(false);
 
-  // Nur Status-Filter — kein Zeitraum: der Status ist auf Earnings quasi schon
-  // die Zeit-Achse (pending = innerhalb Hold, available/paid = nach Hold), ein Zeit-Filter
-  // erzeugt v.a. verwirrende Immer-leer-Kombinationen (z.B. „diese Woche" +
-  // „Available"). Zeit-Filter lebt weiter auf /affiliate/activity (dort ist
-  // Zeit eine unabhängige Achse).
   const filtered = useMemo(
     () => (status === "all" ? rows : rows.filter((r) => r.status === status)),
     [rows, status],
@@ -48,352 +65,99 @@ export function EarningsFeed({ rows }: { rows: CommissionRow[] }) {
 
   return (
     <>
-      <div
-        style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}
-      >
-        <FilterMenu
-          options={STATUS_OPTIONS}
-          value={status}
-          onChange={setStatus}
-        />
+      <div className="wb-toolbar" style={{ flexWrap: "wrap" }}>
+        <SegmentedButtons options={STATUS_OPTIONS} value={status} onChange={setStatus} label="Status" />
+        <span style={{ fontSize: 12, color: "var(--wb-ink-3)", marginLeft: "auto" }}>
+          {filtered.length} of {rows.length}
+        </span>
       </div>
 
       {filtered.length === 0 ? (
-        <p style={{ margin: 0, color: "var(--ink-dim)", fontSize: 14 }}>
-          No earnings match these filters.
-        </p>
+        <WbEmpty>No commissions match this filter.</WbEmpty>
       ) : (
-        <>
-          <ul
-            style={{
-              margin: 0,
-              padding: 0,
-              listStyle: "none",
-              display: "flex",
-              flexDirection: "column",
-              gap: 0,
-            }}
-          >
-            {shown.map((r, i) => (
-              <EarningRow
-                key={r.id}
-                row={r}
-                first={i === 0}
-                onInfo={() => setInfoOpen(true)}
-              />
-            ))}
-          </ul>
-          {more > 0 ? (
-            <p
-              style={{
-                margin: "16px 0 0",
-                fontSize: 13,
-                color: "var(--ink-faint)",
-                textAlign: "center",
-              }}
-            >
-              + {more} more commissions
-            </p>
-          ) : null}
-        </>
+        <WbTable>
+          <thead>
+            <tr>
+              <WbTh>Status</WbTh>
+              <WbTh>Date</WbTh>
+              <WbTh>Note</WbTh>
+              <WbTh align="right">Amount</WbTh>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((r) => {
+              // Recovery-Buchungen (Post-Payout-Refund, negativer Betrag) rendern
+              // als "Reversed" statt mit ihrem technischen Status ("available").
+              const badge = r.isRecovery
+                ? { label: "Reversed", tone: "red" as WbTone }
+                : STATUS_BADGE[r.status];
+              return (
+                <WbRow key={r.id}>
+                  <WbTd nowrap>
+                    <span className="wb-inline" style={{ gap: 6 }}>
+                      <WbBadge tone={badge.tone}>{badge.label}</WbBadge>
+                      {r.isRecovery ? (
+                        <button
+                          type="button"
+                          onClick={() => setInfoOpen(true)}
+                          aria-label="What does Reversed mean?"
+                          className="wb-icon-btn"
+                          style={{ width: 24, height: 24 }}
+                        >
+                          <InfoIcon />
+                        </button>
+                      ) : null}
+                    </span>
+                  </WbTd>
+                  <WbTd nowrap muted>
+                    <span className="wb-num">{new Date(r.charged_at).toISOString().slice(0, 10)}</span>
+                  </WbTd>
+                  <WbTd muted>
+                    {r.isRecovery && r.reverses_charged_at
+                      ? `Reverses your ${fmtShortDate(r.reverses_charged_at)} commission`
+                      : "–"}
+                  </WbTd>
+                  <WbTd align="right" nowrap style={{ fontWeight: 600, color: r.isRecovery ? "var(--wb-red)" : undefined }}>
+                    <span className="wb-num">{formatMoney(r.commission_cents, r.charge_currency)}</span>
+                  </WbTd>
+                </WbRow>
+              );
+            })}
+          </tbody>
+        </WbTable>
       )}
 
-      <ReversalInfoSheet open={infoOpen} onClose={() => setInfoOpen(false)} />
-    </>
-  );
-}
+      {more > 0 ? <div className="wb-panel-foot">+ {more} more commissions</div> : null}
 
-const STATUS_STYLE: Record<
-  CommissionStatus,
-  { label: string; color: string; bg: string }
-> = {
-  pending: {
-    label: "Pending",
-    color: "var(--sun-deep)",
-    bg: "rgba(185,126,16,0.1)",
-  },
-  available: {
-    label: "Available",
-    color: "var(--blue-deep)",
-    bg: "rgba(53,100,224,0.1)",
-  },
-  paid: { label: "Paid", color: "#0f766e", bg: "rgba(15,118,110,0.1)" },
-  clawback: { label: "Refunded", color: "#b91c1c", bg: "rgba(185,28,28,0.1)" },
-};
-
-const RECOVERY_BADGE = {
-  label: "Reversed",
-  color: "#b91c1c",
-  bg: "rgba(185,28,28,0.1)",
-};
-
-/** Kurzdatum "Apr 5" für den Reverses-Hinweis. */
-function fmtShortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function EarningRow({
-  row,
-  first,
-  onInfo,
-}: {
-  row: CommissionRow;
-  first: boolean;
-  onInfo: () => void;
-}) {
-  // Recovery-Buchungen (Post-Payout-Refund, negativer Betrag) rendern als rote
-  // "Reversed"-Zeile statt mit ihrem technischen Status ("available"). Der
-  // Betrag zählt weiter in die Available-Rechnung (bewusst — bleibt unter dem
-  // Available-Filter, siehe specs/affiliate-payouts.md §9).
-  const s = row.isRecovery ? RECOVERY_BADGE : STATUS_STYLE[row.status];
-  const date = new Date(row.charged_at).toISOString().slice(0, 10);
-  return (
-    <li
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "12px 0",
-        borderTop: first ? "none" : "0.5px solid var(--line)",
-        gap: 12,
-      }}
-    >
-      <span
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 3,
-          minWidth: 0,
-        }}
-      >
-        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 500,
-              color: s.color,
-              background: s.bg,
-              borderRadius: 6,
-              padding: "3px 8px",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {s.label}
-          </span>
-          {row.isRecovery ? (
-            <button
-              type="button"
-              onClick={onInfo}
-              aria-label="What does Reversed mean?"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                background: "none",
-                border: "none",
-                padding: 2,
-                cursor: "pointer",
-                color: "var(--ink-faint)",
-                lineHeight: 0,
-              }}
-            >
-              <InfoIcon />
+      <WbModal open={infoOpen} onClose={() => setInfoOpen(false)} title="A paid commission was refunded">
+        <div className="wb-stack" style={{ fontSize: 14, lineHeight: 1.55, color: "var(--wb-ink-2)" }}>
+          <p>
+            A commission that was <strong style={{ color: "var(--wb-ink)" }}>already paid out</strong> to
+            you was later refunded by the customer. Since the money was already sent, the amount is
+            recovered from your <strong style={{ color: "var(--wb-ink)" }}>Available</strong> balance.
+          </p>
+          <p>
+            Your original payout stays in your history, this line just balances it out. If a refund
+            happens <em>before</em> a commission is paid, it simply shows as <em>Refunded</em> and
+            never counts.
+          </p>
+          <div>
+            <button type="button" onClick={() => setInfoOpen(false)} className="wb-btn-primary is-small">
+              Got it
             </button>
-          ) : null}
-          <span
-            style={{
-              fontSize: 13,
-              color: "var(--ink-faint)",
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
-            {date}
-          </span>
-        </span>
-        {row.isRecovery && row.reverses_charged_at ? (
-          <span style={{ fontSize: 12, color: "var(--ink-faint)" }}>
-            reverses your {fmtShortDate(row.reverses_charged_at)} commission
-          </span>
-        ) : null}
-      </span>
-      <span
-        style={{
-          fontSize: 14,
-          fontWeight: 600,
-          color: row.isRecovery ? "#b91c1c" : "var(--ink)",
-          fontVariantNumeric: "tabular-nums",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {formatMoney(row.commission_cents, row.charge_currency)}
-      </span>
-    </li>
+          </div>
+        </div>
+      </WbModal>
+    </>
   );
 }
 
 function InfoIcon() {
   return (
-    <svg
-      width={15}
-      height={15}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx={12} cy={12} r={10} />
       <line x1={12} y1={16} x2={12} y2={12} />
       <line x1={12} y1={8} x2={12.01} y2={8} />
     </svg>
-  );
-}
-
-/**
- * Info-Modal, das erklärt was "Reversed" bedeutet. Nutzt das geteilte Overlay-
- * Muster des Affiliate-Dashboards (analog PostComposer): `createPortal` auf
- * `document.body` + `.pc-backdrop` / `.pc-panel` aus globals.css → Desktop
- * zentriertes Modal, Mobile Bottom-Sheet, z-index 10000 ÜBER dem Footer. Der
- * Portal löst zudem die Stacking-Context-Falle (kein `position:fixed` mehr tief
- * im Baum). Body-Scroll gesperrt; schließt bei Backdrop-Klick, "Got it", Escape.
- */
-function ReversalInfoSheet({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
-
-  return createPortal(
-    <div
-      className="pc-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-label="What Reversed means"
-      onClick={onClose}
-    >
-      <div className="pc-panel" onClick={(e) => e.stopPropagation()}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: 8,
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "var(--font-label)",
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "1.2px",
-              color: "#b91c1c",
-            }}
-          >
-            Reversed
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            style={{
-              width: 30,
-              height: 30,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "none",
-              border: "none",
-              color: "var(--ink-faint)",
-              fontSize: 22,
-              lineHeight: 1,
-              cursor: "pointer",
-              padding: 0,
-              marginTop: -4,
-              marginRight: -6,
-            }}
-          >
-            ×
-          </button>
-        </div>
-
-        <h2
-          style={{
-            margin: "0 0 12px",
-            fontSize: 19,
-            fontWeight: 700,
-            letterSpacing: "-0.3px",
-            color: "var(--ink)",
-          }}
-        >
-          A paid commission was refunded
-        </h2>
-        <p
-          style={{
-            margin: "0 0 12px",
-            fontSize: 14,
-            lineHeight: 1.55,
-            color: "var(--ink-dim)",
-          }}
-        >
-          A commission that was{" "}
-          <strong style={{ color: "var(--ink)" }}>already paid out</strong> to you
-          was later refunded by the customer. Since the money was already sent,
-          the amount is recovered from your{" "}
-          <strong style={{ color: "var(--ink)" }}>Available</strong> balance.
-        </p>
-        <p
-          style={{
-            margin: "0 0 20px",
-            fontSize: 14,
-            lineHeight: 1.55,
-            color: "var(--ink-dim)",
-          }}
-        >
-          Your original payout stays in your history — this line just balances it
-          out. If a refund happens <em>before</em> a commission is paid, it simply
-          shows as <em>Refunded</em> and never counts.
-        </p>
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            width: "100%",
-            background:
-              "linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%)",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: 12,
-            padding: "12px 18px",
-            fontSize: 15,
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          Got it
-        </button>
-      </div>
-    </div>,
-    document.body,
   );
 }

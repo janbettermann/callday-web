@@ -10,16 +10,15 @@ import {
   getAffiliateActivity,
   computeDailySeries,
 } from "@/lib/affiliate-activity";
-import { AffiliateNav } from "../AffiliateNav";
-import { SiteFooter } from "../../components/SiteFooter";
+import { WbPanel } from "@/app/components/werkbank";
+
 import { ActivityFeed } from "../ActivityFeed";
-import { ActivityTrendChart } from "../ActivityTrendChart";
-import { affiliateMainStyle } from "../layout-styles";
+import { ActivityTrendChart, TREND_COLORS } from "../ActivityTrendChart";
+import { PortalShell } from "../PortalShell";
 
 /**
- * /affiliate/activity — vollständige Activity-Liste (Views + Sign-ups).
- * Das Dashboard zeigt nur die letzten 10 + einen Link hierher. Gleiche
- * Datenquelle (getAffiliateActivity) und dieselbe ActivityList-Komponente.
+ * /affiliate/activity: Trend der letzten 30 Tage und die vollstaendige
+ * Liste aller Visitors und Sign-ups mit Filtern.
  */
 
 export const dynamic = "force-dynamic";
@@ -44,96 +43,34 @@ export default async function AffiliateActivityPage() {
   const daily = computeDailySeries(act.allViews, act.allSignups);
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
-      <AffiliateNav />
-
-      <main className="container" style={affiliateMainStyle}>
-        <h1
-          style={{
-            fontSize: 32,
-            fontWeight: 700,
-            letterSpacing: "-0.8px",
-            lineHeight: 1.1,
-            margin: "0 0 6px",
-            color: "var(--ink)",
-          }}
-        >
-          Link activity
-        </h1>
-        <p
-          style={{ margin: "0 0 32px", fontSize: 14, color: "var(--ink-dim)" }}
-        >
-          Every visitor and sign-up through your link.
-        </p>
-
-        <section
-          style={{
-            background: "#ffffff",
-            border: "0.5px solid var(--line)",
-            borderRadius: 24,
-            padding: 28,
-            marginBottom: 24,
-            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "var(--font-label)",
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "1.5px",
-              color: "var(--ink-faint)",
-              marginBottom: 12,
-            }}
-          >
-            Last 30 days
-          </div>
-          <div style={{ display: "flex", gap: 18, marginBottom: 16 }}>
-            <LegendItem color="#3564e0" label="Visitors" />
-            <LegendItem color="#059669" label="Sign-ups" />
-          </div>
-          <ActivityTrendChart data={daily} />
-        </section>
-
-        <section
-          style={{
-            background: "#ffffff",
-            border: "0.5px solid var(--line)",
-            borderRadius: 24,
-            padding: 28,
-            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-          }}
-        >
-          <ActivityFeed activity={activity} />
-        </section>
-      </main>
-
-      <SiteFooter />
-    </div>
-  );
-}
-
-function LegendItem({ color, label }: { color: string; label: string }) {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 7,
-        fontSize: 12,
-        color: "var(--ink-dim)",
-      }}
+    <PortalShell
+      current="activity"
+      title="Link activity"
+      subtitle="Every visitor and sign-up through your link"
     >
-      <span
-        aria-hidden
-        style={{
-          width: 9,
-          height: 9,
-          borderRadius: "50%",
-          background: color,
-        }}
-      />
-      {label}
-    </span>
+      <WbPanel
+        title="Last 30 days"
+        subtitle="Per day"
+        meta={
+          <span className="wb-legend">
+            <span className="wb-legend-item">
+              <span className="wb-legend-dot" style={{ background: TREND_COLORS.visitors }} />
+              Visitors
+            </span>
+            <span className="wb-legend-item">
+              <span className="wb-legend-dot" style={{ background: TREND_COLORS.signups }} />
+              Sign-ups
+            </span>
+          </span>
+        }
+        padded
+      >
+        <ActivityTrendChart data={daily} />
+      </WbPanel>
+
+      <WbPanel title="Activity" subtitle="Newest first">
+        <ActivityFeed activity={activity} />
+      </WbPanel>
+    </PortalShell>
   );
 }

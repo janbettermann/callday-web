@@ -6,12 +6,9 @@ import { useRouter } from "next/navigation";
 import { requestMagicLinkAction } from "./actions";
 
 /**
- * Email-Form fuer das Affiliate-Magic-Link-Login. Submit triggert
- * Server-Action requestMagicLinkAction. Bei success navigieren wir zu
- * /affiliate/login?sent=<email> → die Page rendert dann den SentCard.
- *
- * Note: noValidate + Custom-Validation-Message-Pattern (analog zur
- * SignupForm) — Button immer klickbar, Hint bei leerem Feld.
+ * E-Mail-Formular fuer das Affiliate-Magic-Link-Login. Submit triggert die
+ * Server-Action requestMagicLinkAction; bei Erfolg navigieren wir zu
+ * /affiliate/login?sent=<email>, die Page rendert dann die Bestaetigung.
  */
 
 interface Props {
@@ -45,49 +42,48 @@ export function LoginForm({ presetEmail, initialError }: Props) {
         setError(result.error ?? "Something went wrong. Try again.");
         return;
       }
-      router.push(
-        `/affiliate/login?sent=${encodeURIComponent(result.email ?? trimmed)}`,
-      );
+      router.push(`/affiliate/login?sent=${encodeURIComponent(result.email ?? trimmed)}`);
     });
   }
 
   return (
-    <div className="login-card">
-      <h1 className="login-headline">Affiliate sign-in</h1>
-      <p className="login-sub">
-        Enter your email — we&apos;ll send you a sign-in link.
+    <form onSubmit={handleSubmit} noValidate>
+      <h1 className="wb-login-title">Sign in</h1>
+      <p style={{ fontSize: 13, color: "var(--wb-ink-2)", marginTop: -12, marginBottom: 18, lineHeight: 1.5 }}>
+        Enter your email and we&apos;ll send you a sign-in link.
       </p>
 
-      <form className="beta-form" onSubmit={handleSubmit} noValidate>
-        <label className="beta-field">
-          <span className="beta-field-label">Email</span>
-          <input
-            type="email"
-            required
-            autoFocus
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            disabled={isPending}
-          />
-        </label>
+      <label className="wb-label" htmlFor="affiliate-email">
+        Email
+      </label>
+      <input
+        id="affiliate-email"
+        type="email"
+        required
+        autoFocus
+        autoComplete="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="you@example.com"
+        disabled={isPending}
+        className="wb-input"
+      />
 
-        <button
-          type="submit"
-          className="beta-submit"
-          aria-busy={isPending}
-          disabled={isPending}
-        >
-          {isPending ? "Sending…" : "Send sign-in link"}
-        </button>
+      {error ? (
+        <p className="wb-error-text" role="alert">
+          {error}
+        </p>
+      ) : null}
 
-        {error ? (
-          <p className="beta-submit-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-      </form>
-    </div>
+      <button
+        type="submit"
+        className="wb-btn-primary"
+        style={{ width: "100%", marginTop: 18 }}
+        aria-busy={isPending}
+        disabled={isPending}
+      >
+        {isPending ? "Sending…" : "Send sign-in link"}
+      </button>
+    </form>
   );
 }

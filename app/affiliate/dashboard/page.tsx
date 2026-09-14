@@ -14,33 +14,27 @@ import {
   POST_WINDOW_HOURS,
   type PostRow,
 } from "@/lib/affiliate-activity";
-import { AffiliateNav } from "../AffiliateNav";
-import { SiteFooter } from "../../components/SiteFooter";
-import { affiliateMainStyle } from "../layout-styles";
-import { ActivityList } from "../ActivityList";
-import { PostList } from "../PostList";
+import { WbNotice, WbPanel, WbStatTile, WbTileGrid } from "@/app/components/werkbank";
 
+import { ActivityList } from "../ActivityList";
+import { PortalShell } from "../PortalShell";
+import { PostList } from "../PostList";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { PostComposer } from "./PostComposer";
 
 /**
- * /affiliate/dashboard — Affiliate's eigene Mini-Page.
+ * /affiliate/dashboard: der eigene Link, die zwei Zahlen (Visitors,
+ * Sign-ups), heutige Posts und die letzten Link-Ereignisse.
  *
- * Data-MVP (Plan-Phase 1.5):
- *   - Sein Affiliate-Link mit Copy-Button
- *   - Sign-ups Count + Activated Count
- *   - Recent-Activity-Timestamps (kein PII)
- *   - Hint zu Payouts (post-launch)
- *
- * Auth: Cookie-Gate via verifyAffiliateSession. Removed-Status fliegt
- * im verify schon raus → redirect zu /login mit Error. Paused-Affiliates
- * sehen ein Hinweis-Banner aber haben Zugriff.
+ * Auth: Cookie-Gate via verifyAffiliateSession. Removed-Status fliegt im
+ * verify schon raus (redirect zu /login). Paused-Affiliates sehen einen
+ * Hinweis, haben aber Zugriff.
  */
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Your dashboard · Callday Affiliates",
+  title: "Dashboard · Callday Affiliates",
   robots: { index: false, follow: false },
 };
 
@@ -71,9 +65,9 @@ export default async function AffiliateDashboardPage() {
   };
 
   // Views + Sign-ups + abgeleiteter Activity-Feed kommen aus dem geteilten
-  // Helper (dieselbe Quelle wie /affiliate/activity, kein Copy-Paste). Posts +
-  // Korrelation bleiben hier. Activated bewusst NICHT angezeigt (nicht im
-  // Einflussbereich des Affiliates) — Admin-Dashboard zeigt es weiterhin.
+  // Helper (dieselbe Quelle wie /affiliate/activity). Posts + Korrelation
+  // bleiben hier. Activated bewusst NICHT angezeigt (nicht im Einfluss-
+  // bereich des Affiliates), der Admin zeigt es weiterhin.
   const [act, postsRes] = await Promise.all([
     getAffiliateActivity(affiliateId),
     sb
@@ -92,286 +86,63 @@ export default async function AffiliateDashboardPage() {
   const affiliateLink = `${baseUrl}/a/${aff.slug}`;
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
-      <AffiliateNav />
+    <PortalShell
+      current="dashboard"
+      title="Dashboard"
+      subtitle={`Your link: ${affiliateLink.replace(/^https?:\/\//, "")}`}
+      actions={<CopyLinkButton link={affiliateLink} />}
+    >
+      {aff.status === "paused" ? (
+        <WbNotice>
+          Your account is paused. New sign-ups through your link won&apos;t be attributed
+          until it&apos;s reactivated.
+        </WbNotice>
+      ) : null}
 
-      <main className="container" style={affiliateMainStyle}>
-        {/* === Header === */}
-        <header style={{ marginBottom: 20 }}>
-          <h1
-            style={{
-              fontSize: 32,
-              fontWeight: 700,
-              letterSpacing: "-0.8px",
-              lineHeight: 1.1,
-              margin: 0,
-              color: "var(--ink)",
-            }}
-          >
-            Dashboard
-          </h1>
-        </header>
+      <WbPanel
+        title="Your link"
+        subtitle="Share it anywhere: bio, captions, posts, DMs. Anyone who signs up through it counts toward your sign-ups."
+        padded
+      >
+        <div className="wb-code-box" style={{ fontSize: 14 }}>{affiliateLink}</div>
+      </WbPanel>
 
-        {aff.status === "paused" ? (
-          <div
-            style={{
-              background: "rgba(245,158,11,0.08)",
-              border: "0.5px solid rgba(245,158,11,0.3)",
-              borderRadius: 16,
-              padding: "14px 18px",
-              marginBottom: 32,
-              color: "var(--sun-deep)",
-              fontSize: 14,
-            }}
-          >
-            Your account is paused. New sign-ups through your link
-            won&apos;t be attributed until it&apos;s reactivated.
-          </div>
-        ) : null}
+      <WbTileGrid>
+        <WbStatTile label="Visitors" value={uniqueVisitors} sub="People who opened your link" />
+        <WbStatTile label="Sign-ups" value={signupCount} sub="Created an account" />
+      </WbTileGrid>
 
-        {/* === Affiliate-Link === */}
-        <section
-          style={{
-            background: "#ffffff",
-            border: "0.5px solid var(--line)",
-            borderRadius: 24,
-            padding: 28,
-            marginBottom: 24,
-            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "var(--font-label)",
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "1.5px",
-              color: "var(--ink-faint)",
-              marginBottom: 10,
-            }}
-          >
-            Your link
-          </div>
-          <div
-            style={{
-              background: "rgba(26,29,38,0.045)",
-              borderRadius: 12,
-              padding: "14px 16px",
-              fontFamily: "var(--font-mono), monospace",
-              fontSize: 15,
-              color: "var(--ink)",
-              wordBreak: "break-all",
-              marginBottom: 14,
-            }}
-          >
-            {affiliateLink}
-          </div>
-          <CopyLinkButton link={affiliateLink} />
-          <p
-            style={{
-              marginTop: 14,
-              fontSize: 13,
-              color: "var(--ink-dim)",
-              lineHeight: 1.5,
-            }}
-          >
-            Share this anywhere — bio, captions, posts, DMs. Anyone who signs
-            up through it counts toward your sign-ups below.
-          </p>
-        </section>
-
-        {/* === Stats === */}
-        <section
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-            gap: 12,
-            marginBottom: 24,
-          }}
-        >
-          <StatCard
-            label="Visitors"
-            value={uniqueVisitors}
-            hint="People who opened your link"
-          />
-          <StatCard
-            label="Sign-ups"
-            value={signupCount}
-            hint="Created an account"
-          />
-        </section>
-
-        {/* === Posts === */}
-        <section
-          style={{
-            background: "#ffffff",
-            border: "0.5px solid var(--line)",
-            borderRadius: 24,
-            padding: 28,
-            marginBottom: 24,
-            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 16,
-            }}
-          >
-            <div
-              style={{
-                fontFamily: "var(--font-label)",
-                fontSize: 11,
-                textTransform: "uppercase",
-                letterSpacing: "1.5px",
-                color: "var(--ink-faint)",
-              }}
-            >
-              Today&apos;s posts
-            </div>
+      <WbPanel
+        title="Today's posts"
+        subtitle={`Visitors and sign-ups in the ${POST_WINDOW_HOURS} h after each post`}
+        meta={
+          <span className="wb-inline">
+            <Link href="/affiliate/posts" className="wb-link-blue">
+              View all
+            </Link>
             <PostComposer windowHours={POST_WINDOW_HOURS} />
-          </div>
-
-          <PostList posts={postStats} todayOnly />
-          <ViewAllLink href="/affiliate/posts" label="View all posts" />
-        </section>
-
-        {/* === Recent activity === */}
-        <section
-          style={{
-            background: "#ffffff",
-            border: "0.5px solid var(--line)",
-            borderRadius: 24,
-            padding: 28,
-            marginBottom: 24,
-            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "var(--font-label)",
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "1.5px",
-              color: "var(--ink-faint)",
-              marginBottom: 14,
-            }}
-          >
-            Recent link activity
-          </div>
-
-          <ActivityList activity={activity.slice(0, 5)} />
-          <ViewAllLink href="/affiliate/activity" label="View all activity" />
-        </section>
-
-        {/* === Payouts hint === */}
-        <p
-          style={{
-            margin: 0,
-            color: "var(--ink-faint)",
-            fontSize: 13,
-            lineHeight: 1.5,
-            textAlign: "center",
-            maxWidth: 480,
-            marginLeft: "auto",
-            marginRight: "auto",
-          }}
-        >
-          Payouts go out ~2 weeks after public launch. The formal agreement
-          follows separately by email — keep an eye on your inbox.
-        </p>
-      </main>
-
-      <SiteFooter />
-    </div>
-  );
-}
-
-/**
- * Zentrierter „View all"-Footer-Link mit feiner Trennlinie darüber.
- * paddingTop (28) = Card-Padding-Bottom (28), damit der Link denselben Abstand
- * nach oben (zur Trennlinie) wie nach unten (zur Card-Kante) hat.
- */
-function ViewAllLink({ href, label }: { href: string; label: string }) {
-  return (
-    <div
-      style={{
-        marginTop: 20,
-        paddingTop: 28,
-        borderTop: "0.5px solid var(--line)",
-        textAlign: "center",
-        lineHeight: 1,
-      }}
-    >
-      <Link
-        href={href}
-        style={{
-          fontSize: 13,
-          fontWeight: 500,
-          color: "var(--blue-deep, #2563e8)",
-          textDecoration: "none",
-        }}
+          </span>
+        }
       >
-        {label}
-      </Link>
-    </div>
-  );
-}
+        <PostList posts={postStats} todayOnly />
+      </WbPanel>
 
-function StatCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string | number;
-  hint: string;
-}) {
-  return (
-    <div
-      style={{
-        background: "#ffffff",
-        border: "0.5px solid var(--line)",
-        borderRadius: 18,
-        padding: "18px 20px",
-        boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-      }}
-    >
-      <div
-        style={{
-          fontFamily: "var(--font-label)",
-          fontSize: 10,
-          textTransform: "uppercase",
-          letterSpacing: "1.2px",
-          color: "var(--ink-faint)",
-        }}
+      <WbPanel
+        title="Recent link activity"
+        subtitle="Newest first"
+        meta={
+          <Link href="/affiliate/activity" className="wb-link-blue">
+            View all
+          </Link>
+        }
       >
-        {label}
-      </div>
-      <div
-        style={{
-          marginTop: 6,
-          fontSize: 30,
-          fontWeight: 700,
-          letterSpacing: "-0.6px",
-          color: "var(--ink)",
-          fontVariantNumeric: "tabular-nums",
-        }}
-      >
-        {value}
-      </div>
-      <div
-        style={{
-          marginTop: 4,
-          fontSize: 12,
-          color: "var(--ink-faint)",
-          lineHeight: 1.4,
-        }}
-      >
-        {hint}
-      </div>
-    </div>
+        <ActivityList activity={activity.slice(0, 5)} />
+      </WbPanel>
+
+      <p className="wb-note">
+        Payouts go out about two weeks after public launch. The formal agreement follows
+        separately by email.
+      </p>
+    </PortalShell>
   );
 }

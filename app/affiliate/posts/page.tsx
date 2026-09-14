@@ -13,16 +13,16 @@ import {
   POST_WINDOW_HOURS,
   type PostRow,
 } from "@/lib/affiliate-activity";
-import { AffiliateNav } from "../AffiliateNav";
-import { SiteFooter } from "../../components/SiteFooter";
+import { WbPanel } from "@/app/components/werkbank";
+
+import { PortalShell } from "../PortalShell";
 import { PostList } from "../PostList";
-import { affiliateMainStyle } from "../layout-styles";
 import { PostComposer } from "../dashboard/PostComposer";
 
 /**
- * /affiliate/posts — alle je geloggten Posts (mit Korrelation). Das Dashboard
- * zeigt nur die heutigen; hier ist das Archiv. Gleiche Datenlogik
- * (getAffiliateActivity + computePostStats) und dieselbe PostList-Komponente.
+ * /affiliate/posts: alle je geloggten Posts (mit Korrelation). Das
+ * Dashboard zeigt nur die heutigen; hier ist das Archiv. Gleiche Datenlogik
+ * (getAffiliateActivity + computePostStats) und dieselbe PostList.
  */
 
 export const dynamic = "force-dynamic";
@@ -56,53 +56,18 @@ export default async function AffiliatePostsPage() {
   const postStats = computePostStats(posts, act.allViews, act.allSignups);
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
-      <AffiliateNav />
-
-      <main className="container" style={affiliateMainStyle}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-            margin: "0 0 6px",
-          }}
-        >
-          <h1
-            style={{
-              fontSize: 32,
-              fontWeight: 700,
-              letterSpacing: "-0.8px",
-              lineHeight: 1.1,
-              margin: 0,
-              color: "var(--ink)",
-            }}
-          >
-            Posts
-          </h1>
-          <PostComposer windowHours={POST_WINDOW_HOURS} />
-        </div>
-        <p
-          style={{ margin: "0 0 32px", fontSize: 14, color: "var(--ink-dim)" }}
-        >
-          Every post you&apos;ve logged and how it moved your numbers.
-        </p>
-
-        <section
-          style={{
-            background: "#ffffff",
-            border: "0.5px solid var(--line)",
-            borderRadius: 24,
-            padding: 28,
-            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-          }}
-        >
-          <PostList posts={postStats} />
-        </section>
-      </main>
-
-      <SiteFooter />
-    </div>
+    <PortalShell
+      current="posts"
+      title="Posts"
+      subtitle="Every post you've logged and how it moved your numbers"
+      actions={<PostComposer windowHours={POST_WINDOW_HOURS} />}
+    >
+      <WbPanel
+        title="All posts"
+        subtitle={`Visitors and sign-ups in the ${POST_WINDOW_HOURS} h after each post, newest first`}
+      >
+        <PostList posts={postStats} />
+      </WbPanel>
+    </PortalShell>
   );
 }

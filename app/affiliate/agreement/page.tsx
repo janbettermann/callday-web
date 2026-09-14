@@ -6,14 +6,14 @@ import {
   AFFILIATE_SESSION_COOKIE,
   verifyAffiliateSession,
 } from "@/lib/affiliate-auth";
-import { AffiliateNav } from "../AffiliateNav";
-import { SiteFooter } from "../../components/SiteFooter";
-import { affiliateMainStyle } from "../layout-styles";
+import { WbPanel } from "@/app/components/werkbank";
+
+import { PortalShell } from "../PortalShell";
 
 /**
- * /affiliate/agreement — Container fuer den Affiliate-Vertrag. Der finale
- * Text kommt vom Anwalt (Onboarding ist bis dahin geblockt); bis dahin ein
- * ehrlicher Platzhalter. Wenn der Text da ist, ersetzt er die Platzhalter-Card.
+ * /affiliate/agreement: Container fuer den Affiliate-Vertrag. Der finale
+ * Text kommt vom Anwalt; bis dahin ein ehrlicher Platzhalter. Erreichbar
+ * ueber Settings (Account), deshalb dort als aktiver Bereich markiert.
  */
 
 export const dynamic = "force-dynamic";
@@ -34,69 +34,24 @@ export default async function AffiliateAgreementPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
-      <AffiliateNav />
-
-      <main className="container" style={affiliateMainStyle}>
-        <h1
-          style={{
-            fontSize: 32,
-            fontWeight: 700,
-            letterSpacing: "-0.8px",
-            lineHeight: 1.1,
-            margin: "0 0 6px",
-            color: "var(--ink)",
-          }}
-        >
-          Affiliate agreement
-        </h1>
-        <p
-          style={{ margin: "0 0 32px", fontSize: 14, color: "var(--ink-dim)" }}
-        >
-          The terms of the Callday founding-affiliate program.
+    <PortalShell
+      current="settings"
+      title="Affiliate agreement"
+      subtitle="The terms of the Callday founding-affiliate program"
+    >
+      <WbPanel title="Agreement" padded>
+        <p style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 8 }}>
+          Your affiliate agreement is being finalized.
         </p>
-
-        <section
-          style={{
-            background: "#ffffff",
-            border: "0.5px solid var(--line)",
-            borderRadius: 24,
-            padding: 28,
-            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-          }}
-        >
-          <p
-            style={{
-              margin: "0 0 12px",
-              fontSize: 15,
-              lineHeight: 1.6,
-              color: "var(--ink)",
-            }}
-          >
-            Your affiliate agreement is being finalized.
-          </p>
-          <p
-            style={{
-              margin: 0,
-              fontSize: 14,
-              lineHeight: 1.6,
-              color: "var(--ink-dim)",
-            }}
-          >
-            Once it&apos;s ready, the full terms will live right here and
-            we&apos;ll email you a copy. Questions in the meantime? Reach us at{" "}
-            <a
-              href="mailto:hello@callday.io"
-              style={{ color: "var(--blue-deep, #2563e8)" }}
-            >
-              hello@callday.io
-            </a>
-            .
-          </p>
-        </section>
-      </main>
-
-      <SiteFooter />
-    </div>
+        <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--wb-ink-2)" }}>
+          Once it&apos;s ready, the full terms will live right here and we&apos;ll email you a
+          copy. Questions in the meantime? Reach us at{" "}
+          <a href="mailto:hello@callday.io" className="wb-link-blue">
+            hello@callday.io
+          </a>
+          .
+        </p>
+      </WbPanel>
+    </PortalShell>
   );
 }

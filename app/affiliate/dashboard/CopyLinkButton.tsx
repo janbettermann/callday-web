@@ -3,8 +3,7 @@
 import { useState } from "react";
 
 /**
- * Copy-to-clipboard Button fuer den Affiliate-Link. 2-Sekunden "Copied!"-
- * Feedback nach erfolgreichem Copy.
+ * Copy-to-clipboard fuer den Affiliate-Link, 2 Sekunden Bestaetigung.
  */
 export function CopyLinkButton({ link }: { link: string }) {
   const [state, setState] = useState<"idle" | "copied" | "error">("idle");
@@ -13,39 +12,19 @@ export function CopyLinkButton({ link }: { link: string }) {
     try {
       await navigator.clipboard.writeText(link);
       setState("copied");
-      setTimeout(() => setState("idle"), 2000);
     } catch {
       setState("error");
-      setTimeout(() => setState("idle"), 2000);
     }
+    setTimeout(() => setState("idle"), 2000);
   }
 
-  const label =
-    state === "copied"
-      ? "Copied ✓"
-      : state === "error"
-        ? "Copy failed"
-        : "Copy your link";
+  const label = state === "copied" ? "Copied" : state === "error" ? "Copy failed" : "Copy link";
 
   return (
     <button
       type="button"
       onClick={handleCopy}
-      style={{
-        background:
-          state === "copied"
-            ? "rgba(16,185,129,0.1)"
-            : "linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%)",
-        color: state === "copied" ? "#047857" : "#ffffff",
-        border: "none",
-        borderRadius: 10,
-        width: "100%",
-        padding: "10px 20px",
-        fontSize: 14,
-        fontWeight: 600,
-        cursor: "pointer",
-        transition: "background 0.15s",
-      }}
+      className={state === "copied" ? "wb-btn is-ok" : "wb-btn-primary is-small"}
     >
       {label}
     </button>

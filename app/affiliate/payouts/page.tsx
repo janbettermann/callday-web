@@ -22,18 +22,16 @@ import {
   type RawPayout,
   type PayoutSummary,
 } from "@/lib/affiliate-payout";
-import { AffiliateNav } from "../AffiliateNav";
-import { SiteFooter } from "../../components/SiteFooter";
-import { affiliateMainStyle } from "../layout-styles";
+import { WbEmpty, WbMetricStrip, WbNotice, WbPanel, type WbMetricItem } from "@/app/components/werkbank";
+
 import { MethodMark } from "../MethodMark";
+import { PortalShell } from "../PortalShell";
 import { EarningsFeed } from "./EarningsFeed";
 
 /**
- * /affiliate/payouts — die Earnings-Sicht des Affiliates. Zeigt Pending /
- * Available / Paid (pro Währung, abgeleiteter Status) + wie die Auszahlung
- * funktioniert. Bis die RC-Accrual zum Launch live ist, ist die Tabelle leer
- * und die Page zeigt ehrliche Nullen + den Explainer.
- * Spec: callday-web/specs/affiliate-payouts.md.
+ * /affiliate/payouts: die Earnings-Sicht des Affiliates. Pending /
+ * Available / Paid (pro Waehrung, abgeleiteter Status) plus wie die
+ * Auszahlung funktioniert. Spec: specs/affiliate-payouts.md.
  */
 
 export const dynamic = "force-dynamic";
@@ -59,14 +57,11 @@ export default async function AffiliatePayoutsPage({
 
   // Beta-Demo: `?demo=1` zeigt illustrative Zahlen (rein Anzeige, keine DB).
   const demo = (await searchParams).demo === "1";
-  const earnings = demo
-    ? getDemoEarnings()
-    : await getAffiliateEarnings(affiliateId);
+  const earnings = demo ? getDemoEarnings() : await getAffiliateEarnings(affiliateId);
   // Aktuell zahlende Referrals (aggregiert, kein PII). Demo passend zum Szenario.
   const activeReferrals = demo ? 100 : await getActiveReferralCount(affiliateId);
 
-  // Aktive Auszahlungsmethode (read-only Zusammenfassung — Einrichtung lebt in
-  // /affiliate/settings). Reflektiert die echte Config, unabhaengig vom Demo.
+  // Aktive Auszahlungsmethode (read-only; Einrichtung lebt in /affiliate/settings).
   const sb = getServerSupabase();
   const { data: payoutRow } = await sb
     .from("affiliates")
@@ -77,7 +72,7 @@ export default async function AffiliatePayoutsPage({
     payoutRow ? mapPayout(payoutRow as unknown as RawPayout) : null,
   );
 
-  // Ohne Daten: eine Null-Zeile in EUR, damit die Karten sinnvoll rendern.
+  // Ohne Daten: eine Null-Zeile in EUR, damit die Leiste sinnvoll rendert.
   const buckets =
     earnings.byCurrency.length > 0
       ? earnings.byCurrency
@@ -85,282 +80,122 @@ export default async function AffiliatePayoutsPage({
   const showCurrency = buckets.length > 1;
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
-      <AffiliateNav />
+    <PortalShell
+      current="payouts"
+      title="Payouts"
+      subtitle="Your commission earnings and how they're paid out"
+      actions={
+        demo ? (
+          <Link href="/affiliate/payouts" className="wb-btn">
+            Exit demo
+          </Link>
+        ) : !earnings.hasAny ? (
+          <Link href="/affiliate/payouts?demo=1" className="wb-btn">
+            Preview with demo data
+          </Link>
+        ) : null
+      }
+    >
+      {demo ? <WbNotice>Demo mode: illustrative numbers, not your real earnings.</WbNotice> : null}
 
-      <main className="container" style={affiliateMainStyle}>
-        <h1
-          style={{
-            fontSize: 32,
-            fontWeight: 700,
-            letterSpacing: "-0.8px",
-            lineHeight: 1.1,
-            margin: "0 0 6px",
-            color: "var(--ink)",
-          }}
-        >
-          Payouts
-        </h1>
-        <p
-          style={{ margin: "0 0 32px", fontSize: 14, color: "var(--ink-dim)" }}
-        >
-          Your commission earnings and how they&apos;re paid out.
-        </p>
-
-        {demo ? (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 12,
-              flexWrap: "wrap",
-              background: "rgba(185,126,16,0.1)",
-              border: "0.5px solid rgba(185,126,16,0.3)",
-              borderRadius: 16,
-              padding: "12px 16px",
-              marginBottom: 24,
-            }}
+      {buckets.map((b, idx) => {
+        const items: WbMetricItem[] = [];
+        if (idx === 0) {
+          items.push({
+            key: "referrals",
+            label: "Active referrals",
+            value: String(activeReferrals),
+            sub: "Earning you recurring commission",
+          });
+        }
+        items.push(
+          {
+            key: "pending",
+            label: "Pending",
+            value: formatMoney(b.pendingCents, b.currency),
+            sub: `In the ${COMMISSION_HOLD_DAYS}-day hold`,
+          },
+          {
+            key: "available",
+            label: "Available",
+            value: formatMoney(Math.max(0, b.availableCents), b.currency),
+            sub:
+              b.availableCents < 0
+                ? `${formatMoney(-b.availableCents, b.currency)} to recover from upcoming earnings`
+                : "Ready for payout",
+          },
+          {
+            key: "paid",
+            label: "Paid out",
+            value: formatMoney(b.paidCents, b.currency),
+            sub: "Already sent to you",
+            snapshot: true,
+          },
+        );
+        return (
+          <WbPanel
+            key={b.currency}
+            title={showCurrency ? `Earnings in ${b.currency}` : "Earnings"}
+            subtitle="Commissions move from pending to available after the hold"
           >
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 500,
-                color: "var(--sun-deep)",
-                lineHeight: 1.4,
-              }}
-            >
-              Demo mode — illustrative numbers, not your real earnings.
-            </span>
-            <Link
-              href="/affiliate/payouts"
-              style={{
-                flexShrink: 0,
-                fontSize: 13,
-                fontWeight: 500,
-                color: "#ffffff",
-                background: "var(--sun-deep)",
-                borderRadius: 100,
-                padding: "6px 14px",
-                textDecoration: "none",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Exit demo
-            </Link>
-          </div>
-        ) : null}
+            <WbMetricStrip items={items} />
+          </WbPanel>
+        );
+      })}
 
-        {buckets.map((b, idx) => (
-          <div key={b.currency} style={{ marginBottom: 24 }}>
-            {showCurrency ? (
-              <div
-                style={{
-                  fontFamily: "var(--font-label)",
-                  fontSize: 11,
-                  textTransform: "uppercase",
-                  letterSpacing: "1.5px",
-                  color: "var(--ink-faint)",
-                  marginBottom: 10,
-                }}
-              >
-                {b.currency}
-              </div>
-            ) : null}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                gap: 12,
-              }}
-            >
-              {idx === 0 ? (
-                <MoneyCard
-                  label="Active referrals"
-                  value={String(activeReferrals)}
-                  hint="Earning you recurring commission"
-                  dot
-                />
-              ) : null}
-              <MoneyCard
-                label="Pending"
-                value={formatMoney(b.pendingCents, b.currency)}
-                hint={`In the ${COMMISSION_HOLD_DAYS}-day hold`}
-              />
-              <MoneyCard
-                label="Available"
-                value={formatMoney(Math.max(0, b.availableCents), b.currency)}
-                hint={
-                  b.availableCents < 0
-                    ? `${formatMoney(-b.availableCents, b.currency)} to recover from upcoming earnings`
-                    : "Ready for payout"
-                }
-              />
-              <MoneyCard
-                label="Paid out"
-                value={formatMoney(b.paidCents, b.currency)}
-                hint="Already sent to you"
-              />
-            </div>
-          </div>
-        ))}
-
-        {/* === Wohin gezahlt wird (read-only; Einrichtung in /settings) === */}
+      <WbPanel title="Paid to" subtitle="Set up and verified in Settings" padded>
         <PayoutDestination summary={payoutSummary} />
+      </WbPanel>
 
-        {/* === How it works — „You're in"-Card-Stil (blauer Tint + Border) === */}
-        <section
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(37,99,232,0.06) 0%, rgba(255,255,255,1) 100%)",
-            border: "0.5px solid rgba(37,99,232,0.3)",
-            borderRadius: 24,
-            padding: 28,
-            marginBottom: 24,
-            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "var(--font-label)",
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "1.5px",
-              color: "var(--ink-faint)",
-              marginBottom: 14,
-            }}
-          >
-            How payouts work
-          </div>
-          <ul
-            style={{
-              margin: 0,
-              paddingLeft: 18,
-              display: "flex",
-              flexDirection: "column",
-              gap: 10,
-              fontSize: 14,
-              color: "var(--ink-dim)",
-              lineHeight: 1.5,
-            }}
-          >
-            <li>
-              You earn <strong style={{ color: "var(--ink)" }}>50%</strong> of
-              every payment your referrals make — for as long as they stay
-              subscribed.
-            </li>
-            <li>
-              Each commission is held for{" "}
-              <strong style={{ color: "var(--ink)" }}>
-                {COMMISSION_HOLD_DAYS} days
-              </strong>{" "}
-              to cover refunds, then moves to <em>Available</em>.
-            </li>
-            <li>
-              Available earnings are paid out via{" "}
-              <strong>PayPal or Wise</strong> — set your method in{" "}
-              <Link
-                href="/affiliate/settings"
-                style={{ color: "var(--blue-deep)", textDecoration: "none" }}
-              >
-                Settings
-              </Link>
-              .
-            </li>
-          </ul>
-        </section>
-
-        {/* === Earnings list === */}
-        <section
-          style={{
-            background: "#ffffff",
-            border: "0.5px solid var(--line)",
-            borderRadius: 24,
-            padding: 28,
-            boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-          }}
-        >
-          {earnings.hasAny ? (
-            <EarningsFeed rows={earnings.rows} />
-          ) : (
-            <p style={{ margin: 0, color: "var(--ink-dim)", fontSize: 14 }}>
-              Your earnings will show here once your referrals subscribe.
-            </p>
-          )}
-        </section>
-
-        {!demo && !earnings.hasAny ? (
-          <div style={{ textAlign: "center", marginTop: 20 }}>
-            <Link
-              href="/affiliate/payouts?demo=1"
-              style={{
-                display: "inline-block",
-                fontSize: 13,
-                fontWeight: 500,
-                color: "var(--ink-dim)",
-                background: "#ffffff",
-                border: "0.5px solid var(--line)",
-                borderRadius: 100,
-                padding: "8px 16px",
-                textDecoration: "none",
-                boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-              }}
-            >
-              Preview with demo data
+      <WbPanel title="How payouts work" padded>
+        <ul className="wb-list">
+          <li>
+            You earn <strong>50%</strong> of every payment your referrals make, for as long as they
+            stay subscribed.
+          </li>
+          <li>
+            Each commission is held for <strong>{COMMISSION_HOLD_DAYS} days</strong> to cover
+            refunds, then moves to <em>Available</em>.
+          </li>
+          <li>
+            Available earnings are paid out via <strong>PayPal or Wise</strong>, set your method
+            in{" "}
+            <Link href="/affiliate/settings" className="wb-link-blue">
+              Settings
             </Link>
-          </div>
-        ) : null}
-      </main>
+            .
+          </li>
+        </ul>
+      </WbPanel>
 
-      <SiteFooter />
-    </div>
+      <WbPanel title="Commissions" subtitle="Newest first">
+        {earnings.hasAny ? (
+          <EarningsFeed rows={earnings.rows} />
+        ) : (
+          <WbEmpty>Your earnings will show here once your referrals subscribe.</WbEmpty>
+        )}
+      </WbPanel>
+    </PortalShell>
   );
 }
 
 /**
- * Read-only Zeile „wohin geht die Auszahlung". Reflektiert die aktive (=
- * verifizierte) Methode aus den Settings; „Change" bzw. „Set up" routen dahin.
- * Bewusst nur eine Spiegelung — die Payout-Seite bleibt Status, konfiguriert
- * wird in /affiliate/settings.
+ * Read-only Zeile "wohin geht die Auszahlung". Reflektiert die aktive
+ * (= verifizierte) Methode aus den Settings; "Change" bzw. "Set up"
+ * routen dahin.
  */
 function PayoutDestination({ summary }: { summary: PayoutSummary }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: 12,
-        flexWrap: "wrap",
-        background: "#ffffff",
-        border: "0.5px solid var(--line)",
-        borderRadius: 18,
-        padding: "16px 20px",
-        marginBottom: 24,
-        boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-      }}
-    >
+    <div className="wb-form-row">
       {summary.method ? (
         <>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-            <span
-              style={{
-                fontFamily: "var(--font-label)",
-                fontSize: 10,
-                textTransform: "uppercase",
-                letterSpacing: "1.2px",
-                color: "var(--ink-faint)",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Paid to
-            </span>
+          <span className="wb-inline" style={{ minWidth: 0 }}>
             <MethodMark method={summary.method} height={16} />
             {summary.destination ? (
               <span
                 style={{
                   fontSize: 14,
-                  color: "var(--ink-dim)",
+                  color: "var(--wb-ink-2)",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
@@ -369,105 +204,19 @@ function PayoutDestination({ summary }: { summary: PayoutSummary }) {
                 {summary.destination}
               </span>
             ) : null}
-          </div>
-          <Link href="/affiliate/settings" style={changeLinkStyle}>
+          </span>
+          <Link href="/affiliate/settings" className="wb-btn">
             Change
           </Link>
         </>
       ) : (
         <>
-          <span style={{ fontSize: 14, color: "var(--ink-dim)" }}>
-            Add a payout method to get paid.
-          </span>
-          <Link href="/affiliate/settings" style={changeLinkStyle}>
-            Set up →
+          <span style={{ fontSize: 14, color: "var(--wb-ink-2)" }}>Add a payout method to get paid.</span>
+          <Link href="/affiliate/settings" className="wb-btn-primary is-small">
+            Set up
           </Link>
         </>
       )}
-    </div>
-  );
-}
-
-const changeLinkStyle: React.CSSProperties = {
-  flexShrink: 0,
-  fontSize: 13,
-  fontWeight: 600,
-  color: "var(--blue-deep)",
-  textDecoration: "none",
-  whiteSpace: "nowrap",
-};
-
-function MoneyCard({
-  label,
-  value,
-  hint,
-  dot,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  dot?: boolean;
-}) {
-  return (
-    <div
-      style={{
-        background: "#ffffff",
-        border: "0.5px solid var(--line)",
-        borderRadius: 18,
-        padding: "18px 20px",
-        boxShadow: "0 1px 3px rgba(26,29,38,0.04)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          fontFamily: "var(--font-label)",
-          fontSize: 10,
-          textTransform: "uppercase",
-          letterSpacing: "1.2px",
-          color: "var(--ink-faint)",
-        }}
-      >
-        {dot ? (
-          <span
-            aria-hidden
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: "50%",
-              background: "#22c55e",
-              boxShadow: "0 0 8px rgba(34,197,94,0.55)",
-              animation: "pulse 2.4s ease-in-out infinite",
-              flexShrink: 0,
-            }}
-          />
-        ) : null}
-        {label}
-      </div>
-      <div
-        style={{
-          marginTop: 6,
-          fontSize: 26,
-          fontWeight: 700,
-          letterSpacing: "-0.6px",
-          color: "var(--ink)",
-          fontVariantNumeric: "tabular-nums",
-        }}
-      >
-        {value}
-      </div>
-      <div
-        style={{
-          marginTop: 4,
-          fontSize: 12,
-          color: "var(--ink-faint)",
-          lineHeight: 1.4,
-        }}
-      >
-        {hint}
-      </div>
     </div>
   );
 }
