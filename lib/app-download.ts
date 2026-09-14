@@ -1,19 +1,19 @@
 /**
  * APP_STORE_LIVE — der Launch-Tag-Schalter fuer den Web-Funnel.
  *
- * Solange false laeuft alles wie in der Beta: Signup-Mail + /account-Karte
- * zeigen auf den TestFlight-Public-Link (Env TESTFLIGHT_PUBLIC_LINK).
- * Am Launch-Tag: Flag auf true flippen + pushen (= Live-Deploy) — damit
- * schalten Signup-Mail (App-Store-Variante statt TestFlight-2-Step) und
- * die /account-Download-Karte gleichzeitig auf den App Store um.
+ * Geflippt am 2026-09-13 (App-Store-Go-Live). Seitdem schicken Signup-Mail
+ * (lib/testflight-invite.ts → AppStoreDownload-Template) und die
+ * /account-Download-Karte auf den App Store; der TestFlight-Public-Link
+ * (Env TESTFLIGHT_PUBLIC_LINK) wird nicht mehr gelesen. Der Beta-Zweig
+ * bleibt im Code, damit ein Rueckflip (z.B. Store-Pull) ohne Rebuild
+ * geht — bewusst kein Env-Schalter, das Flag soll im Diff sichtbar sein.
  *
- * WICHTIG vor dem Flip: APP_STORE_URL braucht die echte Apple-ID der App
- * (App Store Connect → App-Informationen → Apple-ID). Die URL funktioniert
- * erst, wenn die App im Store live ist — deshalb nicht frueher flippen.
+ * Auch der Generator-CTA (lib/lists/config.ts → APP_DOWNLOAD_PATH) zeigt
+ * seit dem Flip direkt auf APP_STORE_URL.
  */
-// Explizit als boolean typisiert, damit der Flip auf true keine
-// Narrowing-Folgefehler in den Callern ausloest.
-export const APP_STORE_LIVE: boolean = false;
+// Explizit als boolean typisiert, damit der Flip keine Narrowing-
+// Folgefehler in den Callern ausloest (der Beta-Zweig bleibt erreichbar).
+export const APP_STORE_LIVE: boolean = true;
 
 // Apple-ID aus App Store Connect (App-Informationen). Die URL ist ab
 // dem Store-Go-Live erreichbar — vorher bleibt APP_STORE_LIVE false.

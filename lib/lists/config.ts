@@ -6,6 +6,8 @@
  * hier bleiben die Outscraper-Stellschrauben.
  */
 
+import { APP_STORE_URL } from "@/lib/app-download";
+
 /** Outscraper-Limit pro Query (Hard-Cap der API: 500). */
 export const OUTSCRAPER_FETCH_LIMIT = 400;
 
@@ -31,8 +33,10 @@ export const OUTSCRAPER_MAX_SCAN_LIMIT = 500;
 export const INDUSTRY_SUGGESTIONS = ["Dentist", "Plumber", "Law firm"];
 
 /**
- * Ziel des "Get the Callday app"-CTAs. Waehrend der Beta zeigt /account
- * die TestFlight-2-Step-Card; beim Public-Launch auf den App-Store-Link
- * umstellen (eine Stelle).
+ * Ziel des "Open in Callday"-CTAs im Generator. Waehrend der Beta zeigte
+ * das auf /account (TestFlight-2-Step-Card); seit dem App-Store-Launch
+ * (2026-09-13) direkt auf die Store-Seite — die hat fuer installierte
+ * Apps den "Oeffnen"-Button, fuer alle anderen den Download. Quelle der
+ * URL ist lib/app-download.ts, hier nur die Weiterreichung.
  */
-export const APP_DOWNLOAD_PATH = "/account";
+export const APP_DOWNLOAD_PATH = APP_STORE_URL;

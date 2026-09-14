@@ -62,6 +62,16 @@ export function AppStoreDownload({ name, appStoreLink }: AppStoreDownloadProps) 
         </Link>
       </Text>
 
+      {/* Bruecke Web → App (Jan, 2026-09-13): der Generator ist fuer die
+          meisten Website-Signups der Einstieg, und niemand sagt ihnen
+          sonst, dass die Liste in der App liegt. Als Frage formuliert,
+          weil die Mail direkt nach dem Signup rausgeht — meist bevor eine
+          Liste existiert. */}
+      <Text style={bodyTextStyle}>
+        Already generated your free call list? It&apos;s in the app, ready
+        to call.
+      </Text>
+
       <Text style={bodyTextStyle}>
         If anything breaks or you have a question, just reply to this
         email and we&apos;ll take a look.

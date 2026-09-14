@@ -131,8 +131,8 @@ export function AffiliateWelcome({
         attributed to you automatically.
       </Text>
       <Text style={bulletStyle}>
-        We send the TestFlight invite to your referrals the moment they
-        create their account. No extra step on your side.
+        We send the App Store download link to your referrals the moment
+        they create their account. No extra step on your side.
       </Text>
 
       <Text style={fineStyle}>

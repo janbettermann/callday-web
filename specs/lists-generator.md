@@ -8,9 +8,9 @@
 > Gebaut: `/lists` (3 Zustaende, auth-aware), `/api/lists/{generate,webhook,
 > status,download}`, `lib/lists/*` (Outscraper-Client, Callable-Pipeline,
 > Job-Verarbeitung), `emails/list-ready.tsx`, Migration `0048_lead_gen_jobs`
-> (App-Repo, deployed), SignupForm `nextPath`-Prop. Offen vor Merge:
-> `OUTSCRAPER_API_KEY` in Vercel, App-CTA von /account auf App-Store-Link
-> umstellen, SignupForm-Card-Copy (TestFlight-Text) fuer Launch pruefen.
+> (App-Repo, deployed), SignupForm `nextPath`-Prop. Die Vor-Merge-Punkte
+> sind erledigt: `OUTSCRAPER_API_KEY` liegt in Vercel, und seit dem App-
+> Store-Launch (2026-09-13) zeigen App-CTA und Signup-Mail auf den Store.
 
 ## 1. Was + Warum (Strategie)
 

@@ -133,17 +133,18 @@ export default async function AccountPage() {
       ? Math.min(100, (credits.balance / credits.total) * 100)
       : 0;
 
-  // Read-only Subscription-Label. Die Spalten werden heute von Stripe-
-  // Legacy-Daten, ab App-Store-Launch vom RevenueCat-Webhook gefuellt
+  // Read-only Subscription-Label. Die Spalten werden von Stripe-Legacy-
+  // Daten bzw. seit dem App-Store-Launch vom RevenueCat-Webhook gefuellt
   // (supabase/functions/revenuecat-webhook im App-Repo) — die Anzeige
-  // funktioniert fuer beide Quellen unveraendert.
-  // TODO beim App-Store-Launch: Fallback-Label "Beta access" → "Free".
+  // funktioniert fuer beide Quellen unveraendert. Ohne aktives Abo ist
+  // der Account seit dem Launch (2026-09-13) "Free" (Sample-Liste offen,
+  // eigene Listen gelockt) — vorher stand hier "Beta access".
   const hasActiveSubscription =
     profile.subscription_status === "active" ||
     profile.subscription_status === "trialing";
   const subscriptionLabel = hasActiveSubscription
     ? `Callday ${profile.subscription_plan === "yearly" ? "Yearly" : "Monthly"}`
-    : "Beta access";
+    : "Free";
 
   return (
     <AppShell>
