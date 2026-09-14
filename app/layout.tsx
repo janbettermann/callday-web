@@ -63,7 +63,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://callday.io"),
   title: "Callday. Make today a Callday.",
   description:
-    "The cold calling app for solo founders and freelancers. Less avoiding. More dialing. Apply for one of 50 closed-beta spots.",
+    "The cold calling app for solo founders and freelancers. Less avoiding. More dialing. Now on the App Store for iPhone.",
   openGraph: {
     title: "Callday. Make today a Callday.",
     description:
