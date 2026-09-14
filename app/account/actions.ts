@@ -21,7 +21,9 @@ import { getStripe } from "@/lib/stripe";
 
 /**
  * Löscht den User-Account komplett:
- *   1. Cancel jede aktive Stripe-Subscription
+ *   1. Cancel jede aktive Stripe-Subscription (nur Legacy-Stripe-Kunden;
+ *      ein Apple-Abo kann das Web NICHT kuendigen — das macht der User in
+ *      den iOS-Einstellungen, die Delete-Copy auf /account sagt das)
  *   2. Löscht den Auth-User via Supabase Admin (service_role)
  *   3. Sign out + Redirect zur Homepage
  *

@@ -213,10 +213,17 @@ export default async function AccountPage() {
                 Delete account
               </summary>
               <div className="account-details-content">
+                {/* Seit dem IAP-only-Launch kann das Web ein Apple-Abo
+                    nicht kuendigen (nur der Legacy-Stripe-Block in
+                    actions.ts laeuft noch) — der Satz "cancelled
+                    automatically" waere falsch. Gleiche Ansage wie der
+                    Delete-Dialog in der App: erst in den iOS-Einstellungen
+                    kuendigen. */}
                 <p className="account-body">
-                  This permanently deletes your account and all data. Any
-                  active subscription is cancelled automatically. To
-                  confirm, type your email below.
+                  This permanently deletes your account and all data. If you
+                  have an active subscription, cancel it in your iPhone
+                  Settings first. Deleting your account does not cancel it.
+                  To confirm, type your email below.
                 </p>
                 <form action={deleteAccountAction} className="account-delete-form">
                   <input
