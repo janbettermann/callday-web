@@ -354,61 +354,36 @@ body:has(.hero-light) .site-nav .nav-login:hover {
   align-items: center;
 }
 
-/* === HERO EYEBROW — Textmarker (Jan-Entscheidung 2026-09-14) ===
-   Ersetzt die Announcement-Pille (.pill: Milchglas, blauer Schatten,
-   pulsierender Punkt), die nach Landing-Page-Baukasten aussah — der
-   Puls behauptete zudem einen Live-Zustand, den es nicht gibt. Der
-   sonnengelbe Markerstrich ist der dritte Auftritt des Sonnen-Motivs
-   (Logo-Mark, Footer-Punkt) und haelt das Angebot als eigenen Block vor
-   der H1 zusammen, ohne eine Box zu bauen.
+/* === HERO EYEBROW — Kategorie-Label (Jan-Entscheidung 2026-09-15) ===
+   Historie: Announcement-Pille (Milchglas + pulsierender Punkt, las sich
+   als Landing-Page-Baukasten) → 2026-09-14 Textmarker-Angebot "Generate
+   your first call list for free" (sonnengelber Streifen via <mark>) →
+   2026-09-15 Label "The cold-calling app for iPhone." (Markup in
+   components/LandingHero.tsx). Seit der CTA selbst "Build your first
+   call list" heisst, hat die Eyebrow kein Angebot mehr zu tragen —
+   sie sagt stattdessen, was Callday ist.
 
-   Technik: Verlauf als Hintergrund + box-decoration-break: clone statt
-   Pseudo-Element, damit bei einem Zeilenumbruch (sehr schmale Phones)
-   jedes Zeilenfragment einzeln unterlegt wird. Die leichte Drehung gibt
-   es nur ab 600px, wo die Zeile garantiert einzeilig ist — inline-block
-   + rotate wuerde ein umgebrochenes Fragment-Paar als Ganzes kippen.
-
-   Bewusst genau EINMAL auf der Seite einsetzen: als wiederkehrendes
-   Muster wuerde der Marker zum Gimmick. */
+   Ohne Marker, ruhig gesetzt: der Marker hob ein Angebot hervor, ein
+   Label hat nichts hervorzuheben, und der Hero kommt so mit einer
+   Akzentfarbe (Blau) aus. Das Sonnen-Motiv bleibt im Logo-Mark, im
+   Footer-Punkt und im gelben Schimmer am unteren Rand des Hero-Verlaufs.
+   Der Marker-Code (Verlauf + box-decoration-break + Drehung ab 600px)
+   liegt in der Git-History. */
 .hero-eyebrow {
   margin: 0 0 26px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.1px;
   line-height: 1.4;
-  color: var(--ink);
+  color: var(--ink-dim);
 }
-.hero-eyebrow mark {
-  color: inherit;
-  padding: 0.06em 0.3em 0.02em;
-  /* Negativer Rand zieht den Streifen leicht ueber die Textkante hinaus,
-     wie ein Marker, der vor dem Wort ansetzt und dahinter abhebt. */
-  margin: 0 -0.1em;
-  background: linear-gradient(
-    to bottom,
-    transparent 24%,
-    var(--sun-light) 24%,
-    var(--sun-light) 96%,
-    transparent 96%
-  );
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
-  border-radius: 3px;
-}
-@media (min-width: 600px) {
-  .hero-eyebrow mark {
-    display: inline-block;
-    transform: rotate(-0.9deg);
-  }
-}
-/* Legacy-Dark-Hero (ohne .hero-light): Text hell, der Marker traegt
-   sich auf Navy selbst. */
+/* Legacy-Dark-Hero (ohne .hero-light): gedaempft hell wie die Sub-Zeile. */
 .hero:not(.hero-light) .hero-eyebrow {
-  color: #f7f8fb;
+  color: rgba(233, 236, 244, 0.64);
 }
 
-/* Puls-Keyframes: seit dem Textmarker-Eyebrow nicht mehr im Hero, aber
-   weiterhin von affiliate/payouts/page.tsx (Inline-Style) genutzt. */
+/* Puls-Keyframes: seit 2026-09-14 nicht mehr im Hero, aber weiterhin von
+   affiliate/payouts/page.tsx (Inline-Style) genutzt. */
 @keyframes pulse {
   0%,
   100% {
@@ -507,7 +482,7 @@ h1 .accent {
   letter-spacing: 0.1px;
 }
 /* Leise Plattform-Zeile unter der Meta (Jan 2026-07-23) — kleiner und
-   gedaempfter als der Markensatz darueber. */
+   gedaempfter als die Gratis-Zeile darueber. */
 .hero-cta-platform {
   margin: 6px 0 0;
   font-size: 12px;

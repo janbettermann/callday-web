@@ -26,7 +26,13 @@ import { SignupForm } from "./SignupForm";
  * z:9999-Nav.
  *
  * `slug` reist pro Landing durch (Affiliate-Attribution auf /a/[slug]).
- * Success-Navigation machen die Formulare selbst.
+ * Success-Navigation machen die Formulare selbst; das Sign-up bekommt
+ * hier `nextPath="/lists/new"` (Jan-Entscheidung 2026-09-15): der Hero-
+ * CTA heisst "Build your first call list", also muss der Besucher nach
+ * Apple/Google/E-Mail direkt im Generator stehen — der Umweg ueber das
+ * Dashboard (dort nochmal "Get your first lead list") waere ein Tap, den
+ * der Button nicht angekuendigt hat. Die Sign-up-Card in der #signup-
+ * Sektion (BetaCta) landet weiterhin auf dem Dashboard-Default.
  */
 export function SignupModal({ slug }: { slug?: string }) {
   const { open, mode } = useAuthModalState();
@@ -89,7 +95,7 @@ export function SignupModal({ slug }: { slug?: string }) {
         {mode === "login" ? (
           <LoginForm variant="modal" />
         ) : (
-          <SignupForm slug={slug} oauthFirst />
+          <SignupForm slug={slug} oauthFirst nextPath="/lists/new" />
         )}
       </div>
     </div>,

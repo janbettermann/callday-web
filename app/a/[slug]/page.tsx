@@ -10,7 +10,7 @@ import { SiteNav } from "../../components/SiteNav";
 import { getServerSupabase } from "@/lib/supabase-server";
 import { trackPageView } from "@/lib/affiliate-page-views";
 import { BetaCta } from "../../components/BetaCta";
-import { HeroCta } from "../../components/HeroCta";
+import { LandingHero } from "../../components/LandingHero";
 import { SiteFooter } from "../../components/SiteFooter";
 
 /**
@@ -18,8 +18,10 @@ import { SiteFooter } from "../../components/SiteFooter";
  *
  * Strukturell IDENTISCH zur organic Landing (app/page.tsx) — Hero,
  * Flow-Animations, Stats, Differentiators, FAQ, Footer, und seit
- * 2026-07-05 auch dasselbe SignupForm. Einziger Unterschied: hier
- * bekommt es den slug fuer die Affiliate-Attribution.
+ * 2026-07-05 auch dasselbe SignupForm. Der Hero ist seit 2026-09-15 die
+ * geteilte LandingHero-Komponente (vorher hier ausgeschrieben und bereits
+ * gedriftet: ohne Geraet, "one tap" statt "one call"). Einziger
+ * Unterschied: hier bekommt es den slug fuer die Affiliate-Attribution.
  *
  * Bewusste Entscheidungen (2026-06-26):
  *   - **Keine Affiliate-Pill.** Affiliate erscheint NIRGENDWO auf der
@@ -106,29 +108,8 @@ export default async function AffiliateLanding({
       {/* === NAV === */}
       <SiteNav />
 
-      {/* === HERO === */}
-      <section className="hero hero-light">
-        <div className="container hero-inner">
-          {/* Textmarker-Eyebrow, identisch zur organischen Landing
-              (app/page.tsx) — Styles unter .hero-eyebrow in globals.css. */}
-          <p className="hero-eyebrow reveal">
-            <mark>Generate your first call list for free</mark>
-          </p>
-
-          <h1 className="reveal delay-1">
-            Less avoiding.
-            <br />
-            More <span className="accent">dialing</span>.
-          </h1>
-
-          <p className="hero-sub reveal delay-2">
-            Cold callers don&apos;t lose to bad scripts. They lose to
-            procrastination. Callday keeps you on the phone, one tap at a time.
-          </p>
-
-          <HeroCta />
-        </div>
-      </section>
+      {/* === HERO — geteilt mit app/page.tsx, siehe LandingHero === */}
+      <LandingHero />
 
       {/* === THE FLOW === */}
       <section className="flow">

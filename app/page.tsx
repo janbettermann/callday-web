@@ -7,9 +7,8 @@ import { BetaCta } from "./components/BetaCta";
 import { BoxIcon } from "./components/BoxIcon";
 import { BrainIcon } from "./components/BrainIcon";
 import { GeneratorFeatureCard } from "./components/GeneratorFeatureCard";
-import { HeroCta } from "./components/HeroCta";
+import { LandingHero } from "./components/LandingHero";
 import { LpSession } from "./components/LpSession";
-import { PhoneMockup } from "./components/PhoneMockup";
 import { SignupModal } from "./components/SignupModal";
 import { SiteNav } from "./components/SiteNav";
 import { SiteFooter } from "./components/SiteFooter";
@@ -33,8 +32,10 @@ export default async function Home({
   // Split-Test-Zuweisung (lib/lp/experiments.ts + docs/experiments.md).
   // Ohne aktives Experiment ist `assignment.variant` null und die Seite
   // rendert den Default; das Funnel-Tracking (LpSession) laeuft immer.
-  // Varianten werden HIER im Markup verzweigt, z. B.
+  // Varianten werden HIER entschieden und als Props an die Sektionen
+  // gereicht, z. B.
   //   const headline = assignment.variant === "b" ? <>…</> : <>…</>;
+  //   <LandingHero headline={headline} />
   // und nach dem Test wieder auf den Gewinner eingedampft. `?v=<key>`
   // erzwingt eine Variante zur Vorschau (wird nicht getrackt).
   const assignment = await assignLandingVariant(await searchParams);
@@ -52,68 +53,9 @@ export default async function Home({
       {/* === NAV === */}
       <SiteNav />
 
-      {/* === HERO — split ab 960px: Copy links, Geraet rechts ===
-          Der Pre-Call-Screen steht bewusst direkt im Hero: Besucher sollen
-          sofort sehen WAS die App tut und DASS sie mobil ist (Jan-Entscheidung
-          2026-07-18 — loest die fruehere "kein Mockup, Hero klein halten"-
-          Regel ab). Die animierte 3-Schritt-Flow darunter bleibt der
-          Erklaerteil; die Hero liefert nur den statischen Hook.
-          Unter 960px bleibt die zentrierte Einspalter-Hero unveraendert,
-          das Geraet rutscht dort unter die CTA. */}
-      <section className="hero hero-light">
-        <div className="container hero-inner hero-split">
-          <div className="hero-copy">
-            {/* Eyebrow als Textmarker statt Announcement-Pille (Jan
-                2026-09-14): die Pille (Milchglas + pulsierender Punkt) las
-                sich als Landing-Page-Baukasten. Markup + Styles siehe
-                .hero-eyebrow in globals.css; das Pendant auf /a/[slug]
-                traegt denselben Text. */}
-            <p className="hero-eyebrow reveal">
-              <mark>Generate your first call list for free</mark>
-            </p>
-
-            <h1 className="reveal delay-1">
-              Less avoiding.
-              <br />
-              More <span className="accent">dialing</span>.
-            </h1>
-
-            <p className="hero-sub reveal delay-2">
-              Cold callers don&apos;t lose to bad scripts. They lose to
-              procrastination. Callday keeps you on the phone, one call at a
-              time.
-            </p>
-
-            <HeroCta />
-          </div>
-
-          <div className="hero-visual reveal">
-            {/* BEWUSSTE ABWEICHUNG vom App-Label — bitte nicht "korrigieren":
-                Der Screenshot zeigt die grüne Status-Pille als "NEW LEAD",
-                die App selbst beschriftet sie mit "NEW". Grund: Auf der
-                Landing Page hat ein Erstbesucher zwei Sekunden, da ist das
-                Substantiv selbsterklärender. In der App wäre "LEAD"
-                redundant (man steht auf einer Lead-Karte) und würde das
-                Gegenstück "NOT REACHED" asymmetrisch machen.
-
-                Screenshot neu aufnehmen (Rezept):
-                 1. dealswipe-app → `leadHeaderPill()` in
-                    components/shared/LeadStatusPill.tsx: Label temporär auf
-                    "NEW LEAD" stellen.
-                 2. Aufnahme aus einer NORMALEN Liste mit Fantasie-Leads —
-                    nicht aus der Demo-Liste (dort gewinnt "DEMO LEAD") und
-                    keine echten Kundendaten (die Seite ist öffentlich).
-                 3. Label sofort wieder auf "NEW" zurückstellen.
-                Die Jitter-Animation in Step 02 muss dieselbe Beschriftung
-                tragen, sonst ist die Seite in sich inkonsistent. */}
-            <PhoneMockup
-              src="/hero-precall-iphone.png"
-              alt="Callday auf dem iPhone: die Pre-Call-Karte eines Leads mit „New lead“-Markierung, Website- und Google-Profil-Link, Standort- und Branchenangaben und großem Call-Button."
-              priority
-            />
-          </div>
-        </div>
-      </section>
+      {/* === HERO — geteilt mit /a/[slug], Markup + Entscheidungen in
+          components/LandingHero.tsx === */}
+      <LandingHero />
 
       {/* === THE FLOW — 3 animated steps (the centerpiece) ===
           container-wide: die Sektion bricht auf 1360px aus (einzige
