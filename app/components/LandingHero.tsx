@@ -8,19 +8,20 @@ import { PhoneMockup } from "./PhoneMockup";
  * Geraet, Sub-Zeile "one tap" statt "one call"); seitdem gibt es den Hero
  * genau einmal.
  *
- * Aufbau (Jan-Entscheidung 2026-09-15, zusammen mit dem neuen CTA):
- *   - Eyebrow = Kategorie-Label "The cold-calling app for iPhone." statt
- *     des Textmarker-Angebots "Generate your first call list for free".
- *     Seit der CTA selbst "Build your first call list" heisst, muss die
- *     erste Zeile sagen, dass Callday eine Anruf-App ist und kein
- *     Listen-Tool — sonst liest ein Erstbesucher die Seite als Generator.
- *     "iPhone" oben heisst ausserdem: Android-Besucher wissen es beim
- *     ersten Blick, die Plattform-Zeile unter dem Button sagt nur noch
- *     "Android coming later." Ohne Marker (Styles: .hero-eyebrow in
- *     globals.css), weil ein Label nichts hervorzuheben hat.
- *   - Das Gratis-Versprechen wandert in die Meta-Zeile unter den Button
- *     (siehe HeroCta), der Markensatz "Make today a Callday." bleibt die
- *     H2 der Signup-Sektion.
+ * Aufbau (Jan-Entscheidungen 2026-09-15, zusammen mit dem neuen CTA):
+ *   - KEINE Eyebrow mehr, die H1 eroeffnet den Hero. Historie: Announce-
+ *     ment-Pille → Textmarker-Angebot "Generate your first call list for
+ *     free" (2026-09-14) → kurz ein Kategorie-Label "The cold-calling app
+ *     for iPhone." ohne Marker → am selben Tag ganz gestrichen. Grund: das
+ *     Angebot wanderte in den CTA ("Build your first call list") und die
+ *     Gratis-Zeile darunter, damit hatte der Slot keinen Job mehr; ein
+ *     Label als Fueller wollte Jan nicht. Die Plattform-Info lebt wieder
+ *     komplett in der Zeile unter dem Button ("iOS only. Android coming
+ *     later."). Eyebrow-Markup + .hero-eyebrow-Styles liegen in der
+ *     Git-History.
+ *   - Das Gratis-Versprechen steht als blauer Marker in der Meta-Zeile
+ *     unter dem Button (siehe HeroCta), der Markensatz "Make today a
+ *     Callday." bleibt die H2 der Signup-Sektion.
  *   - Split ab 960px: Copy links, Geraet rechts. Der Pre-Call-Screen steht
  *     bewusst direkt im Hero: Besucher sollen sofort sehen WAS die App tut
  *     und DASS sie mobil ist (Jan-Entscheidung 2026-07-18). Die animierte
@@ -37,8 +38,6 @@ export function LandingHero() {
     <section className="hero hero-light">
       <div className="container hero-inner hero-split">
         <div className="hero-copy">
-          <p className="hero-eyebrow reveal">The cold-calling app for iPhone.</p>
-
           <h1 className="reveal delay-1">
             Less avoiding.
             <br />

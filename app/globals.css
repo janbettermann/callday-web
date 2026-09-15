@@ -354,33 +354,9 @@ body:has(.hero-light) .site-nav .nav-login:hover {
   align-items: center;
 }
 
-/* === HERO EYEBROW — Kategorie-Label (Jan-Entscheidung 2026-09-15) ===
-   Historie: Announcement-Pille (Milchglas + pulsierender Punkt, las sich
-   als Landing-Page-Baukasten) → 2026-09-14 Textmarker-Angebot "Generate
-   your first call list for free" (sonnengelber Streifen via <mark>) →
-   2026-09-15 Label "The cold-calling app for iPhone." (Markup in
-   components/LandingHero.tsx). Seit der CTA selbst "Build your first
-   call list" heisst, hat die Eyebrow kein Angebot mehr zu tragen —
-   sie sagt stattdessen, was Callday ist.
-
-   Ohne Marker, ruhig gesetzt: der Marker hob ein Angebot hervor, ein
-   Label hat nichts hervorzuheben, und der Hero kommt so mit einer
-   Akzentfarbe (Blau) aus. Das Sonnen-Motiv bleibt im Logo-Mark, im
-   Footer-Punkt und im gelben Schimmer am unteren Rand des Hero-Verlaufs.
-   Der Marker-Code (Verlauf + box-decoration-break + Drehung ab 600px)
-   liegt in der Git-History. */
-.hero-eyebrow {
-  margin: 0 0 26px;
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: -0.1px;
-  line-height: 1.4;
-  color: var(--ink-dim);
-}
-/* Legacy-Dark-Hero (ohne .hero-light): gedaempft hell wie die Sub-Zeile. */
-.hero:not(.hero-light) .hero-eyebrow {
-  color: rgba(233, 236, 244, 0.64);
-}
+/* Hero-Eyebrow: seit 2026-09-15 gestrichen (Historie und Grund im Doc-
+   Kommentar von components/LandingHero.tsx; Pille-, Marker- und Label-
+   Styles liegen in der Git-History). */
 
 /* Puls-Keyframes: seit 2026-09-14 nicht mehr im Hero, aber weiterhin von
    affiliate/payouts/page.tsx (Inline-Style) genutzt. */
@@ -539,6 +515,22 @@ h1 .accent {
 }
 .hero.hero-light .hero-cta-meta {
   color: var(--ink-faint);
+}
+/* Highlight der Gratis-Zeile unter dem Hero-Button (Jan 2026-09-15,
+   Markup in HeroCta.tsx). Marker-Look wie der fruehere Eyebrow-Marker,
+   nur in Blau: Tint aus der Button-Farbe, Schrift in --blue-deep — das
+   hellere --blue faellt bei 13px auf dem Tint unter 4,5:1 Kontrast,
+   das dunkle Ende des Button-Verlaufs besteht knapp. Kleiner Radius und
+   wenig Innenabstand, damit es ein Marker bleibt und nicht als zweiter,
+   leichterer Button liest. Alternative Sonnen-Tint (--sun-tint +
+   dunkles Amber) wurde besprochen und verworfen: Jan wollte den Hero
+   bei einer Farbfamilie halten. */
+.hero-cta-meta mark {
+  background: var(--blue-tint);
+  color: var(--blue-deep);
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 4px;
 }
 
 /* === HERO-SPLIT + PHONE-MOCKUP (2026-07-18) ===

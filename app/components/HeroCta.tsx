@@ -20,10 +20,18 @@ import { openSignupModal } from "@/lib/use-signup-modal";
  * /lists/new ("Build my list"). Damit der Button sein Versprechen haelt,
  * landet das Modal-Sign-up direkt im Generator (nextPath in SignupModal).
  * Weil "free" nicht mehr im Button steht, traegt die Meta-Zeile darunter
- * die Rueckversicherung ("Your first list is free. No credit card." —
- * bewusst nicht nur "Free.", die App selbst ist nicht gratis); der
- * Markensatz "Make today a Callday." ist dafuer aus dem Hero raus und
- * bleibt die H2 der Signup-Sektion. Kein A/B-Test dafuer: vor dem Start
+ * die Rueckversicherung "Free. No credit card." (Jan-Entscheidung
+ * 2026-09-15: kurz, bezieht sich auf die Liste im Button direkt darueber;
+ * die laengere Form "Your first list is free. No credit card." war der
+ * Vorschlag und liegt in der Git-History); der Markensatz "Make today a
+ * Callday." ist dafuer aus dem Hero raus und bleibt die H2 der
+ * Signup-Sektion. Die Zeile sitzt in einem <mark> (Styles: .hero-cta-meta
+ * mark in globals.css): leichter Blau-Tint, Schrift im dunklen Button-
+ * Blau — Jan-Wahl 2026-09-15 (Variante E) gegen einen Sonnen-Tint, weil
+ * der Hero so bei einer Farbfamilie bleibt. Bekannter Preis: eine helle
+ * blaue Flaeche mit blauer Schrift unter dem Button kann wie ein zweiter,
+ * leichterer Button wirken; deshalb Marker-Geometrie (kleiner Radius,
+ * wenig Innenabstand), keine Pille. Kein A/B-Test dafuer: vor dem Start
  * der Meta-Ads gibt es keine Baseline zu schuetzen, der erste Test-Slot
  * gehoert der Headline.
  *
@@ -57,11 +65,13 @@ export function HeroCta() {
             Build your first call list
             <CtaArrow />
           </a>
-          <p className="hero-cta-meta">Your first list is free. No credit card.</p>
+          <p className="hero-cta-meta">
+            <mark>Free. No credit card.</mark>
+          </p>
           {/* Plattform-Hinweis (Jan 2026-07-23): Android-Besucher sollen es
-              VOR dem Sign-up wissen. Seit die Eyebrow "for iPhone" sagt,
-              nur noch der Android-Teil — "iOS only" waere doppelt. */}
-          <p className="hero-cta-platform">Android coming later.</p>
+              VOR dem Sign-up wissen. Seit die Eyebrow weg ist, steht "iOS"
+              sonst nirgends im Hero — deshalb wieder die volle Zeile. */}
+          <p className="hero-cta-platform">iOS only. Android coming later.</p>
         </>
       )}
     </div>
