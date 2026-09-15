@@ -20,10 +20,13 @@ import { openSignupModal } from "@/lib/use-signup-modal";
  * /lists/new ("Build my list"). Damit der Button sein Versprechen haelt,
  * landet das Modal-Sign-up direkt im Generator (nextPath in SignupModal).
  * Weil "free" nicht mehr im Button steht, traegt die Meta-Zeile darunter
- * die Rueckversicherung "Free. No credit card." (Jan-Entscheidung
- * 2026-09-15: kurz, bezieht sich auf die Liste im Button direkt darueber;
- * die laengere Form "Your first list is free. No credit card." war der
- * Vorschlag und liegt in der Git-History); der Markensatz "Make today a
+ * die Rueckversicherung "Free. No credit card. Ready in minutes." (Jan-
+ * Entscheidung 2026-09-15: kurz, bezieht sich auf die Liste im Button
+ * direkt darueber; die laengere Form "Your first list is free. No credit
+ * card." war der Vorschlag und liegt in der Git-History). "Ready in
+ * minutes" ist bewusst vage statt "2 minutes": der Generator braucht je
+ * nach Wellen und Outscraper-Warteschlange eine bis einige Minuten, die
+ * Fertig-Mail deckt den Zeit-Tail; der Markensatz "Make today a
  * Callday." ist dafuer aus dem Hero raus und bleibt die H2 der
  * Signup-Sektion. Die Zeile sitzt in einem <mark> (Styles: .hero-cta-meta
  * mark in globals.css): leichter Blau-Tint, Schrift im dunklen Button-
@@ -66,7 +69,7 @@ export function HeroCta() {
             <CtaArrow />
           </a>
           <p className="hero-cta-meta">
-            <mark>Free. No credit card.</mark>
+            <mark>Free. No credit card. Ready in minutes.</mark>
           </p>
           {/* Plattform-Hinweis (Jan 2026-07-23): Android-Besucher sollen es
               VOR dem Sign-up wissen. Die Eyebrow nennt die Zielgruppe, nicht
