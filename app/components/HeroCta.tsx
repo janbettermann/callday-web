@@ -69,8 +69,9 @@ export function HeroCta() {
             <mark>Free. No credit card.</mark>
           </p>
           {/* Plattform-Hinweis (Jan 2026-07-23): Android-Besucher sollen es
-              VOR dem Sign-up wissen. Seit die Eyebrow weg ist, steht "iOS"
-              sonst nirgends im Hero — deshalb wieder die volle Zeile. */}
+              VOR dem Sign-up wissen. Die Eyebrow nennt die Zielgruppe, nicht
+              die Plattform, "iOS" steht sonst nirgends im Hero — deshalb die
+              volle Zeile. */}
           <p className="hero-cta-platform">iOS only. Android coming later.</p>
         </>
       )}

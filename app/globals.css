@@ -354,9 +354,24 @@ body:has(.hero-light) .site-nav .nav-login:hover {
   align-items: center;
 }
 
-/* Hero-Eyebrow: seit 2026-09-15 gestrichen (Historie und Grund im Doc-
-   Kommentar von components/LandingHero.tsx; Pille-, Marker- und Label-
-   Styles liegen in der Git-History). */
+/* === HERO EYEBROW — ruhiges Label (Jan 2026-09-15) ===
+   Zielgruppen-Zeile ueber der H1 ("The cold calling app for solo
+   founders.", Markup + Historie in components/LandingHero.tsx). Kein
+   Marker: der hob frueher ein Angebot hervor, ein Label hat nichts
+   hervorzuheben, und der Hero bleibt so bei einer Akzentfarbe. Pille-
+   und Marker-Styles liegen in der Git-History. */
+.hero-eyebrow {
+  margin: 0 0 26px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
+  line-height: 1.4;
+  color: var(--ink-dim);
+}
+/* Legacy-Dark-Hero (ohne .hero-light): gedaempft hell wie die Sub-Zeile. */
+.hero:not(.hero-light) .hero-eyebrow {
+  color: rgba(233, 236, 244, 0.64);
+}
 
 /* Puls-Keyframes: seit 2026-09-14 nicht mehr im Hero, aber weiterhin von
    affiliate/payouts/page.tsx (Inline-Style) genutzt. */
@@ -458,9 +473,12 @@ h1 .accent {
   letter-spacing: 0.1px;
 }
 /* Leise Plattform-Zeile unter der Meta (Jan 2026-07-23) — kleiner und
-   gedaempfter als die Gratis-Zeile darueber. */
+   gedaempfter als die Gratis-Zeile darueber. 12px Abstand statt 6
+   (Jan 2026-09-15): seit die Gratis-Zeile ein Marker mit eigener
+   Flaeche ist, braucht die Plattform-Zeile mehr Luft, sonst klebt sie
+   am Marker. */
 .hero-cta-platform {
-  margin: 6px 0 0;
+  margin: 12px 0 0;
   font-size: 12px;
   color: var(--ink-mute);
   letter-spacing: 0.1px;

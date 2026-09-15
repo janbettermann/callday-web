@@ -9,16 +9,17 @@ import { PhoneMockup } from "./PhoneMockup";
  * genau einmal.
  *
  * Aufbau (Jan-Entscheidungen 2026-09-15, zusammen mit dem neuen CTA):
- *   - KEINE Eyebrow mehr, die H1 eroeffnet den Hero. Historie: Announce-
- *     ment-Pille → Textmarker-Angebot "Generate your first call list for
- *     free" (2026-09-14) → kurz ein Kategorie-Label "The cold-calling app
- *     for iPhone." ohne Marker → am selben Tag ganz gestrichen. Grund: das
- *     Angebot wanderte in den CTA ("Build your first call list") und die
- *     Gratis-Zeile darunter, damit hatte der Slot keinen Job mehr; ein
- *     Label als Fueller wollte Jan nicht. Die Plattform-Info lebt wieder
- *     komplett in der Zeile unter dem Button ("iOS only. Android coming
- *     later."). Eyebrow-Markup + .hero-eyebrow-Styles liegen in der
- *     Git-History.
+ *   - Eyebrow = Zielgruppen-Label "The cold calling app for solo
+ *     founders." (Jan-Wahl 2026-09-15, Schreibweise wie die Metadata-
+ *     Description der Affiliate-Landing), ruhig gesetzt ohne Marker
+ *     (Styles: .hero-eyebrow in globals.css). Historie desselben Tages:
+ *     Textmarker-Angebot "Generate your first call list for free" (seit
+ *     2026-09-14) → Kategorie-Label "The cold-calling app for iPhone."
+ *     → kurz ganz gestrichen → Zielgruppen-Label. Das Angebot wanderte
+ *     in den CTA ("Build your first call list") und die Gratis-Zeile
+ *     darunter; die Eyebrow sagt jetzt, fuer WEN die Seite ist. Weil sie
+ *     die Plattform nicht mehr nennt, bleibt die Zeile unter dem Button
+ *     voll ("iOS only. Android coming later.").
  *   - Das Gratis-Versprechen steht als blauer Marker in der Meta-Zeile
  *     unter dem Button (siehe HeroCta), der Markensatz "Make today a
  *     Callday." bleibt die H2 der Signup-Sektion.
@@ -38,6 +39,10 @@ export function LandingHero() {
     <section className="hero hero-light">
       <div className="container hero-inner hero-split">
         <div className="hero-copy">
+          <p className="hero-eyebrow reveal">
+            The cold calling app for solo founders.
+          </p>
+
           <h1 className="reveal delay-1">
             Less avoiding.
             <br />
